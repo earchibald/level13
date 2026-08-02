@@ -1,15 +1,26 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (mobile)
 
-# Deploys the static site to GitHub Pages from THIS branch (gh-pages).
+# Publishes the mobile port to https://earchibald.github.io/level13-mobile
 #
-# gh-pages is the upstream release branch — the same branch that serves
-# https://nroutasuo.github.io/level13/. It is NOT the default branch.
-# master is unreleased development work and must not be deployed.
+# How this works: this workflow travels with the gh-pages-mobile branch.
+# The branch is pushed to TWO repositories:
+#   - earchibald/level13 (source of truth; the workflow is skipped there
+#     so it can never overwrite the desktop site at /level13)
+#   - earchibald/level13-mobile (hosting repo; the workflow runs there and
+#     deploys this branch to that repo's GitHub Pages)
+#
+# To publish an update:
+#   git push origin gh-pages-mobile
+#   git push mobile  gh-pages-mobile
+# where "mobile" is the earchibald/level13-mobile remote.
+#
+# No secrets or deploy keys are needed: the deploy runs inside
+# level13-mobile with its own GITHUB_TOKEN.
 
 on:
   push:
     branches:
-      - gh-pages
+      - gh-pages-mobile
   workflow_dispatch:
 
 # Allow the workflow to publish to GitHub Pages.
@@ -25,6 +36,9 @@ concurrency:
 
 jobs:
   deploy:
+    # Guard: only the hosting repo deploys. In earchibald/level13 this job
+    # is skipped, so the desktop site at /level13 is never touched.
+    if: github.repository == 'earchibald/level13-mobile'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -35,6 +49,9 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # First deploy enables GitHub Pages on the repo automatically.
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
