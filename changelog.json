@@ -1,6 +1,23 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.1",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Map: mouse wheel zoom, click targets and icons scale with zoom, hover tooltip for sectors"
+				},
+				{
+					"type": "DEV",
+					"summary": "Fix error when scouting greenhouse after discovering deity; fix map tooltip error when no sector is selected"
+				}
+			]
+		},
+		{
 			"version": "0.6.3",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",
