@@ -30,7 +30,7 @@ define( function () {
 			level: "level",
 		},
 		
-		gameURL: "https://nroutasuo.github.io/level13",
+		gameURL: window.location.origin + window.location.pathname.replace(/\/$/, ""),
 		
 		getFeedbackLinksHTML: function () {
 			let result = "";
