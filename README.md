@@ -9,6 +9,22 @@ The game is in active development. It is a personal side project but has also re
 * Read about how to report bugs, suggest features, or submit fixes to the project in the [contributing guidelines](docs/CONTRIBUTING.md)
 * Chat about the game or get help on the [discussions page](https://github.com/nroutasuo/level13/discussions), the [subreddit](https://www.reddit.com/r/level13/), or the [Discord server](https://discord.gg/BzMbATyKph)
 
+## Mobile Port (this branch)
+
+This branch (`gh-pages-mobile`) is a mobile port of the game. It plays at
+phone widths with full feature parity: tap-to-open info callouts,
+long-press action previews, touch pan and pinch zoom on maps, a
+scrollable tab bar, a log drawer, and touch-sized controls.
+
+* Play the mobile port at <https://earchibald.github.io/level13-mobile/>
+* Design notes: `docs/superpowers/specs/2026-08-02-mobile-port-design.md`
+
+Publishing: the deploy workflow travels with this branch and only runs in
+the hosting repo. To publish an update, push the branch to both remotes:
+
+    git push origin gh-pages-mobile
+    git push mobile  gh-pages-mobile   # earchibald/level13-mobile -> deploys
+
 ## Game Overview
 
 ### Features
