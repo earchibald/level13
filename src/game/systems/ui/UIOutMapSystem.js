@@ -789,7 +789,7 @@ define([
 			var hasCampOnLevel = levelEntity.get(CampComponent) !== null;
 			var sectorFeatures = sector.get(SectorFeaturesComponent);
 			var sectorPassages = sector.get(PassagesComponent);
-			var statusComponent = this.selectedSector.get(SectorStatusComponent);
+			var statusComponent = sector.get(SectorStatusComponent);
 			var localesComponent = sector.get(SectorLocalesComponent);
 			var improvements = sector.get(SectorImprovementsComponent);
 			var unScoutedLocales = localesComponent.locales.length - statusComponent.getNumLocalesScouted();
@@ -989,7 +989,7 @@ define([
 			let result = [];
 			
 			if (isScouted) {
-				let statusComponent = this.selectedSector.get(SectorStatusComponent);
+				let statusComponent = sector.get(SectorStatusComponent);
 				let featuresComponent = sector.get(SectorFeaturesComponent);
 
 				if (GameGlobals.sectorHelper.canBeInvestigated(sector)) {
