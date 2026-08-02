@@ -394,6 +394,27 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			for (let i = 0; i < mapHints.length; i++) {
 				this.drawMapHint(ctx, mapPosition, mapHints[i], dimensions);
 			}
+
+			this.rebuildMapHintOverlay(mapPosition, mapHints, dimensions);
+		},
+
+		// invisible hover targets over the hint blibs so they can show tooltips
+		rebuildMapHintOverlay: function (mapPosition, mapHints, dimensions) {
+			let $overlay = $("#minimap-background-overlay");
+			if ($overlay.length == 0) return;
+			$overlay.empty();
+
+			let cellSize = 14;
+
+			for (let i = 0; i < mapHints.length; i++) {
+				let mapHint = mapHints[i];
+				let blibPos = this.getMapHintBlibPos(mapPosition, mapHint, dimensions);
+				if (!blibPos) continue;
+				let pos = mapHint.position;
+				let data = "data-hint-id='" + mapHint.id + "' data-level='" + pos.level + "' data-x='" + pos.sectorX + "' data-y='" + pos.sectorY + "'";
+				let style = "top: " + Math.round(blibPos.y - cellSize / 2) + "px; left: " + Math.round(blibPos.x - cellSize / 2) + "px; width: " + cellSize + "px; height: " + cellSize + "px";
+				$overlay.append($("<div class='map-hint-cell' style='" + style + "' " + data + "></div>"));
+			}
 		},
 		
 		getMaphints: function (mapPosition) {
@@ -418,7 +439,7 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			let passageDown = GameGlobals.levelHelper.findPassageDown(mapPosition.level);
 			if (passageDown != null && passageDown.get(SectorStatusComponent).scouted) {
 				let passageDownIcon = this.icons["passage-down" + (useSunlitIcon ? "-sunlit" : "")];
-				result.push({ id: "passage-up", icon: passageDownIcon, position: passageDown.get(PositionComponent) });
+				result.push({ id: "passage-down", icon: passageDownIcon, position: passageDown.get(PositionComponent) });
 			}
 			
 			let nearestWaterSector = GameGlobals.levelHelper.findNearestKnownWaterSector(mapPosition, true);
@@ -446,36 +467,44 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			return result;
 		},
 		
-		drawMapHint: function (ctx, mapPosition, mapHint, dimensions) {
-			let sunlit = $("body").hasClass("sunlit");
+		// returns the pixel position of the hint blib on the minimap frame, or null if the hint is not drawn
+		getMapHintBlibPos: function (mapPosition, mapHint, dimensions) {
 			let sectorSize = this.getSectorSize(true);
-			
+
 			let xDist = Math.abs(mapHint.position.sectorX - mapPosition.sectorX);
 			let yDist = Math.abs(mapHint.position.sectorY - mapPosition.sectorY);
-			
-			if (xDist <= 3 && yDist <= 3) return;
-			
+
+			if (xDist <= 3 && yDist <= 3) return null;
+
 			// TODO hard-coded numbers
 			let frameSize = 12;
-			
+
 			// choose egde the hint should appear on
 			let edge = this.getMapHintEdge(mapPosition, mapHint, frameSize);
-			
+
 			if (!edge) {
 				log.w("could not determine map hint edge " + mapHint.id + " " + mapHint.position);
-				return;
+				return null;
 			}
-			
+
 			// pixel pos on the real map
 			let center = this.getSectorPixelPosCenter(dimensions, true, sectorSize, mapPosition.sectorX, mapPosition.sectorY);
 			let pixelPos = this.getSectorPixelPosCenter(dimensions, true, sectorSize, mapHint.position.sectorX, mapHint.position.sectorY);
-			
+
 			// offset due to the two canvases being positioned differently
 			pixelPos.x = pixelPos.x + frameSize;
 			pixelPos.y = pixelPos.y + frameSize;
-			
+
 			// find position on edge - intersection of edge and line connecting map center to target
-			let blibPos = MathUtils.lineIntersection(center.x, center.y, pixelPos.x, pixelPos.y, edge.p1.x, edge.p1.y, edge.p2.x, edge.p2.y);
+			return MathUtils.lineIntersection(center.x, center.y, pixelPos.x, pixelPos.y, edge.p1.x, edge.p1.y, edge.p2.x, edge.p2.y);
+		},
+
+		drawMapHint: function (ctx, mapPosition, mapHint, dimensions) {
+			let sunlit = $("body").hasClass("sunlit");
+
+			let blibPos = this.getMapHintBlibPos(mapPosition, mapHint, dimensions);
+			if (!blibPos) return;
+
 			let iconSize = 10;
 			let icon = mapHint.icon;
 			
@@ -556,7 +585,7 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 				let radius = sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_VISIBLE ? sectorSize * radiusSmall : sectorSize * radiusDefault;
 				ctx.fillStyle = colorBorderVisibleArea;
 				ctx.strokeStyle = colorBorderVisibleArea;
-				let fillX = Mathr.sectorXpx - bgPadding;
+				let fillX = Math.round(sectorXpx) - bgPadding;
 				let fillY = sectorYpx - bgPadding;
 				let fillSize = sectorSize + bgPadding * 2;
 				CanvasUtils.fillRoundedRect(ctx, fillX, fillY, fillSize, fillSize, radius);

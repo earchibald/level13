@@ -53,6 +53,23 @@
 	outline: 5px solid @color-text-meta;
 }
 
+// minimap overlay cells are hover targets for tooltips only, not clickable
+#minimap-overlay .map-overlay-cell {
+	cursor: default;
+}
+
+// invisible hover targets over the off-map hint blibs on the minimap frame
+.map-hint-cell {
+	position: absolute;
+	pointer-events: auto;
+	cursor: default;
+	border-radius: 50%;
+}
+
+.map-hint-cell:hover {
+	outline: 1px solid @color-text-meta;
+}
+
 // hover tooltip for map sectors
 // lives at body level and is positioned with position:fixed, so the map scroll
 // container cannot clip it. pointer-events are off so it never blocks the map.
@@ -92,6 +109,13 @@
 #map-sector-tooltip .map-tooltip-pos {
 	color: @color-text-meta;
 	font-size: @font-size-small;
+}
+
+#map-sector-tooltip .map-tooltip-context {
+	margin: 0 0 3px 0;
+	color: @color-text-meta;
+	font-size: @font-size-small;
+	font-style: italic;
 }
 
 #map-sector-tooltip table {

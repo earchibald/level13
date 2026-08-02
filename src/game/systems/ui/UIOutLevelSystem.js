@@ -1061,7 +1061,7 @@ define([
 			
 			let mapPosition = this.playerLocationNodes.head.position.getPosition();
 			GameGlobals.uiMapHelper.rebuildMapHints("minimap-background", "minimap", mapPosition);
-			GameGlobals.uiMapHelper.rebuildMap("minimap", null, mapPosition, UIConstants.MAP_MINIMAP_SIZE, true, MapUtils.MAP_MODE_DEFAULT);
+			GameGlobals.uiMapHelper.rebuildMap("minimap", "minimap-overlay", mapPosition, UIConstants.MAP_MINIMAP_SIZE, true, MapUtils.MAP_MODE_DEFAULT);
 		},
 		
 		showInvestigate: function () {
