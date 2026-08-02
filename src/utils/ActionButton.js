@@ -63,9 +63,9 @@ define([
         },
 
         createHotkeyIndicator: function ($btn, action) {
-            let hotkey = GameGlobals.uiFunctions.getActionHotkey(action);
-            if (hotkey) {
-                $btn.append("<div class='hotkey-hint hide-in-small-layout'>" + hotkey.displayKeyShort + "</div>");
+            let hint = GameGlobals.uiFunctions.getActionHotkeyHint(action);
+            if (hint) {
+                $btn.append("<div class='hotkey-hint hide-in-small-layout'>" + hint + "</div>");
             }
         },
 

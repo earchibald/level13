@@ -30,6 +30,10 @@ define(['ash',
 
 			hotkeys: {},
 
+			// actions the context-sensitive ENTER hotkey can trigger, in priority order
+			// buttons for these actions show the hint even though the hotkey has no fixed action
+			contextHotkeyActions: [ "enter_camp", "move_level_up", "move_level_down" ],
+
 			texts: [],
 
 			HOTKEY_DEFAULT_MODIFIER: "HOTKEY_DEFAULT_MODIFIER",
@@ -79,6 +83,11 @@ define(['ash',
 				$.each($("#switch-tabs li"), function () {
 					$(this).click(onTabClickedInternal);
 					$(this).keydown((e) => uiFunctions.onButtonLikeElementKeyDown(e, onTabClickedInternal));
+					$(this).append("<span class='tab-hotkey-number' aria-hidden='true'></span>");
+				});
+
+				GlobalSignals.popupClosedSignal.add(function () {
+					uiFunctions.lastPopupClosedTimestamp = new Date().getTime();
 				});
 
 				// Collapsible divs
@@ -205,10 +214,22 @@ define(['ash',
 				this.registerHotkey("Previous tab", "ArrowLeft", "shiftKey", null, false, false, () => GameGlobals.uiFunctions.showPreviousTab());
 				this.registerHotkey("Next tab", "ArrowRight", "shiftKey", null, false, false, () => GameGlobals.uiFunctions.showNextTab());
 
+				// number keys select the visible tabs in order; shown as one entry in the hotkey list
+				for (let i = 1; i <= 9; i++) {
+					let tabIndex = i - 1;
+					let options = i == 1 ? { displayKey: "1-9" } : { isHiddenFromList: true };
+					this.registerHotkey("Select tab", "Digit" + i, defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabByNumber(tabIndex), options);
+				}
+
+				// ENTER acts on the current location: enter the camp or use a passage
+				// not shown in the hotkey list because it is location-specific; the buttons show the hint instead
+				this.registerHotkey("Enter camp / use passage", "Enter", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
+				this.registerHotkey("Enter camp / use passage", "NumpadEnter", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
+
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 			},
 
-			registerHotkey: function (description, code, modifier, tab, isUniversal, isDev, cb) {
+			registerHotkey: function (description, code, modifier, tab, isUniversal, isDev, cb, options) {
 				if (!code) return;
 				if (!cb) return;
 				if (isDev && !GameConstants.isCheatsEnabled) return;
@@ -216,8 +237,9 @@ define(['ash',
 				modifier = modifier || null;
 				tab = tab || null;
 				isUniversal = isUniversal || false;
+				options = options || {};
 
-				let displayKey = code.replace("Key", "");
+				let displayKey = options.displayKey || code.replace("Key", "").replace("Digit", "");
 				let displayKeyShort = displayKey.replace("Numpad", "");
 
 				let action = null;
@@ -245,9 +267,10 @@ define(['ash',
 					description: description, 
 					displayKey: displayKey, 
 					displayKeyShort: displayKeyShort,
-					tab: tab, 
+					tab: tab,
 					isUniversal: isUniversal,
 					isDev: isDev,
+					isHiddenFromList: options.isHiddenFromList || false,
 					action: action, 
 					cb: cb 
 				};
@@ -264,6 +287,25 @@ define(['ash',
 					}
 				}
 				return null;
+			},
+
+			getActionHotkeyHint: function (action) {
+				if (!action) return null;
+				let hotkey = this.getActionHotkey(action);
+				if (hotkey) return hotkey.displayKeyShort;
+				if (this.contextHotkeyActions.indexOf(action) >= 0) return "&#9166;";
+				return null;
+			},
+
+			triggerContextEnterAction: function () {
+				for (let i = 0; i < this.contextHotkeyActions.length; i++) {
+					let $btn = $("button.action[action='" + this.contextHotkeyActions[i] + "']");
+					if ($btn.length == 0) continue;
+					if (!$btn.is(":visible")) continue;
+					if ($btn.hasClass("btn-disabled")) continue;
+					$btn.click();
+					return;
+				}
 			},
 			
 			registerCustomButtonListeners: function (scope, btnClass, fn) {
@@ -601,8 +643,8 @@ define(['ash',
 				$.each($("button.action"), function () {
 					let $btn = $(this);
 					let action = $btn.attr("action");
-					let hotkey = GameGlobals.uiFunctions.getActionHotkey(action);
-					$btn.children(".hotkey-hint").html(hotkey ? hotkey.displayKeyShort : "");
+					let hint = GameGlobals.uiFunctions.getActionHotkeyHint(action);
+					$btn.children(".hotkey-hint").html(hint ? hint : "");
 				});
 			},
 
@@ -913,7 +955,13 @@ define(['ash',
 			
 			onKeyUp: function (e) {
 				if (e.originalEvent.isTextInput) return;
-				if (!GameGlobals.uiFunctions.triggerHotkey(e.originalEvent.code, e)) return;
+				// number inputs (steppers) don't set isTextInput; never treat typing in a field as a hotkey
+				let targetTagName = e.target ? e.target.tagName : null;
+				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA") return;
+				// Enter on a focused button already clicked it on keydown; don't also trigger the hotkey
+				let code = e.originalEvent.code;
+				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && $(e.target).is("button, a, [tabindex]")) return;
+				if (!GameGlobals.uiFunctions.triggerHotkey(code, e)) return;
 			},
 
 			triggerHotkey: function (code, modifiers) {
@@ -921,11 +969,14 @@ define(['ash',
 				let currentTab = GameGlobals.gameState.uiStatus.currentTab;
 				let hasPopups = GameGlobals.uiFunctions.popupManager.hasOpenPopup();
 				let hasModifier = modifiers.shiftKey || modifiers.altKey || modifiers.ctrlKey || modifiers.metaKey;
+				// a popup dismissed on keydown (Enter clicks the focused button) must not leak the keyup to game hotkeys
+				let msSincePopupClosed = new Date().getTime() - (this.lastPopupClosedTimestamp || 0);
 
 				for (let i = 0; i < this.hotkeys[code].length; i++) {
 					let hotkey = this.hotkeys[code][i];
 					if (hotkey.tab && hotkey.tab !== currentTab) continue;
 					if (!hotkey.isUniversal && hasPopups) continue;
+					if (!hotkey.isUniversal && msSincePopupClosed < 300) continue;
 					if (hotkey.activeCondition && !hotkey.activeCondition()) continue;
 					if (!GameGlobals.gameState.settings.hotkeysEnabled && !hotkey.isUniversal) continue;
 
@@ -1602,6 +1653,22 @@ define(['ash',
 				if (nextTabElementIndex >= visibleTabElements.length) nextTabElementIndex = 0;
 				visibleTabElements[nextTabElementIndex].click();
 				GameGlobals.uiFunctions.scrollToTabTop();
+			},
+
+			showTabByNumber: function (index) {
+				let visibleTabElements = $("#switch-tabs li").filter("[data-visible=true]");
+				if (index < 0 || index >= visibleTabElements.length) return;
+				visibleTabElements[index].click();
+				GameGlobals.uiFunctions.scrollToTabTop();
+			},
+
+			updateTabHotkeyNumbers: function () {
+				$("#switch-tabs li .tab-hotkey-number").text("");
+				if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
+				let visibleTabElements = $("#switch-tabs li").filter("[data-visible=true]");
+				for (let i = 0; i < visibleTabElements.length && i < 9; i++) {
+					$(visibleTabElements[i]).find(".tab-hotkey-number").text(i + 1);
+				}
 			},
 
 			showFight: function () {

@@ -110,6 +110,7 @@ define([
                     let hotkey = GameGlobals.uiFunctions.hotkeys[code][i];
 					if (hotkey.activeCondition && !hotkey.activeCondition()) continue;
                     if (hotkey.isUniversal) continue;
+                    if (hotkey.isHiddenFromList) continue;
                     let modifier = GameGlobals.uiFunctions.getActualHotkeyModifier(hotkey.modifier);
                     let hotkeyValue = "";
                     if (modifier) hotkeyValue += modifier + " + ";

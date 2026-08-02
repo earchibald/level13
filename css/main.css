@@ -1255,6 +1255,15 @@ body.dark ul.tabs li span {
   overflow-x: hidden;
   width: 100%;
 }
+body.dark ul.tabs li span.tab-hotkey-number {
+  width: auto;
+  overflow-x: visible;
+  margin-left: 4px;
+  font-size: 0.7em;
+  font-weight: normal;
+  vertical-align: top;
+  color: rgba(255, 255, 255, 0.5);
+}
 body.dark div.popup {
   background: #282a28;
   border: 2px solid #3a3a3a;
@@ -3971,6 +3980,15 @@ body.sunlit ul.tabs li span {
   display: inline-block;
   overflow-x: hidden;
   width: 100%;
+}
+body.sunlit ul.tabs li span.tab-hotkey-number {
+  width: auto;
+  overflow-x: visible;
+  margin-left: 4px;
+  font-size: 0.7em;
+  font-weight: normal;
+  vertical-align: top;
+  color: rgba(0, 0, 0, 0.5);
 }
 body.sunlit div.popup {
   background: #fbfbfb;
