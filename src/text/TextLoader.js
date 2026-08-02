@@ -6,9 +6,9 @@ define(['ash', 'text/Text', 'game/GameGlobals', 'game/GlobalSignals', 'game/cons
             constructor: function () { },
 
             textSources: {
-                default: { language: "default", source: "/strings/strings.json", name: "Default" },
-                EN_GB: { language: "EN_GB", source: "/strings/strings.json", name: "English" },
-                FI_FI: { language: "FI_FI", source: "/strings/strings-fi.json", name: "suomi" },
+                default: { language: "default", source: "strings/strings.json", name: "Default" },
+                EN_GB: { language: "EN_GB", source: "strings/strings.json", name: "English" },
+                FI_FI: { language: "FI_FI", source: "strings/strings-fi.json", name: "suomi" },
             },
     
             isSupportedLanguage: function (language) {
