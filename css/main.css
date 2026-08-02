@@ -1256,12 +1256,14 @@ body.dark ul.tabs li span {
   width: 100%;
 }
 body.dark ul.tabs li span.tab-hotkey-number {
+  position: absolute;
+  top: 1px;
+  right: 3px;
   width: auto;
   overflow-x: visible;
-  margin-left: 4px;
-  font-size: 0.7em;
+  font-size: 0.65em;
   font-weight: normal;
-  vertical-align: top;
+  line-height: 1em;
   color: rgba(255, 255, 255, 0.5);
 }
 body.dark div.popup {
@@ -3982,12 +3984,14 @@ body.sunlit ul.tabs li span {
   width: 100%;
 }
 body.sunlit ul.tabs li span.tab-hotkey-number {
+  position: absolute;
+  top: 1px;
+  right: 3px;
   width: auto;
   overflow-x: visible;
-  margin-left: 4px;
-  font-size: 0.7em;
+  font-size: 0.65em;
   font-weight: normal;
-  vertical-align: top;
+  line-height: 1em;
   color: rgba(0, 0, 0, 0.5);
 }
 body.sunlit div.popup {

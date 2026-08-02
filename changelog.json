@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.4",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Tab number annotations sit in the tab corner; ENTER on the embark tab leaves the camp"
+				}
+			]
+		},
+		{
 			"version": "0.6.3.3",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

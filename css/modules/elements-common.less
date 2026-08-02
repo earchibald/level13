@@ -252,13 +252,16 @@ ul.tabs li span {
 }
 
 ul.tabs li span.tab-hotkey-number {
-	// subtle number-key annotation; overrides the 100% width the generic tab span gets
+	// subtle number-key annotation in the tab corner
+	// out of flow so the 100% width of the name span doesn't push it to the far edge
+	position: absolute;
+	top: 1px;
+	right: 3px;
 	width: auto;
 	overflow-x: visible;
-	margin-left: 4px;
-	font-size: 0.7em;
+	font-size: 0.65em;
 	font-weight: normal;
-	vertical-align: top;
+	line-height: 1em;
 	color: @color-text-meta;
 }
 

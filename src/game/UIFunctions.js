@@ -32,7 +32,7 @@ define(['ash',
 
 			// actions the context-sensitive ENTER hotkey can trigger, in priority order
 			// buttons for these actions show the hint even though the hotkey has no fixed action
-			contextHotkeyActions: [ "enter_camp", "move_level_up", "move_level_down" ],
+			contextHotkeyActions: [ "enter_camp", "move_level_up", "move_level_down", "leave_camp" ],
 
 			texts: [],
 
@@ -221,10 +221,12 @@ define(['ash',
 					this.registerHotkey("Select tab", "Digit" + i, defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabByNumber(tabIndex), options);
 				}
 
-				// ENTER acts on the current location: enter the camp or use a passage
+				// ENTER acts on the current location: enter the camp, use a passage, or leave the camp (embark tab)
 				// not shown in the hotkey list because it is location-specific; the buttons show the hint instead
 				this.registerHotkey("Enter camp / use passage", "Enter", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
 				this.registerHotkey("Enter camp / use passage", "NumpadEnter", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
+				this.registerHotkey("Leave camp", "Enter", defaultModifier, tabs.embark, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
+				this.registerHotkey("Leave camp", "NumpadEnter", defaultModifier, tabs.embark, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
 
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 			},
