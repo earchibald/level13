@@ -34,6 +34,9 @@ define(['ash',
 			// buttons for these actions show the hint even though the hotkey has no fixed action
 			contextHotkeyActions: [ "enter_camp", "move_level_up", "move_level_down", "leave_camp" ],
 
+			// hotkeys with custom callbacks whose buttons should still show a badge
+			manualHotkeyHints: { "move_camp_level": "B" },
+
 			texts: [],
 
 			HOTKEY_DEFAULT_MODIFIER: "HOTKEY_DEFAULT_MODIFIER",
@@ -231,6 +234,9 @@ define(['ash',
 				this.registerHotkey("Leave camp", "Enter", defaultModifier, tabs.embark, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
 				this.registerHotkey("Leave camp", "NumpadEnter", defaultModifier, tabs.embark, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
 
+				// asks for confirmation when available; shows the requirements when not
+				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
+
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
 				// same path as more > settings; the popup contains the hotkey list
@@ -306,7 +312,45 @@ define(['ash',
 					return prefix + hotkey.displayKeyShort;
 				}
 				if (this.contextHotkeyActions.indexOf(action) >= 0) return "&#9166;";
+				if (this.manualHotkeyHints[action]) return this.manualHotkeyHints[action];
 				return null;
+			},
+
+			triggerBackToCamp: function () {
+				let action = "move_camp_level";
+				let $btn = $("#out-action-move-camp");
+				if (!$btn.is(":visible")) return;
+
+				if (GameGlobals.playerActionsHelper.checkAvailability(action)) {
+					this.showConfirmation("Go back to camp?", () => $btn.click(), false, true);
+				} else {
+					this.showBackToCampRequirementsPopup(action);
+				}
+			},
+
+			showBackToCampRequirementsPopup: function (action) {
+				let msg = "";
+
+				let reqsResult = GameGlobals.playerActionsHelper.checkRequirements(action, false);
+				if (reqsResult.value < 1 && reqsResult.reason) {
+					msg += "<span class='btn-disabled-reason action-cost-blocker'>" + Text.t(reqsResult.reason) + "</span><br/><br/>";
+				}
+
+				let costs = GameGlobals.playerActionsHelper.getCosts(action);
+				let costKeys = costs ? Object.keys(costs) : [];
+				if (costKeys.length > 0) {
+					msg += "<span class='p-meta'>Costs:</span><br/>";
+					for (let i = 0; i < costKeys.length; i++) {
+						let key = costKeys[i];
+						let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
+						let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
+						msg += "<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span><br/>";
+					}
+				}
+
+				if (msg.length == 0) msg = "Cannot go back to camp right now.";
+
+				this.showInfoPopup("Back to camp", msg, "OK", null, null, false, true);
 			},
 
 			triggerContextEnterAction: function () {
@@ -1355,9 +1399,12 @@ define(['ash',
 			},
 
 			updateText: function ($elem, text) {
-				let current = $elem.text();
+				// buttons processed by ActionButton keep their overlay children; the text lives in the label
+				let $label = $elem.children(".btn-label");
+				let $target = $label.length > 0 ? $label : $elem;
+				let current = $target.text();
 				if (current == text) return;
-				$elem.text(text);
+				$target.text(text);
 			},
 
 			stopButtonCooldown: function (button) {
@@ -1766,9 +1813,9 @@ define(['ash',
 				this.popupManager.showPopup(title, msg, null, "Cancel", null, null, null, options);
 			},
 
-			showConfirmation: function (msg, callback, isMeta) {
+			showConfirmation: function (msg, callback, isMeta, isDismissable) {
 				let uiFunctions = this;
-				
+
 				let okCallback = function (e) {
 					uiFunctions.popupManager.closePopup("common-popup");
 					callback();
@@ -1778,7 +1825,8 @@ define(['ash',
 				};
 				let options = {
 					isMeta: isMeta,
-					isDismissable: false,
+					// dismissing (Esc) triggers the cancel button, so this is safe to allow
+					isDismissable: isDismissable || false,
 				};
 				
 				this.popupManager.showPopup("Confirmation", msg, "Confirm", "Cancel", null, okCallback, cancelCallback, options);

@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.7",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "B asks to go back to camp (Enter confirms, Esc cancels); when camp is unreachable it shows the requirements. Fix hotkey badges missing from localized buttons (Enter camp, Go, passages, collect all, movement)."
+				}
+			]
+		},
+		{
 			"version": "0.6.3.6",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

@@ -272,3 +272,8 @@ button.btn-disabled-basic, button.btn-disabled-vision, button.btn-disabled-resou
 button.btn-disabled .hotkey-hint {
     display: none !important;
 }
+
+// back to camp keeps its badge when disabled; the hotkey then explains the requirements
+#out-action-move-camp.btn-disabled .hotkey-hint {
+	display: block !important;
+}

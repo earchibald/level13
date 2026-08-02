@@ -1045,6 +1045,9 @@ body.dark .container-btn-action:hover .hotkey-hint {
 body.dark button.btn-disabled .hotkey-hint {
   display: none !important;
 }
+body.dark #out-action-move-camp.btn-disabled .hotkey-hint {
+  display: block !important;
+}
 body.dark div.container-btn-action:hover + div.btn-callout,
 body.dark div.btn-callout:hover,
 body.dark .info-callout-target:hover + div.info-callout,
@@ -3796,6 +3799,9 @@ body.sunlit .container-btn-action:hover .hotkey-hint {
 }
 body.sunlit button.btn-disabled .hotkey-hint {
   display: none !important;
+}
+body.sunlit #out-action-move-camp.btn-disabled .hotkey-hint {
+  display: block !important;
 }
 body.sunlit div.container-btn-action:hover + div.btn-callout,
 body.sunlit div.btn-callout:hover,
