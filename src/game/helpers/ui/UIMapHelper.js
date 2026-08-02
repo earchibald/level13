@@ -344,7 +344,10 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 						let sectorYpx = this.getSectorPixelPos(dimensions, options.centered, sectorSize, x, y).y;
 						let sectorPos = new PositionVO(level, x, y);
 						var data = "data-level='" + sectorPos.level + "' data-x='" + sectorPos.sectorX + "' data-y='" + sectorPos.sectorY + "'";
-						var $div = $("<div class='canvas-overlay-cell map-overlay-cell' style='top: " + sectorYpx + "px; left: " + sectorXpx + "px' " + data +"></div>");
+						// size the hit area from the same sectorSize used to position it, so it tracks the map zoom
+						// (the CSS width/height is fixed at the unzoomed sector size and would misalign when zoomed)
+						var style = "top: " + sectorYpx + "px; left: " + sectorXpx + "px; width: " + sectorSize + "px; height: " + sectorSize + "px";
+						var $div = $("<div class='canvas-overlay-cell map-overlay-cell' style='" + style + "' " + data +"></div>");
 						if (sectorSelectedCallback) {
 							$div.click(function (e) {
 								GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
