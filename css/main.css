@@ -6108,14 +6108,14 @@ body.touch .collapsible-header {
   padding-top: 10px;
   padding-bottom: 10px;
 }
-div.popup {
-  box-sizing: border-box;
-  max-height: 94vh;
-  max-height: calc(100dvh - 10px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
 @media screen and (max-width: 850px) {
+  div.popup {
+    box-sizing: border-box;
+    max-height: 94vh;
+    max-height: calc(100dvh - 10px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   body[class] div.popup {
     max-width: 90%;
   }
@@ -6136,7 +6136,6 @@ div.popup {
 }
 #incoming-caravan-inventorybox {
   display: flex;
-  justify-content: center;
 }
 #inventorylist-incoming-caravan-camp-inventory,
 #inventorylist-incoming-caravan-trader-inventory {
@@ -6149,6 +6148,7 @@ div.popup {
 @media screen and (max-width: 568px) {
   #incoming-caravan-inventorybox {
     flex-wrap: wrap;
+    justify-content: center;
     gap: 5px;
   }
   #incoming-caravan-inventorybox .inventorydivision {
@@ -6275,6 +6275,9 @@ body.layout-small #footer {
 }
 #btn-log-toggle {
   display: none;
+}
+body.vision-step-0 #btn-log-toggle {
+  pointer-events: none;
 }
 body.layout-small #btn-log-toggle {
   display: block;

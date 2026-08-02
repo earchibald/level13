@@ -28,12 +28,13 @@ define(['ash',
 
 		SMALL_LAYOUT_THRESHOLD: 850,  // make sure this corresponds to something in gridism.css
 
-		// True on touch-screen devices. Overridable with ?touch=1 / ?touch=0 for testing.
+		// True when the PRIMARY pointer is a touch screen. Touchscreen laptops with
+		// a mouse/trackpad report a fine pointer and keep the desktop hover UI.
+		// Overridable with ?touch=1 / ?touch=0 for testing.
 		isTouchScreen: function () {
 			if (window.location.search.indexOf("touch=1") >= 0) return true;
 			if (window.location.search.indexOf("touch=0") >= 0) return false;
-			if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true;
-			return "ontouchstart" in window;
+			return window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 		},
 		
 		UNLOCKABLE_FEATURE_WORKER_AUTO_ASSIGNMENT: "workerAutoAssignment",

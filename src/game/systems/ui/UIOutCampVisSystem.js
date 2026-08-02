@@ -163,8 +163,11 @@ define([
 							if (this.isHoverable(building.name)) {
 								$elem.mouseleave({ system: this, building: building.name }, this.onMouseLeaveBuilding);
 								$elem.mouseenter({ system: this, building: building.name }, this.onMouseEnterBuilding);
-								// tap toggles the building info on touch screens (no hover)
-								$elem.click({ system: this, building: building.name }, this.onClickBuilding);
+								// tap toggles the building info on touch screens (no hover);
+								// on desktop a click would just hide the hover overlay
+								if (GameGlobals.uiFunctions && GameGlobals.uiFunctions.isTouchUI()) {
+									$elem.click({ system: this, building: building.name }, this.onClickBuilding);
+								}
 							}
 						}
 						

@@ -177,16 +177,18 @@ body.touch .collapsible-header {
 // Note: body always carries a theme class (.dark/.sunlit), so overrides of
 // themed rules use a body[class] prefix to match their specificity; this
 // module is imported last, so the cascade order decides.
-
-div.popup {
-	box-sizing: border-box;
-	max-height: 94vh;
-	max-height: ~"calc(100dvh - 10px)";
-	overflow-y: auto;
-	-webkit-overflow-scrolling: touch;
-}
+// The shell rules stay inside the small-layout media query: on desktop the
+// old overflow behavior lets hover callouts extend past the popup border.
 
 @media screen and (max-width: 850px) {
+	div.popup {
+		box-sizing: border-box;
+		max-height: 94vh;
+		max-height: ~"calc(100dvh - 10px)";
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	body[class] div.popup {
 		max-width: 90%;
 	}
@@ -216,7 +218,6 @@ div.popup {
 
 #incoming-caravan-inventorybox {
 	display: flex;
-	justify-content: center;
 }
 
 #inventorylist-incoming-caravan-camp-inventory,
@@ -232,6 +233,7 @@ div.popup {
 @media screen and (max-width: 568px) {
 	#incoming-caravan-inventorybox {
 		flex-wrap: wrap;
+		justify-content: center;
 		gap: 5px;
 	}
 
@@ -419,6 +421,11 @@ body.layout-small #footer {
 
 #btn-log-toggle {
 	display: none;
+}
+
+// invisible chrome must not stay tappable while the player is "down"
+body.vision-step-0 #btn-log-toggle {
+	pointer-events: none;
 }
 
 body.layout-small #btn-log-toggle {

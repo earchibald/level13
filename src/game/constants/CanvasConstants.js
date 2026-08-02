@@ -143,9 +143,11 @@ define(['ash', 'game/constants/UIConstants'
 			if (isScrollEnabled && !$("#" + canvasId).hasClass("scroll-enabled"))
 				$("#" + canvasId).addClass("scroll-enabled");
 			// only block native touch scrolling while there is something to pan;
-			// otherwise a small canvas would be a page-scroll dead zone on touch
+			// otherwise a small canvas would be a page-scroll dead zone on touch.
+			// Containers with their own pinch zoom keep touch-action: none always.
 			if (scrollContainer.length > 0 && scrollContainer[0].style.touchAction !== "") {
-				scrollContainer[0].style.touchAction = isScrollEnabled ? "none" : "pan-y";
+				let hasTouchZoom = scrollContainer[0].dataset && scrollContainer[0].dataset.touchZoom === "true";
+				scrollContainer[0].style.touchAction = isScrollEnabled || hasTouchZoom ? "none" : "pan-y";
 			}
 		},
 		

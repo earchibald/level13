@@ -1137,7 +1137,8 @@ define([
 			// in short (landscape) viewports the mobile header is static and scrolls
 			// away, so the content needs no padding to clear it (see mobile.less)
 			let isHeaderFixed = $("#mobile-header").css("position") == "fixed";
-			let padding = isSmallLayout && isHeaderFixed ? Math.ceil($("#mobile-header").height()) + 20 : 15;
+			// outerHeight includes padding and border, so safe-area insets count
+			let padding = isSmallLayout && isHeaderFixed ? Math.ceil($("#mobile-header").outerHeight()) + 7 : 15;
 			$("#unit-main").css("padding-top", padding + "px");
 			$("#log-container").css("padding-top", (padding + 10) + "px");
 		},

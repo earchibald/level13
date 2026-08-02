@@ -280,6 +280,10 @@ define(['ash',
 				});
 			},
 
+			isTouchUI: function () {
+				return UIConstants.isTouchScreen();
+			},
+
 			openCallout: function ($container, $target) {
 				$container.addClass("callout-visible");
 				// fire the same hooks hover fires so callout content and buttons refresh
@@ -1797,7 +1801,9 @@ define(['ash',
 						cancelLongTap();
 					});
 					$(el).on('contextmenu', function (e) {
-						e.preventDefault();
+						// only suppress the long-press context menu on touch screens;
+						// desktop right-click stays available
+						if (UIConstants.isTouchScreen()) e.preventDefault();
 					});
 				});
 			},

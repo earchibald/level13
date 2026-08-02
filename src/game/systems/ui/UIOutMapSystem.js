@@ -151,6 +151,9 @@ define([
 			let sys = this;
 			let container = $("#mainmap-container")[0];
 			if (!container) return;
+			// tells CanvasConstants to keep touch-action: none even when the canvas
+			// fits, so pinch gestures are never claimed by native page scrolling
+			container.dataset.touchZoom = "true";
 			let pinch = { active: false, startDist: 0 };
 			let getTouchDistance = function (e) {
 				let dx = e.touches[0].pageX - e.touches[1].pageX;
