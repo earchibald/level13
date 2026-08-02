@@ -71,6 +71,15 @@ define([
 			$("#minimap-background-overlay").on("mouseenter", ".map-hint-cell", this._onSectorHoverIn);
 			$("#minimap-background-overlay").on("mousemove", ".map-hint-cell", this._onSectorHoverMove);
 			$("#minimap-background-overlay").on("mouseleave", ".map-hint-cell", this._onSectorHoverOut);
+			// touch parity: tap shows the minimap tooltips (hover does not exist);
+			// the main map needs no tap tooltip since tap opens the details panel
+			if (UIConstants.isTouchScreen()) {
+				this._onSectorTapTooltip = $.proxy(this.onSectorTapTooltip, this);
+				this._onDocumentTapHideTooltip = $.proxy(this.onDocumentTapHideTooltip, this);
+				$("#minimap-overlay").on("click", ".map-overlay-cell", this._onSectorTapTooltip);
+				$("#minimap-background-overlay").on("click", ".map-hint-cell", this._onSectorTapTooltip);
+				$(document).on("click", this._onDocumentTapHideTooltip);
+			}
 			this.playerPositionNodes = engine.getNodeList(PlayerPositionNode);
 			this.playerLocationNodes = engine.getNodeList(PlayerLocationNode);
 			GlobalSignals.add(this, GlobalSignals.playerPositionChangedSignal, this.hideSectorTooltip);
@@ -96,6 +105,11 @@ define([
 			$("#minimap-background-overlay").off("mouseenter", ".map-hint-cell", this._onSectorHoverIn);
 			$("#minimap-background-overlay").off("mousemove", ".map-hint-cell", this._onSectorHoverMove);
 			$("#minimap-background-overlay").off("mouseleave", ".map-hint-cell", this._onSectorHoverOut);
+			if (this._onSectorTapTooltip) {
+				$("#minimap-overlay").off("click", ".map-overlay-cell", this._onSectorTapTooltip);
+				$("#minimap-background-overlay").off("click", ".map-hint-cell", this._onSectorTapTooltip);
+				$(document).off("click", this._onDocumentTapHideTooltip);
+			}
 			this.playerPositionNodes = null;
 			this.playerLocationNodes = null;
 		},
@@ -427,6 +441,25 @@ define([
 		onSectorHoverMove: function (e) {
 			this.tooltipCursor = { x: e.clientX, y: e.clientY };
 			// once shown the pane stays put, so it does not jitter under the cursor
+		},
+
+		onSectorTapTooltip: function (e) {
+			let $cell = $(e.currentTarget);
+			let level = parseInt($cell.attr("data-level"));
+			let x = parseInt($cell.attr("data-x"));
+			let y = parseInt($cell.attr("data-y"));
+			let hintID = $cell.attr("data-hint-id");
+			let contextLabel = hintID ? this.MAP_HINT_LABELS[hintID] : null;
+
+			this.cancelSectorTooltip();
+			this.tooltipCursor = { x: e.clientX, y: e.clientY };
+			this.showSectorTooltip(level, x, y, contextLabel);
+			e.stopPropagation();
+		},
+
+		onDocumentTapHideTooltip: function (e) {
+			if ($(e.target).closest(".map-overlay-cell, .map-hint-cell, #map-sector-tooltip").length > 0) return;
+			this.hideSectorTooltip();
 		},
 
 		onSectorHoverOut: function (e) {
