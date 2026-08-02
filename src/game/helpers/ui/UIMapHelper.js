@@ -46,11 +46,33 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 		isMapRevealed: false,
 		isMapEasyMode: false,
 
+		MAP_ZOOM_MAIN_MIN: 0.6,
+		MAP_ZOOM_MAIN_MAX: 2.4,
+		MAP_ZOOM_MAIN_STEP: 0.3,
+
+		mapZoom: 1,
+
 		constructor: function (engine) {
 			this.playerPosNodes = engine.getNodeList(PlayerPositionNode);
 			this.isMapRevealed = false;
 			this.isMapEasyMode = false;
+			this.mapZoom = 1;
 			this.icons = MapElements.icons;
+		},
+
+		getMapZoom: function () {
+			return this.mapZoom;
+		},
+
+		setMapZoom: function (value) {
+			let clamped = MathUtils.clamp(value, this.MAP_ZOOM_MAIN_MIN, this.MAP_ZOOM_MAIN_MAX);
+			let changed = clamped != this.mapZoom;
+			this.mapZoom = clamped;
+			return changed;
+		},
+
+		changeMapZoom: function (steps) {
+			return this.setMapZoom(this.mapZoom + steps * this.MAP_ZOOM_MAIN_STEP);
 		},
 
 		enableScrollingForMap: function (canvasId) {
@@ -1125,7 +1147,8 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 		},
 
 		getSectorSize: function (centered) {
-			return MapUtils.getSectorSize(centered ? MapUtils.MAP_ZOOM_MINIMAP : MapUtils.MAP_ZOOM_DEFAULT);
+			if (centered) return MapUtils.getSectorSize(MapUtils.MAP_ZOOM_MINIMAP);
+			return Math.round(MapUtils.getSectorSize(MapUtils.MAP_ZOOM_DEFAULT) * this.mapZoom);
 		},
 
 		getGridSize: function () {

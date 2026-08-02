@@ -15,6 +15,7 @@ define([
 	'game/constants/TextConstants',
 	'game/constants/TradeConstants',
 	'game/constants/UIConstants',
+	'game/constants/CanvasConstants',
 	'game/nodes/PlayerLocationNode',
 	'game/nodes/PlayerPositionNode',
 	'game/components/common/CampComponent',
@@ -30,7 +31,7 @@ define([
 	'game/components/player/ItemsComponent',
 	'game/components/type/LevelComponent',
 	'game/systems/CheatSystem',
-], function (Ash, Text, FileUtils, MapUtils, GameGlobals, GlobalSignals, GameConstants, ItemConstants, LevelConstants, LocaleConstants, MovementConstants, PositionConstants, SectorConstants, TextConstants, TradeConstants, UIConstants,
+], function (Ash, Text, FileUtils, MapUtils, GameGlobals, GlobalSignals, GameConstants, ItemConstants, LevelConstants, LocaleConstants, MovementConstants, PositionConstants, SectorConstants, TextConstants, TradeConstants, UIConstants, CanvasConstants,
 	PlayerLocationNode, PlayerPositionNode,
 	CampComponent, PositionComponent, EnemiesComponent, PassagesComponent, SectorControlComponent, SectorFeaturesComponent, SectorLocalesComponent, SectorStatusComponent, SectorImprovementsComponent, WorkshopComponent, ItemsComponent, LevelComponent,
 	CheatSystem) {
@@ -56,6 +57,8 @@ define([
 			$("#select-header-mapmode").on("change", $.proxy(this.onMapModeSelectorChanged, this));
 			$("#select-header-mapstyle").on("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.enableScrollingForMap("mainmap");
+			this._onMapMouseWheel = $.proxy(this.onMapMouseWheel, this);
+			$("#mainmap-container").on("wheel", this._onMapMouseWheel);
 			this.playerPositionNodes = engine.getNodeList(PlayerPositionNode);
 			this.playerLocationNodes = engine.getNodeList(PlayerLocationNode);
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
@@ -71,6 +74,7 @@ define([
 			$("#select-header-mapmode").off("change", $.proxy(this.onMapModeSelectorChanged, this));
 			$("#select-header-mapstyle").off("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.disableScrollingForMap("mainmap");
+			if (this._onMapMouseWheel) $("#mainmap-container").off("wheel", this._onMapMouseWheel);
 			this.playerPositionNodes = null;
 			this.playerLocationNodes = null;
 		},
@@ -299,6 +303,57 @@ define([
 				$("#mainmap-sector-details-misc").html(this.getMiscHTML(this.selectedSector, isScouted));
 				$("#mainmap-sector-debug-text").text("Zone: " + sectorFeatures.zone);
 			}
+		},
+
+		onMapMouseWheel: function (e) {
+			if (this.selectedMapStyle != this.MAP_STYLE_CANVAS) return;
+			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
+			let originalEvent = e.originalEvent || e;
+			let deltaY = originalEvent.deltaY;
+			if (!deltaY) return;
+			e.preventDefault();
+			this.zoomMap(deltaY < 0 ? 1 : -1, originalEvent.pageX, originalEvent.pageY);
+		},
+
+		zoomMap: function (steps, pageX, pageY) {
+			let changed = GameGlobals.uiMapHelper.changeMapZoom(steps);
+			if (!changed) return;
+
+			let $canvas = $("#mainmap");
+			let $scrollContainer = $canvas.parent();
+			let containerOffset = $scrollContainer.offset();
+
+			let oldWidth = $canvas[0].width;
+			let oldHeight = $canvas[0].height;
+
+			// point on the map that is currently under the cursor (or the center if unknown)
+			let viewX = pageX != null ? pageX - containerOffset.left : $scrollContainer.width() / 2;
+			let viewY = pageY != null ? pageY - containerOffset.top : $scrollContainer.height() / 2;
+			let focusX = viewX + $scrollContainer.scrollLeft();
+			let focusY = viewY + $scrollContainer.scrollTop();
+			let ratioX = oldWidth > 0 ? focusX / oldWidth : 0.5;
+			let ratioY = oldHeight > 0 ? focusY / oldHeight : 0.5;
+
+			this.rebuildMapForZoom();
+
+			// keep the same map point under the cursor after zooming
+			let newWidth = $canvas[0].width;
+			let newHeight = $canvas[0].height;
+			$scrollContainer.scrollLeft(ratioX * newWidth - viewX);
+			$scrollContainer.scrollTop(ratioY * newHeight - viewY);
+			CanvasConstants.updateScrollIndicators("mainmap");
+		},
+
+		rebuildMapForZoom: function () {
+			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
+			let sys = this;
+			let mapPosition = this.getCurrentMapPosition();
+			let levelEntity = GameGlobals.levelHelper.getLevelEntityForPosition(mapPosition.level);
+			if (!levelEntity) return;
+			this.map = GameGlobals.uiMapHelper.rebuildMap("mainmap", "mainmap-overlay", mapPosition, -1, false, this.selectedMapMode, function (level, x, y) {
+				sys.onSectorSelected(level, x, y);
+			});
+			GameGlobals.uiMapHelper.setSelectedSector(this.map, this.selectedSector);
 		},
 
 		centerMap: function (pos, animate) {

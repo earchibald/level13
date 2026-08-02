@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+# Deploys the static site to GitHub Pages from THIS branch (gh-pages).
+#
+# gh-pages is the upstream release branch — the same branch that serves
+# https://nroutasuo.github.io/level13/. It is NOT the default branch.
+# master is unreleased development work and must not be deployed.
+
+on:
+  push:
+    branches:
+      - gh-pages
+  workflow_dispatch:
+
+# Allow the workflow to publish to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, without cancelling in-progress runs.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The game is a static site served from the repository root.
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
