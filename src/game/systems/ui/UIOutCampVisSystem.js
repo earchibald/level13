@@ -163,6 +163,8 @@ define([
 							if (this.isHoverable(building.name)) {
 								$elem.mouseleave({ system: this, building: building.name }, this.onMouseLeaveBuilding);
 								$elem.mouseenter({ system: this, building: building.name }, this.onMouseEnterBuilding);
+								// tap toggles the building info on touch screens (no hover)
+								$elem.click({ system: this, building: building.name }, this.onClickBuilding);
 							}
 						}
 						
@@ -485,6 +487,12 @@ define([
 		onMouseLeaveBuilding: function (e) {
 			e.data.system.hoveredBuilding = null;
 			e.data.system.updateInfoOverlay();
+		},
+
+		onClickBuilding: function (e) {
+			let system = e.data.system;
+			system.hoveredBuilding = system.hoveredBuilding == e.data.building ? null : e.data.building;
+			system.updateInfoOverlay();
 		},
 		
 		getBuildingSpotCoords: function (i) {

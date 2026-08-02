@@ -16,8 +16,11 @@
 	<meta itemprop="description" name="description" property="og:description" content="A text-based science fiction adventure game.">
 	<meta itemprop="image" property="og:image" content="favicon.png" />
 	<meta itemprop="name" property="og:title" content="Level 13" />
-	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+	<meta name="theme-color" content="#202220">
 	<link rel="shortcut icon" href="favicon.ico" />
+	<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
 	<link rel="stylesheet" type="text/css" href="css/normalize.css" />
 	<link rel="stylesheet" type="text/css" href="css/gridism.css" />
@@ -36,17 +39,13 @@
 				<div id="mobile-header" class="hidden-when-down" role="banner">
 					<div id="mobile-header-tribe">
 						<div id="statsbar-tribe-stats-mobile" class="statsbar-tribe-stats mobile-header-section"></div>
-						<!--
-						<span id="statsbar-hope-mobile" class="statsbar statsbar-hope">
+						<span id="statsbar-deity-mobile" class="statsbar statsbar-deity">
 							Deity: <span id="deity-name-mobile" class="deity-name">Name</span>
 						</span>
-						-->
 					</div>
 					<div id="mobile-header-self">
 						<div class="player-stats-container mobile-header-section"></div>
-						<!--
 						<div id="container-equipment-stats-mobile" class="container-equipment-stats"></div>
-						-->
 					</div>
 					<div id="mobile-header-status" class="mobile-header-section">
 						<ul class="itemlist player-perks-list" id="player-perks-list-mobile"></ul>
@@ -64,15 +63,11 @@
 							<span class="value">0</span>
 						</span>
 						<div id="bag-resources-mobile" class="bag-resources statsbar"></div>
-						<!--
 						<ul class="itemlist list-header-items" id="list-header-items-mobile"></ul>
-						-->
 					</div>
-					<!--
 					<div id="mobile-header-explorers" class="mobile-header-section">
 						<ul class="itemlist list-header-explorers" id="list-header-explorers-mobile"></ul>
 					</div>
-					-->
 					<div id="mobile-header-camp" class="mobile-header-section">
 						<div id="header-camp-storage-mobile" class="stat-indicator header-camp-storage">
 							<span class="label"></span>
@@ -126,7 +121,7 @@
 					</div>
 				</div>
 				
-				<div class="grid" id="grid-main-header" class="vision-container hidden-when-down" role="banner">
+				<div class="grid vision-container hidden-when-down" id="grid-main-header" role="banner">
 					<h3 class="hide-from-visual-layout">Stats</h3>
 					<div class="unit whole lvl13-box-1 header-row" id="header-tribe-container">
 						<div id="statsbar-self" class="statsbar">
@@ -539,6 +534,10 @@
 									<canvas id="mainmap" width="500" height="500" role="img" aria-label="level map"></canvas>
 									<div id="mainmap-overlay" class="canvas-overlay"></div>
 								</div>
+								<div id="mainmap-zoom-controls">
+									<button id="btn-mainmap-zoom-in" class="btn-glyph-big" aria-label="Zoom in">+</button>
+									<button id="btn-mainmap-zoom-out" class="btn-glyph-big" aria-label="Zoom out">&minus;</button>
+								</div>
 							</div>
 							<div id="mainmap-container-ascii">
 								<textarea rows="12" readonly></textarea>
@@ -740,12 +739,12 @@
 			</div><!-- excluding log -->
 			
 			<div id="log-container" class="unit one-fifth div-horizontal-space-filler hidden-by-popups">
-				<h1 class="hide-from-visual-layout hide-while-loading" id="header-log-main">Log</h2>
-				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-latest">Latest</h3>
+				<h1 class="hide-from-visual-layout hide-while-loading" id="header-log-main">Log</h1>
+				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-latest">Latest</h2>
 				<div id="log-latest" class="hide-from-visual-layout">
 					<ul role="log"></ul>
 				</div>
-				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-all">All</h3>
+				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-all">All</h2>
 				<div id="log" class="limit-height">
 					<ul></ul>
 				</div>
@@ -775,7 +774,11 @@
 			</ul>
 		</div>
 	</div><!-- sticky footer -->
-	
+
+	<!-- mobile log drawer toggle (shown in small layout only) -->
+
+	<button id="btn-log-toggle" class="hidden-by-popups" aria-label="Toggle message log">log</button>
+
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
@@ -847,25 +850,25 @@
 		<div id="incoming-caravan-popup" role="dialog" class="popup popup-wide fill-on-mobiles hidden-by-default popup-ingame" style="display:none" aria-labelledby="trade-header" aria-modal="true">
 			<h3 id="trade-header">Trader</h3>
 			<p id="incoming-caravan-popup-markup"></p>
-			<div class="inventorybox" style="display:flex">
-				<div id="inventorylist-incoming-caravan-camp-inventory" class="inventorydivision" style="width: 170px">
+			<div class="inventorybox" id="incoming-caravan-inventorybox">
+				<div id="inventorylist-incoming-caravan-camp-inventory" class="inventorydivision inventorydivision-inventory">
 					<p class="inventorybox-header">Camp inventory</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
 				</div>
-				<div id="inventorylist-incoming-caravan-camp-offer" class="inventorydivision inventorydivision-with-footer highlightbox" style="width: 130px">
+				<div id="inventorylist-incoming-caravan-camp-offer" class="inventorydivision inventorydivision-offer inventorydivision-with-footer highlightbox">
 					<p class="inventorybox-header">Camp offer</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
-					<p class="value inventorybox-footer">0</span>
+					<p class="value inventorybox-footer">0</p>
 				</div>
-				<div id="inventorylist-incoming-caravan-trader-offer" class="inventorydivision inventorydivision-with-footer highlightbox" style="width: 130px">
+				<div id="inventorylist-incoming-caravan-trader-offer" class="inventorydivision inventorydivision-offer inventorydivision-with-footer highlightbox">
 					<p class="inventorybox-header">Trader offer</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
-					<p class="value inventorybox-footer">0</span>
+					<p class="value inventorybox-footer">0</p>
 				</div>
-				<div id="inventorylist-incoming-caravan-trader-inventory" class="inventorydivision" style="width: 170px">
+				<div id="inventorylist-incoming-caravan-trader-inventory" class="inventorydivision inventorydivision-inventory">
 					<p class="inventorybox-header">Trader inventory</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>

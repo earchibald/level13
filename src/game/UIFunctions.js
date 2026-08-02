@@ -56,11 +56,13 @@ define(['ash',
 			},
 			
 			init: function () {
+				$("body").toggleClass("touch", UIConstants.isTouchScreen());
 				this.registerHotkeys();
 				this.generateElements();
 				this.hideElements();
 				this.registerListeners();
 				this.registerGlobalMouseEvents();
+				this.registerTouchAndMobileListeners();
 			},
 
 			registerListeners: function () {
@@ -157,20 +159,125 @@ define(['ash',
 			},
 
 			registerGlobalMouseEvents: function () {
+				// pointer events cover both mouse and touch, so hold-to-repeat works on touch too
 				GameGlobals.gameState.uiStatus.mouseDown = false;
 				GameGlobals.gameState.uiStatus.mouseDownElement = null;
-				$(document).on('mouseleave', function (e) {
+				$(document).on('pointerleave', function (e) {
 					GameGlobals.gameState.uiStatus.mouseDown = false;
 					GameGlobals.gameState.uiStatus.mouseDownElement = null;
 				});
-				$(document).on('mouseup', function (e) {
+				$(document).on('pointerup pointercancel', function (e) {
 					GameGlobals.gameState.uiStatus.mouseDown = false;
 					GameGlobals.gameState.uiStatus.mouseDownElement = null;
 				});
-				$(document).on('mousedown', function (e) {
+				$(document).on('pointerdown', function (e) {
 					GameGlobals.gameState.uiStatus.mouseDown = true;
 					GameGlobals.gameState.uiStatus.mouseDownElement = e.target;
 				});
+			},
+
+			registerTouchAndMobileListeners: function () {
+				let uiFunctions = this;
+				let isTouch = UIConstants.isTouchScreen();
+
+				// checkbox labels toggle their checkbox (all devices)
+				$(document).on("click", ".checkbox-label", function () {
+					let $box = $(this).prevAll("input[type='checkbox']").first();
+					if ($box.length == 0 || $box.prop("disabled")) return;
+					$box.prop("checked", !$box.prop("checked")).trigger("change");
+				});
+
+				// mobile log drawer toggle (small layout only, see mobile css)
+				$("#btn-log-toggle").click(function () {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					$("body").toggleClass("log-drawer-open");
+				});
+
+				if (!isTouch) return;
+
+				// tap toggles info callouts (hover is not available on touch)
+				$(document).on("click", ".info-callout-target", function (e) {
+					if ($(e.target).closest("button, a, input, select, textarea").length > 0) return;
+					let $container = $(this).closest(".callout-container");
+					if ($container.length == 0) return;
+					let wasOpen = $container.hasClass("callout-visible");
+					uiFunctions.closeAllCallouts();
+					if (!wasOpen) {
+						uiFunctions.openCallout($container, $(this));
+					}
+					e.stopPropagation();
+				});
+
+				// tap on a disabled action button shows its callout (costs + disabled reason)
+				$(document).on("click", ".container-btn-action > button", function (e) {
+					if (!$(this).hasClass("btn-disabled")) return;
+					let $container = $(this).closest(".callout-container");
+					if ($container.length == 0) return;
+					let wasOpen = $container.hasClass("callout-visible");
+					uiFunctions.closeAllCallouts();
+					if (!wasOpen) {
+						uiFunctions.openCallout($container, $(this));
+					}
+					e.stopPropagation();
+				});
+
+				// long-press on an enabled action button previews its callout instead of acting
+				let longPressDelay = 500;
+				$(document).on("pointerdown", ".container-btn-action > button", function (e) {
+					if (e.pointerType === "mouse") return;
+					let btn = this;
+					let $btn = $(btn);
+					uiFunctions.cancelLongPress($btn);
+					let timer = setTimeout(function () {
+						btn.dataset.longPressFired = "true";
+						let $container = $btn.closest(".callout-container");
+						uiFunctions.closeAllCallouts();
+						uiFunctions.openCallout($container, $btn);
+					}, longPressDelay);
+					$btn.data("long-press-timer", timer);
+				});
+				$(document).on("pointerup pointercancel pointerleave pointermove", ".container-btn-action > button", function (e) {
+					if (e.type == "pointermove") return; // small jitter should not cancel; click suppression handles fired presses
+					uiFunctions.cancelLongPress($(this));
+				});
+				// suppress the click that follows a long-press (capture phase runs before the action handler)
+				document.addEventListener("click", function (e) {
+					let btn = e.target.closest ? e.target.closest(".container-btn-action > button") : null;
+					if (btn && btn.dataset.longPressFired === "true") {
+						btn.dataset.longPressFired = "false";
+						e.preventDefault();
+						e.stopPropagation();
+					}
+				}, true);
+				// long-press should not open the browser context menu on buttons
+				$(document).on("contextmenu", ".container-btn-action", function (e) {
+					e.preventDefault();
+				});
+
+				// tap outside closes open callouts
+				$(document).on("click", function (e) {
+					if ($(e.target).closest(".callout-container").length > 0) return;
+					uiFunctions.closeAllCallouts();
+				});
+			},
+
+			openCallout: function ($container, $target) {
+				$container.addClass("callout-visible");
+				// fire the same hooks hover fires so callout content and buttons refresh
+				if ($target) $target.trigger("mouseenter");
+				GlobalSignals.elementToggledSignal.dispatch();
+			},
+
+			closeAllCallouts: function () {
+				$(".callout-container.callout-visible").removeClass("callout-visible");
+			},
+
+			cancelLongPress: function ($btn) {
+				let timer = $btn.data("long-press-timer");
+				if (timer) {
+					clearTimeout(timer);
+					$btn.data("long-press-timer", null);
+				}
 			},
 
 			registerHotkeys: function () {
@@ -563,7 +670,7 @@ define(['ash',
 
 			generateSteppers: function (scope) {
 				$(scope + " .stepper").append("<button type='button' class='btn-glyph' data-type='minus' data-field=''>-</button>");
-				$(scope + " .stepper").append("<input class='amount' type='text' min='0' max='100' autocomplete='off' value='0' name='' tabindex='0'></input>");
+				$(scope + " .stepper").append("<input class='amount' type='text' inputmode='numeric' pattern='[0-9]*' min='0' max='100' autocomplete='off' value='0' name='' tabindex='0'></input>");
 				$(scope + " .stepper").append("<button type='button' class='btn-glyph' data-type='plus' data-field=''>+</button>");
 				$(scope + " .stepper button").attr("data-field", function (i, val) {
 					return $(this).parent().attr("id") + "-input";
@@ -846,6 +953,7 @@ define(['ash',
 				$("#switch-tabs li").removeClass("selected");
 				$("#switch-tabs li#" + tabID).addClass("selected");
 				$("#tab-header h2").text(tabID);
+				this.scrollTabIntoView();
 
 				GameGlobals.gameState.uiStatus.currentTab = tabID;
 
@@ -862,10 +970,20 @@ define(['ash',
 				});
 
 				GameGlobals.gameState.markSeenTab(tabID);
-				
+
 				log.i("tabChanged: " + tabID, "ui");
 
 				GlobalSignals.tabChangedSignal.dispatch(tabID, tabProps);
+			},
+
+			// keep the selected tab visible when the tab bar is a horizontal scroller (small layout)
+			scrollTabIntoView: function () {
+				let ul = $("#switch-tabs")[0];
+				let li = $("#switch-tabs li.selected")[0];
+				if (!ul || !li) return;
+				if (ul.scrollWidth <= ul.clientWidth + 1) return;
+				let target = li.offsetLeft - (ul.clientWidth - li.offsetWidth) / 2;
+				ul.scrollLeft = Math.max(0, Math.min(target, ul.scrollWidth - ul.clientWidth));
 			},
 
 			onStepperButtonClicked: function (button, e) {
@@ -1514,12 +1632,13 @@ define(['ash',
 			},
 
 			registerLongTap: function (element, callback) {
+				// pointer events so hold-to-repeat works with both mouse and touch
 				var $element = typeof (element) === "string" ? $(element) : element;
 				var minTime = 1000;
 				var intervalTime = 200;
+				var moveCancelThreshold = 15;
 
 				var cancelLongTap = function () {
-					mouseDown = false;
 					var timer = $(this).attr("data-long-tap-timeout");
 					var interval = $(this).attr("data-long-tap-interval");
 					if (!timer && !interval) return;
@@ -1528,9 +1647,11 @@ define(['ash',
 					$(this).attr("data-long-tap-interval", 0);
 					$(this).attr("data-long-tap-timeout", 0);
 				};
-				$element.on('mousedown', function (e) {
+				$element.on('pointerdown', function (e) {
 					var target = e.target;
 					var $target = $(this);
+					$(this).attr("data-long-tap-start-x", Math.floor(e.pageX));
+					$(this).attr("data-long-tap-start-y", Math.floor(e.pageY));
 					cancelLongTap()
 					var timer = setTimeout(function () {
 						cancelLongTap()
@@ -1545,17 +1666,19 @@ define(['ash',
 					}, minTime);
 					$(this).attr("data-long-tap-timeout", timer);
 				});
-				$element.on('mouseleave', function (e) {
+				$element.on('pointerleave pointercancel pointerup pointerout', function (e) {
 					cancelLongTap();
 				});
-				$element.on('mousemove', function (e) {
+				$element.on('pointermove', function (e) {
+					// small jitter (finger tremor) should not cancel the hold
+					var startX = parseInt($(this).attr("data-long-tap-start-x"));
+					var startY = parseInt($(this).attr("data-long-tap-start-y"));
+					if (isNaN(startX) || isNaN(startY)) return;
+					if (Math.abs(e.pageX - startX) < moveCancelThreshold && Math.abs(e.pageY - startY) < moveCancelThreshold) return;
 					cancelLongTap();
 				});
-				$element.on('mouseout', function (e) {
-					cancelLongTap();
-				});
-				$element.on('mouseup', function (e) {
-					cancelLongTap();
+				$element.on('contextmenu', function (e) {
+					e.preventDefault();
 				});
 			},
 

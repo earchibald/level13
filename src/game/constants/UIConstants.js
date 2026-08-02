@@ -27,6 +27,14 @@ define(['ash',
 		SCROLL_INDICATOR_SIZE: 5,
 
 		SMALL_LAYOUT_THRESHOLD: 850,  // make sure this corresponds to something in gridism.css
+
+		// True on touch-screen devices. Overridable with ?touch=1 / ?touch=0 for testing.
+		isTouchScreen: function () {
+			if (window.location.search.indexOf("touch=1") >= 0) return true;
+			if (window.location.search.indexOf("touch=0") >= 0) return false;
+			if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true;
+			return "ontouchstart" in window;
+		},
 		
 		UNLOCKABLE_FEATURE_WORKER_AUTO_ASSIGNMENT: "workerAutoAssignment",
 		UNLOCKABLE_FEATURE_MAP_MODES: "mapModes",

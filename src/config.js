@@ -23,7 +23,7 @@ require.config({
 			'isCheatsEnabled': false,
 			'isDebugOutputEnabled': false,
 			'isAutosaveEnabled': true,
-			'isTrackingEnabled': true,
+			'isTrackingEnabled': false,
 		}
 	},
 	

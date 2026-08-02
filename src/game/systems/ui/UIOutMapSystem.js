@@ -112,6 +112,68 @@ define([
 			$("#btn-mainmap-sector-details-investigate").click($.proxy(this.selectInvestigateSector, this));
 			
 			$("#btn-mainmap-sector-path").click($.proxy(this.showSectorPath, this));
+
+			$("#btn-mainmap-zoom-in").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.onZoomButton(1);
+			}, this));
+			$("#btn-mainmap-zoom-out").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.onZoomButton(-1);
+			}, this));
+
+			this.initTouchZoom();
+		},
+
+		// pinch-to-zoom on the map canvas (the container has touch-action: none)
+		initTouchZoom: function () {
+			let sys = this;
+			let container = $("#mainmap-container")[0];
+			if (!container) return;
+			let pinch = { active: false, startDist: 0 };
+			let getTouchDistance = function (e) {
+				let dx = e.touches[0].pageX - e.touches[1].pageX;
+				let dy = e.touches[0].pageY - e.touches[1].pageY;
+				return Math.sqrt(dx * dx + dy * dy);
+			};
+			container.addEventListener("touchstart", function (e) {
+				if (e.touches.length == 2) {
+					pinch.active = true;
+					pinch.startDist = getTouchDistance(e);
+				} else {
+					pinch.active = false;
+				}
+			}, { passive: true });
+			container.addEventListener("touchmove", function (e) {
+				if (!pinch.active || e.touches.length != 2) return;
+				if (sys.selectedMapStyle != sys.MAP_STYLE_CANVAS) return;
+				e.preventDefault();
+				if (pinch.startDist <= 0) return;
+				let dist = getTouchDistance(e);
+				let ratio = dist / pinch.startDist;
+				let midX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
+				let midY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
+				if (ratio > 1.25) {
+					sys.hideSectorTooltip();
+					sys.zoomMap(1, midX, midY);
+					pinch.startDist = dist;
+				} else if (ratio < 0.8) {
+					sys.hideSectorTooltip();
+					sys.zoomMap(-1, midX, midY);
+					pinch.startDist = dist;
+				}
+			}, { passive: false });
+			container.addEventListener("touchend", function (e) {
+				if (e.touches.length < 2) pinch.active = false;
+			});
+		},
+
+		onZoomButton: function (steps) {
+			if (this.selectedMapStyle != this.MAP_STYLE_CANVAS) return;
+			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
+			this.hideSectorTooltip();
+			// null focal point = zoom on the container center
+			this.zoomMap(steps, null, null);
 		},
 
 		update: function (time) {
@@ -127,7 +189,10 @@ define([
 		},
 		
 		updateHeight: function () {
-			var maxHeight = Math.max(198, $(window).height() - 380);
+			// small layout has less chrome around the map, so give the map more room
+			let isSmallLayout = $("body").hasClass("layout-small");
+			let chromeOffset = isSmallLayout ? 260 : 380;
+			var maxHeight = Math.max(198, $(window).height() - chromeOffset);
 			$("#mainmap-container").css("maxHeight", maxHeight + "px");
 		},
 

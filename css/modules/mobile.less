@@ -1,0 +1,564 @@
+// Mobile port: touch support, phone-width layout, and small-layout upgrades.
+// Theme-neutral module, imported last so it wins the cascade.
+// Body classes set by JS: .touch (UIConstants.isTouchScreen), .layout-small
+// (window width <= 850), .log-drawer-open (mobile log drawer).
+
+// ---------------------------------------------------------------------------
+// THEME HOOKS
+// The only theme-dependent values mobile chrome needs.
+// Keep in sync with css/themes/theme-dark.less and theme-sunlit.less.
+
+body.dark {
+	--l13-mobile-bg: #282a28;
+	--l13-mobile-border: #3a3a3a;
+}
+
+body.sunlit {
+	--l13-mobile-bg: #ffffff;
+	--l13-mobile-border: #aaaaaa;
+}
+
+// ---------------------------------------------------------------------------
+// TAP-OPENABLE CALLOUTS
+// JS toggles .callout-visible on .callout-container (tap, long-press, or tap
+// on a disabled button). Mirrors the :hover/:focus rules in elements-common.
+
+.callout-container.callout-visible > div.btn-callout,
+.callout-container.callout-visible > div.info-callout {
+	display: block;
+	z-index: 7; // above the fixed headers (z-index 5)
+}
+
+.callout-container.callout-visible > .info-callout-target-side + div.info-callout {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+// vision-disabled buttons are hover-revealed on desktop; on touch keep them
+// faintly readable and reveal fully while their callout is open
+body.touch button.btn-disabled-vision {
+	opacity: 0.35;
+}
+
+body.touch .callout-container.callout-visible button.btn-disabled-vision {
+	opacity: 0.65;
+}
+
+// ---------------------------------------------------------------------------
+// TOUCH HYGIENE
+
+body.touch {
+	-webkit-tap-highlight-color: transparent;
+}
+
+body.touch button,
+body.touch ul.tabs li,
+body.touch .checkbox,
+body.touch input[type=checkbox],
+body.touch .checkbox-label,
+body.touch .stepper,
+body.touch .item,
+body.touch .res,
+body.touch .item-slot,
+body.touch .horizontal-select-option,
+body.touch .collapsible-header,
+body.touch .info-callout-target {
+	touch-action: manipulation;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+}
+
+// prevent iOS zoom-on-focus (needs >= 16px font on form controls)
+body.touch input,
+body.touch select,
+body.touch textarea {
+	font-size: 16px;
+}
+
+// ---------------------------------------------------------------------------
+// TOUCH TARGET SIZES
+
+body.touch button {
+	min-height: 44px;
+}
+
+body.touch button.btn-glyph,
+body.touch button.btn-glyph-big {
+	min-height: 36px;
+	min-width: 36px;
+	width: auto;
+}
+
+body.touch button.btn-mini,
+body.touch button.btn-compact {
+	min-height: 36px;
+}
+
+body.touch button.btn-meta {
+	min-height: 32px;
+	padding: 4px 8px;
+}
+
+body.touch .checkbox,
+body.touch input[type=checkbox] {
+	width: 1.4em;
+	height: 1.4em;
+}
+
+body.touch .checkbox-label {
+	padding: 8px 4px;
+	cursor: pointer;
+}
+
+body.touch input[type=range] {
+	height: 32px;
+}
+
+body.touch input[type=range]::-webkit-slider-thumb {
+	height: 24px;
+	width: 24px;
+	margin-top: -10px;
+}
+
+body.touch input[type=range]::-moz-range-thumb {
+	height: 24px;
+	width: 24px;
+}
+
+body.touch ul.tabs li {
+	height: auto;
+	min-height: 2.6em;
+}
+
+body.touch select {
+	min-height: 36px;
+}
+
+body.touch .stepper input.amount {
+	min-height: 36px;
+}
+
+body.touch .horizontal-select-option {
+	padding: 6px 10px;
+}
+
+body.touch .collapsible-header {
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+// ---------------------------------------------------------------------------
+// POPUPS: never taller than the viewport, always scrollable inside
+
+div.popup {
+	max-height: 94vh;
+	max-height: ~"calc(100dvh - 10px)";
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+@media screen and (max-width: 850px) {
+	div.popup {
+		max-width: 90%;
+	}
+
+	// keep confirm/close reachable inside tall scrolling popups
+	div.popup .buttonbox {
+		position: sticky;
+		bottom: 0;
+		background: inherit;
+		padding: 5px 0;
+	}
+
+	#hotkeys-list {
+		max-height: 40vh;
+		max-height: 40dvh;
+	}
+
+	.scrollable-container {
+		max-height: 65vh;
+		max-height: 65dvh;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// INCOMING CARAVAN POPUP
+// Desktop metrics moved here from inline styles; 2x2 grid at phone width.
+
+#incoming-caravan-inventorybox {
+	display: flex;
+	justify-content: center;
+}
+
+#inventorylist-incoming-caravan-camp-inventory,
+#inventorylist-incoming-caravan-trader-inventory {
+	width: 170px;
+}
+
+#inventorylist-incoming-caravan-camp-offer,
+#inventorylist-incoming-caravan-trader-offer {
+	width: 130px;
+}
+
+@media screen and (max-width: 568px) {
+	#incoming-caravan-inventorybox {
+		flex-wrap: wrap;
+		gap: 5px;
+	}
+
+	#incoming-caravan-inventorybox .inventorydivision {
+		display: block;
+		width: 47% !important;
+	}
+}
+
+// result popups: cap the inventory management boxes on small screens
+// (replaces the dead .layout-mobile rule)
+.layout-small #resultlist-inventorymanagement .inventorybox {
+	max-width: 90vw;
+}
+
+// ---------------------------------------------------------------------------
+// MANAGE SAVES POPUP
+
+@media screen and (max-width: 568px) {
+	#manage-save-popup {
+		width: auto;
+		max-width: 100% !important;
+	}
+
+	#save-list-container {
+		flex-direction: column;
+	}
+
+	#manage-save-popup textarea {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// FIGHT POPUP: keep floating damage/status numbers inside the popup
+
+@media screen and (max-width: 568px) {
+	.fight-damage-indicator {
+		right: 0;
+	}
+
+	.fight-status-indicator {
+		right: 3em;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TAB BAR: single-row horizontal scroller at phone widths
+
+@media screen and (max-width: 568px) {
+	ul#switch-tabs {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+		// top padding keeps the notification bubbles (top: -6px) visible
+		padding: 8px 0 0 0 !important;
+	}
+
+	ul#switch-tabs::-webkit-scrollbar {
+		display: none;
+	}
+
+	ul#switch-tabs li {
+		flex: 0 0 auto;
+		margin: 0 !important;
+		top: 0;
+		border-radius: 0;
+		border-bottom-width: 1px !important;
+	}
+
+	ul#switch-tabs li.selected {
+		padding-bottom: 5px;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MOBILE HEADER: compact; strips scroll horizontally instead of stacking tall
+
+body.layout-small #mobile-header {
+	padding: ~"calc(4px + env(safe-area-inset-top))" 0 4px 0;
+}
+
+body.layout-small .mobile-header-section {
+	padding: 1px 3px;
+}
+
+#statsbar-resources-mobile,
+#mobile-header-bag,
+#mobile-header-camp {
+	max-width: 100%;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+#statsbar-resources-mobile::-webkit-scrollbar,
+#mobile-header-bag::-webkit-scrollbar,
+#mobile-header-camp::-webkit-scrollbar {
+	display: none;
+}
+
+#container-equipment-stats-mobile {
+	display: flex;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+#container-equipment-stats-mobile .stat-indicator-secondary {
+	margin: 0 4px;
+}
+
+#mobile-header .itemlist {
+	margin: 0;
+	padding: 0;
+}
+
+#statsbar-deity-mobile {
+	text-align: center;
+	display: block;
+}
+
+// ---------------------------------------------------------------------------
+// FOOTER
+
+body.layout-small #footer {
+	padding-left: 5px;
+}
+
+@media screen and (max-width: 568px) {
+	.sticky-footer {
+		height: auto;
+		min-height: 55px;
+		padding-bottom: ~"calc(10px + env(safe-area-inset-bottom))";
+	}
+
+	body.layout-small #footer {
+		flex-wrap: wrap;
+		height: auto;
+	}
+
+	ul#game-options,
+	ul#game-options-extended {
+		float: none;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LOG: bottom-sheet drawer in small layout
+
+#btn-log-toggle {
+	display: none;
+}
+
+body.layout-small #btn-log-toggle {
+	display: block;
+	position: fixed;
+	right: 10px;
+	bottom: ~"calc(12px + env(safe-area-inset-bottom))";
+	z-index: 9;
+	width: auto;
+	min-width: 3.5em;
+	min-height: 40px;
+	padding: 6px 14px;
+	border-radius: 20px;
+	opacity: 0.9;
+	text-transform: lowercase;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+}
+
+body.layout-small #log {
+	padding-right: 0;
+	overflow-y: auto;
+}
+
+body.layout-small.log-drawer-open #log-container {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	top: auto;
+	width: 100%;
+	height: 55vh;
+	height: 55dvh;
+	z-index: 8;
+	margin: 0;
+	padding: 10px 10px ~"calc(56px + env(safe-area-inset-bottom))" 10px !important;
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	border-top: 2px solid var(--l13-mobile-border);
+	overflow: hidden;
+}
+
+body.layout-small.log-drawer-open #log {
+	position: static;
+	max-height: 100% !important;
+	height: 100%;
+	width: 100%;
+	overflow-y: auto !important;
+}
+
+// ---------------------------------------------------------------------------
+// TABLES AND ACTION ROWS AT PHONE WIDTHS
+
+@media screen and (max-width: 568px) {
+	// action buttons size to content instead of fixed desktop widths
+	button.action {
+		width: auto;
+		min-width: 70px;
+		max-width: 100%;
+	}
+
+	button.btn-wide,
+	button.btn-x-wide {
+		width: auto;
+		max-width: 100%;
+	}
+
+	// multi-widget table rows become wrapping card rows
+	#out-improvements table,
+	#out-improvements tbody,
+	#in-improvements table,
+	#in-improvements tbody,
+	#recruits-container table,
+	#recruits-container tbody {
+		display: block;
+		width: 100%;
+	}
+
+	#out-improvements tr,
+	#in-improvements tr,
+	#recruits-container tr {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		width: 100%;
+	}
+
+	#out-improvements td,
+	#in-improvements td,
+	#recruits-container td {
+		display: block;
+	}
+
+	// outgoing caravan planner: stack the five widgets
+	.trade-caravans-outgoing-plan td {
+		display: block;
+		text-align: center;
+	}
+
+	.trade-caravans-outgoing-plan input[type=range] {
+		width: 80%;
+	}
+}
+
+// tribe overview: restore the columns upstream hides in small layout and
+// let the full table scroll horizontally instead
+@media screen and (max-width: 850px) {
+	#camp-overview {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+}
+
+body.layout-small #camp-overview tr.hide-in-small-layout {
+	display: table-row;
+	visibility: visible;
+}
+
+body.layout-small #camp-overview th.hide-in-small-layout,
+body.layout-small #camp-overview td.hide-in-small-layout {
+	display: table-cell;
+	visibility: visible;
+}
+
+// ---------------------------------------------------------------------------
+// MAP: zoom controls (all pointer types; the only touch zoom path)
+
+#mainmap-container-container {
+	position: relative;
+}
+
+#mainmap-zoom-controls {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 6;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+#mainmap-zoom-controls button {
+	margin: 0;
+	width: 40px;
+	min-width: 40px;
+	height: 40px;
+	padding: 0;
+	font-size: 1.2em;
+}
+
+// map header controls: stacked flex row instead of floats at phone widths
+@media screen and (max-width: 568px) {
+	#tab-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px;
+	}
+
+	#tab-header h2 {
+		order: -1;
+		width: 100%;
+	}
+
+	#tab-header .tabelement {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.tab-options {
+		float: none;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SMALL-SCREEN LEGIBILITY
+
+@media screen and (max-width: 568px) {
+	div.btn-callout-content,
+	div.info-callout-content {
+		font-size: 0.95rem;
+	}
+
+	.progress-label {
+		font-size: 0.9rem;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// REDUCED MOTION
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01s !important;
+		animation-duration: 0.01s !important;
+	}
+}

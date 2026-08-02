@@ -361,7 +361,7 @@ define([
 				var buttonsTD = "<td class='nowrap-on-regular-layout'><button class='trade-caravans-incoming-trade'>Trade</button>";
 				buttonsTD += "<button class='trade-caravans-incoming-dismiss btn-secondary'>Dismiss</button></td>";
 
-				var tr = "<tr>" + nameTD + (isSmallLayout ? "" : inventoryTD) + buttonsTD + "</tr>";
+				var tr = "<tr>" + nameTD + inventoryTD + buttonsTD + "</tr>";
 				$("#trade-caravans-incoming-container table").append(tr);
 
 				var uiFunctions = GameGlobals.uiFunctions;

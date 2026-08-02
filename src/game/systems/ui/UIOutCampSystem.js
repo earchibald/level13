@@ -761,7 +761,7 @@
 				GameGlobals.uiFunctions.toggle(elem.btnUse, existingImprovements > 0 && showUseAction1 && !isDamaged);
 				GameGlobals.uiFunctions.toggle(elem.btnUse2, existingImprovements > 0 && !showUseAction1 && !isDamaged);
 				GameGlobals.uiFunctions.toggle(elem.btnImprove, existingImprovements > 0 && maxImprovementLevel > 1 && !isDamaged);
-				GameGlobals.uiFunctions.toggle(elem.btnDismantle, !isSmallLayout && existingImprovements > 0);
+				GameGlobals.uiFunctions.toggle(elem.btnDismantle, existingImprovements > 0);
 				GameGlobals.uiFunctions.toggle(elem.btnRepair, isDamaged);
 				GameGlobals.uiFunctions.toggle(elem.iconDamaged, isDamaged);
 				

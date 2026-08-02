@@ -7,7 +7,6 @@ $.getJSON('changelog.json', function (json) {
 	var html = "<h4 class='infobox-scrollable-header'>Changelog</h4>";
 	html += "<div id='changelog' class='infobox infobox-scrollable'>";
 	
-	var html = "";
 	var v;
 	for (let i in versions) {
 		v = versions[i];

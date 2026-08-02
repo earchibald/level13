@@ -267,7 +267,7 @@ define([
 			
 			li.$tdDescription.attr("colspan", isAvailable ? 1 : 4);
 			li.$btnHide.css("display", showHideButton ? "initial" : "none");
-			li.$btnMap.css("display", isAvailable && !isSmallLayout ? "initial" : "none");
+			li.$btnMap.css("display", isAvailable ? "initial" : "none");
 			li.$tdAction.css("display", isAvailable ? "initial" : "none");
 			li.$btnAction.css("display", isAvailable ? "initial" : "none");
 			

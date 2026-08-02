@@ -16,7 +16,9 @@ define([
 			let isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent);
 
 			GameConstants.isMobile = isMobileDevice;
-			GameConstants.isMobileOverlayShown = isMobileDevice;
+			// Mobile port: the layout is mobile-optimized, so the "not optimized
+			// for mobile" overlay is never shown.
+			GameConstants.isMobileOverlayShown = false;
 
 			GameConstants.isDebugVersion = config.isDebugVersion;
 			GameConstants.isCheatsEnabled = config.isCheatsEnabled;
