@@ -180,6 +180,12 @@ body.touch .collapsible-header {
 // The shell rules stay inside the small-layout media query: on desktop the
 // old overflow behavior lets hover callouts extend past the popup border.
 
+// popup backdrop: touches starting on it must not scroll the page behind
+#popup-overlay {
+	touch-action: none;
+	overscroll-behavior: contain;
+}
+
 @media screen and (max-width: 850px) {
 	div.popup {
 		box-sizing: border-box;
@@ -187,6 +193,8 @@ body.touch .collapsible-header {
 		max-height: ~"calc(100dvh - 10px)";
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
+		overscroll-behavior: contain;
+		touch-action: pan-y;
 	}
 
 	body[class] div.popup {
@@ -423,6 +431,12 @@ body.layout-small #footer {
 	display: none;
 }
 
+// while a tap callout is open, the content layer paints above the fixed
+// header so callouts near the top of the page are never covered by it
+body.callout-open #grid-switch-content {
+	z-index: 6;
+}
+
 // invisible chrome must not stay tappable while the player is "down"
 body.vision-step-0 #btn-log-toggle {
 	pointer-events: none;
@@ -555,6 +569,14 @@ body.layout-small.log-drawer-open #log {
 @media screen and (max-width: 850px) {
 	#camp-overview {
 		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	// camp visualization keeps a minimum canvas width (see
+	// UIOutCampVisSystem.refreshGrid) and scrolls, so far-out buildings
+	// stay reachable
+	body[class] #tab-vis-in {
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
 	}

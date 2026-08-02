@@ -205,6 +205,14 @@ define(['ash',
 					$("body").toggleClass("log-drawer-open");
 				});
 
+				// keep popups centered within the VISIBLE viewport (the software
+				// keyboard shrinks it on phones)
+				if (window.visualViewport) {
+					window.visualViewport.addEventListener("resize", function () {
+						uiFunctions.popupManager.repositionPopups();
+					});
+				}
+
 				if (!isTouch) return;
 
 				// tap toggles info callouts (hover is not available on touch)
@@ -273,6 +281,40 @@ define(['ash',
 					e.preventDefault();
 				});
 
+				// long-press on trade/reward list items previews the item info;
+				// a quick tap keeps its primary meaning there (move the item)
+				let listItemSelector = ".inventorydivision li, .resultlist li, #resultlist-inventorymanagement li";
+				$(document).on("pointerdown", listItemSelector, function (e) {
+					if (e.pointerType === "mouse") return;
+					let li = this;
+					let $li = $(li);
+					li.dataset.lpInfoFired = "false";
+					uiFunctions.cancelLongPress($li);
+					let timer = setTimeout(function () {
+						let $container = $li.find(".callout-container").first();
+						if ($container.length == 0) return;
+						li.dataset.lpInfoFired = "true";
+						uiFunctions.closeAllCallouts();
+						uiFunctions.openCallout($container, $container.children(".info-callout-target").first());
+					}, longPressDelay);
+					$li.data("long-press-timer", timer);
+				});
+				$(document).on("pointerup pointercancel pointerleave", listItemSelector, function (e) {
+					uiFunctions.cancelLongPress($(this));
+				});
+				// after an info long-press, the release click must not move the item
+				document.addEventListener("click", function (e) {
+					let li = e.target.closest ? e.target.closest("li") : null;
+					if (li && li.dataset && li.dataset.lpInfoFired === "true") {
+						li.dataset.lpInfoFired = "false";
+						e.preventDefault();
+						e.stopPropagation();
+					}
+				}, true);
+				$(document).on("contextmenu", listItemSelector, function (e) {
+					e.preventDefault();
+				});
+
 				// tap outside closes open callouts
 				$(document).on("click", function (e) {
 					if ($(e.target).closest(".callout-container").length > 0) return;
@@ -286,6 +328,9 @@ define(['ash',
 
 			openCallout: function ($container, $target) {
 				$container.addClass("callout-visible");
+				// while a tap callout is open the content layer paints above the
+				// fixed header (see mobile css)
+				$("body").addClass("callout-open");
 				// fire the same hooks hover fires so callout content and buttons refresh
 				if ($target) $target.trigger("mouseenter");
 				GlobalSignals.elementToggledSignal.dispatch();
@@ -297,6 +342,7 @@ define(['ash',
 					$(this).children(".info-callout-target").trigger("mouseleave");
 				});
 				$(".callout-container.callout-visible").removeClass("callout-visible");
+				$("body").removeClass("callout-open");
 			},
 
 			cancelLongPress: function ($btn) {

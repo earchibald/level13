@@ -136,22 +136,23 @@ responsive handling (horizontal-scroll table containers at phone widths).
 - Tracking: `isTrackingEnabled: false` on this branch — a code-modified fork must not
   report errors into upstream's GlitchTip project. GoatCounter stays (hostname-keyed).
 
-## Accepted limitations (audited)
+## Parity edge cases and how they are closed
 
-- Item detail callouts inside the trade and reward-selection lists stay
-  desktop-only: there, tap must keep its primary meaning (move the item), and
-  long-press is the hold-to-repeat gesture. Item stats remain readable from
-  the bag.
-- The software keyboard can cover the centered input popup on iOS
-  (visualViewport is not wired); the input popup is short, so the field
-  itself stays visible.
-- iOS rubber-band scrolling of the page behind an open popup is not fully
-  suppressed (body overflow lock only) — cosmetic.
-- A callout opened at the very top of the content area can slide under the
-  fixed header while scrolled to the top (stacking-context limit) — rare and
-  recoverable by scrolling.
-- Camp-vis building sprites keep their fixed world coordinates; on very
-  narrow screens far-out decorative buildings are clipped, as upstream does.
+- Item details in the trade and reward-selection lists: tap keeps its
+  primary meaning (move the item); a 500ms long-press opens the item's info
+  callout instead, and holding on into the trade popup's 1s mark still
+  starts the upstream hold-to-repeat bulk move.
+- Software keyboard: popups center within `visualViewport` and re-center on
+  its resize, so the input popup stays above the keyboard.
+- Page scroll behind popups: the backdrop takes `touch-action: none` and
+  both backdrop and popup use `overscroll-behavior: contain`, so touches
+  cannot rubber-band the page behind an open popup.
+- Callouts near the top of the content: while a tap callout is open the
+  content layer's z-index rises above the fixed header
+  (`body.callout-open`), so the callout is never covered.
+- Camp-vis: in small layout the canvas keeps a 700px minimum width inside a
+  horizontally scrollable strip (initially centered on the camp), so
+  buildings at far coordinates stay reachable.
 
 ## Explicit non-goals
 

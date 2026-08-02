@@ -91,12 +91,21 @@ define([
 		
 		refreshGrid: function () {
 			var parentWidth = this.elements.container.parent().width();
-			this.containerWidth = Math.max(100, parentWidth);
+			// small layout: keep a minimum canvas width and let the strip scroll
+			// (see mobile css) so buildings at far coordinates stay reachable
+			var isSmallLayout = $("body").hasClass("layout-small");
+			var minWidth = isSmallLayout ? 700 : 100;
+			this.containerWidth = Math.max(minWidth, parentWidth);
 			this.containerHeight = this.containerDefaultHeight;
 			this.elements.container.css("width", this.containerWidth + "px");
 			this.elements.container.css("height", this.containerHeight + "px");
 			this.elements.canvas.attr("width", this.containerWidth);
 			this.elements.canvas.attr("height", this.containerHeight);
+			// start centered on the camp when the strip is wider than the screen
+			if (this.containerWidth > parentWidth) {
+				var parentEl = this.elements.container.parent()[0];
+				if (parentEl) parentEl.scrollLeft = Math.round((this.containerWidth - parentWidth) / 2);
+			}
 		},
 		
 		refreshFloor: function () {

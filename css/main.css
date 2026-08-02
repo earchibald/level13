@@ -6108,6 +6108,10 @@ body.touch .collapsible-header {
   padding-top: 10px;
   padding-bottom: 10px;
 }
+#popup-overlay {
+  touch-action: none;
+  overscroll-behavior: contain;
+}
 @media screen and (max-width: 850px) {
   div.popup {
     box-sizing: border-box;
@@ -6115,6 +6119,8 @@ body.touch .collapsible-header {
     max-height: calc(100dvh - 10px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
   }
   body[class] div.popup {
     max-width: 90%;
@@ -6276,6 +6282,9 @@ body.layout-small #footer {
 #btn-log-toggle {
   display: none;
 }
+body.callout-open #grid-switch-content {
+  z-index: 6;
+}
 body.vision-step-0 #btn-log-toggle {
   pointer-events: none;
 }
@@ -6387,6 +6396,10 @@ body.layout-small.log-drawer-open #log {
 @media screen and (max-width: 850px) {
   #camp-overview {
     display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  body[class] #tab-vis-in {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }

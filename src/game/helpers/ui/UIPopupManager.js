@@ -256,8 +256,9 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 		},
 
 		repositionPopup: function ($popup) {
-			let winh = $(window).height();
-			let winw = $(window).width();
+			// visualViewport tracks the area not covered by the software keyboard
+			let winh = window.visualViewport ? window.visualViewport.height : $(window).height();
+			let winw = window.visualViewport ? window.visualViewport.width : $(window).width();
 			let isSmallLayout = winw <= UIConstants.SMALL_LAYOUT_THRESHOLD;
 			let padding = isSmallLayout ? 0 : 20;
 
