@@ -75,6 +75,12 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			return this.setMapZoom(this.mapZoom + steps * this.MAP_ZOOM_MAIN_STEP);
 		},
 
+		// icon art is authored for the unzoomed main map, so scale it by the map zoom
+		// the minimap (centered) has its own fixed sector size and must not be scaled
+		getIconScale: function (centered) {
+			return centered ? 1 : this.mapZoom;
+		},
+
 		enableScrollingForMap: function (canvasId) {
 			CanvasConstants.makeCanvasScrollable(canvasId);
 			CanvasConstants.updateScrollEnable(canvasId);
@@ -787,7 +793,8 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			
 			let useSunlitIcon = isLocationSunlit;
 			
-			let iconSize = 10;
+			let iconScale = this.getIconScale(options.centered);
+			let iconSize = Math.round(10 * iconScale);
 
 			let showStashes = this.isMapEasyMode;
 			let hasStashOnSector = sectorFeatures.stashes.length > 0 && sectorFeatures.stashes.length > statusComponent.stashesFound.length;
@@ -799,9 +806,9 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 					let hazardValue = hazards[hazardType] || 0;
 					if (hazardValue > 0) {
 						if (this.isAffectedByHazard(sector)) {
-							iconSize = 8;
+							iconSize = Math.round(8 * iconScale);
 							let iconColor = this.getBackgroundColor(level, isLocationSunlit);
-							CanvasUtils.drawXShape(ctx, iconColor, iconSize, 3, sectorXpx + sectorSize / 2, sectorYpx + sectorSize / 2);
+							CanvasUtils.drawXShape(ctx, iconColor, iconSize, Math.max(1, Math.round(3 * iconScale)), sectorXpx + sectorSize / 2, sectorYpx + sectorSize / 2);
 						}
 					}
 				}
@@ -814,55 +821,55 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			let disabledAlpha = 0.4;
 			
 			if (mapModeHasPois && locationShowPOIs && isInvestigatable) {
-				ctx.drawImage(this.icons["investigate" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosYCentered);
+				ctx.drawImage(this.icons["investigate" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosYCentered, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && sector.has(WorkshopComponent) && sector.get(WorkshopComponent).isClearable) {
-				ctx.drawImage(this.icons["workshop" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["workshop" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && sectorImprovements.getCount(improvementNames.greenhouse) > 0) {
-				ctx.drawImage(this.icons["workshop" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["workshop" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && hasCampOnSector) {
-				ctx.drawImage(this.icons["camp" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["camp" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && !hasCampOnLevel && sectorFeatures.canHaveCamp()) {
-				ctx.drawImage(this.icons["campable" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["campable" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && (numUnscoutedLocales > 0 || numUnexaminedSpots > 0)) {
-				ctx.drawImage(this.icons["interest" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["interest" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && showStashes && hasStashOnSector) {
-				ctx.drawImage(this.icons["interest" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["interest" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && sectorPassages.passageUp) {
 				if (GameGlobals.movementHelper.isPassageTypeAvailable(sector, PositionConstants.DIRECTION_UP)) {
-					ctx.drawImage(this.icons["passage-up" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+					ctx.drawImage(this.icons["passage-up" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				} else {
-					ctx.drawImage(this.icons["passage-up-disabled" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+					ctx.drawImage(this.icons["passage-up-disabled" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				}
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && sectorPassages.passageDown) {
 				if (!GameGlobals.movementHelper.isPassageTypeAvailable(sector, PositionConstants.DIRECTION_DOWN)) {
 					ctx.globalAlpha = disabledAlpha;
 				}
-				ctx.drawImage(this.icons["passage-down" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["passage-down" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				ctx.globalAlpha = 1;
 				return true;
 			} else if (mapModeHasPois && locationShowPOIs && sectorImprovements.getCount(improvementNames.beacon) > 0) {
-				ctx.drawImage(this.icons["beacon" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["beacon" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (showIngredientIcons && allItems.length > 0) {
 				if (knownItems.length == 0) {
 					ctx.globalAlpha = disabledAlpha;
 				}
-				ctx.drawImage(this.icons["ingredient" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["ingredient" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				ctx.globalAlpha = 1;
 				return true;
 			} else if (isRevealed && statusComponent.graffiti) {
-				ctx.drawImage(this.icons["graffiti" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY);
+				ctx.drawImage(this.icons["graffiti" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosY, iconSize, iconSize);
 				return true;
 			} else if (!isRevealed && !isPartiallyRevealed && !hideUnknownIcon) {
-				ctx.drawImage(this.icons["unknown" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosYCentered);
+				ctx.drawImage(this.icons["unknown" + (useSunlitIcon ? "-sunlit" : "")], iconPosX, iconPosYCentered, iconSize, iconSize);
 				return true;
 			}
 			
@@ -897,9 +904,10 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			}
 			
 			let totalWidth = 0;
-			let bigResSize = 5;
-			let smallResSize = 3;
-			let padding = 1;
+			let iconScale = this.getIconScale(options.centered);
+			let bigResSize = Math.round(5 * iconScale);
+			let smallResSize = Math.round(3 * iconScale);
+			let padding = Math.max(1, Math.round(iconScale));
 			let isBigSectorSize = sectorSize >= this.getSectorSize(true);
 			
 			let potentialResources = {};
@@ -925,7 +933,7 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			if (totalWidth > 0) {
 				totalWidth -= padding;
 				let x = sectorXpx + sectorSize / 2 - totalWidth / 2;
-				let y = isBigSectorSize ? sectorYpx + sectorSize - 5 : sectorYpx + sectorSize / 2 - 1;
+				let y = isBigSectorSize ? sectorYpx + sectorSize - bigResSize : sectorYpx + sectorSize / 2 - Math.round(iconScale);
 				for (let i in mapResources) {
 					let name = mapResources[i];
 					let drawSize = 0;
@@ -933,7 +941,7 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 					
 					if (directResources[name]) {
 						drawSize = bigResSize;
-						yOffset = -1;
+						yOffset = -Math.round(iconScale);
 					} else if(potentialResources[name]) {
 						drawSize = smallResSize;
 						yOffset = 0;
