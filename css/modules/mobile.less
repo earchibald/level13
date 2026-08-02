@@ -330,6 +330,14 @@ body.layout-small .mobile-header-section {
 	display: block;
 }
 
+// in short (landscape) viewports the fixed header would eat most of the
+// screen; let it scroll away with the page instead
+@media screen and (max-height: 480px) {
+	body.layout-small #mobile-header {
+		position: static;
+	}
+}
+
 // ---------------------------------------------------------------------------
 // FOOTER
 

@@ -6147,6 +6147,11 @@ body.layout-small .mobile-header-section {
   text-align: center;
   display: block;
 }
+@media screen and (max-height: 480px) {
+  body.layout-small #mobile-header {
+    position: static;
+  }
+}
 body.layout-small #footer {
   padding-left: 5px;
 }
