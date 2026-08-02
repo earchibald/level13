@@ -247,13 +247,21 @@ button.btn-disabled-basic, button.btn-disabled-vision, button.btn-disabled-resou
 	color: @color-text-secondary;
 	border: 1px solid @color-border-box-2;
 	border-radius: 0.25em;
+	// auto width so multi-character hints (shift-prefixed keys) fit
 	height: 1em;
-	width: 1em;
+	width: auto;
+	min-width: 1em;
+	padding: 0 1px;
+	line-height: 1em;
+	text-align: center;
 	font-size: @font-size-tiny;
+	opacity: 0.75;
 	pointer-events: none;
 }
 
-.container-btn-action .hotkey-hint {
+// on compact buttons the badge would overlap the label, so show it on hover only
+.container-btn-action .btn-compact .hotkey-hint,
+.container-btn-action .btn-glyph-big .hotkey-hint {
 	display: none;
 }
 

@@ -232,6 +232,9 @@ define(['ash',
 				this.registerHotkey("Leave camp", "NumpadEnter", defaultModifier, tabs.embark, false, false, () => GameGlobals.uiFunctions.triggerContextEnterAction(), { isHiddenFromList: true });
 
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
+
+				// same path as more > settings; the popup contains the hotkey list
+				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?" });
 			},
 
 			registerHotkey: function (description, code, modifier, tab, isUniversal, isDev, cb, options) {

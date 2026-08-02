@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.6",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "? opens settings with the hotkey list. Buttons with a hotkey show a small badge (hover-only on compact buttons)."
+				}
+			]
+		},
+		{
 			"version": "0.6.3.5",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

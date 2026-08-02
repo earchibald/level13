@@ -1026,11 +1026,17 @@ body.dark .hotkey-hint {
   border: 1px solid #3a3a3a;
   border-radius: 0.25em;
   height: 1em;
-  width: 1em;
+  width: auto;
+  min-width: 1em;
+  padding: 0 1px;
+  line-height: 1em;
+  text-align: center;
   font-size: 0.75rem;
+  opacity: 0.75;
   pointer-events: none;
 }
-body.dark .container-btn-action .hotkey-hint {
+body.dark .container-btn-action .btn-compact .hotkey-hint,
+body.dark .container-btn-action .btn-glyph-big .hotkey-hint {
   display: none;
 }
 body.dark .container-btn-action:hover .hotkey-hint {
@@ -3772,11 +3778,17 @@ body.sunlit .hotkey-hint {
   border: 1px solid #aaa;
   border-radius: 0.25em;
   height: 1em;
-  width: 1em;
+  width: auto;
+  min-width: 1em;
+  padding: 0 1px;
+  line-height: 1em;
+  text-align: center;
   font-size: 0.75rem;
+  opacity: 0.75;
   pointer-events: none;
 }
-body.sunlit .container-btn-action .hotkey-hint {
+body.sunlit .container-btn-action .btn-compact .hotkey-hint,
+body.sunlit .container-btn-action .btn-glyph-big .hotkey-hint {
   display: none;
 }
 body.sunlit .container-btn-action:hover .hotkey-hint {
