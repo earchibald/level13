@@ -1093,7 +1093,7 @@ define(['ash',
 			if (isNegative) classes.push("camp-unique-feature-icon-negative");
 			if (!isNegative) classes.push("camp-unique-feature-icon-positive");
 
-			let getIconPath = (id) => "/img/eldorado/camp_feature_" + id + ".png";
+			let getIconPath = (id) => "img/eldorado/camp_feature_" + id + ".png";
 			let iconID = type;
 
 			let displayValue = typeof value == "number" ? UIConstants.getMultiplierBonusDisplayValue(value, true) : value;

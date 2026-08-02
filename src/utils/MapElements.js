@@ -34,9 +34,9 @@ define([
 		
 		initIcon: function(key, name) {
 			this.icons[key] = new Image();
-			this.icons[key].src = location.origin + "/img/map/" + name + ".png";
+			this.icons[key].src = "img/map/" + name + ".png";
 			this.icons[key + "-sunlit"] = new Image();
-			this.icons[key + "-sunlit"].src = location.origin + "/img/map/" + name + "-sunlit.png";
+			this.icons[key + "-sunlit"].src = "img/map/" + name + "-sunlit.png";
 		},
 
 		drawSectorShape: function (ctx, sectorXpx, sectorYpx, sectorSize, size, color, isKeySector) {
