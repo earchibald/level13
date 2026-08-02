@@ -27,6 +27,10 @@ The project uses [jQuery](https://jquery.com/), [Require.js](http://requirejs.or
 * **master** is a development branch and can contain unfinished and buggy features
 * **gh-pages** is more stable and contains whatever is currently live
 
+### Hosting
+
+The game is a static site that can be served directly from the repository root. This fork is published to GitHub Pages automatically by the [Deploy to GitHub Pages workflow](.github/workflows/deploy-pages.yml), which runs on every push to `master` (and can also be triggered manually). To enable it, set the repository's Pages source to "GitHub Actions" under Settings → Pages.
+
 ### Entities and Components
 
 All game data is stored in various [Components](https://github.com/nroutasuo/level13/tree/master/src/game/components) that are attached to entities such as the player or a sector. Entities are simply containers for Components. The [EntityCreator](https://github.com/nroutasuo/level13/blob/master/src/game/EntityCreator.js) gives a good overview of what kind of entities have what kind of components.
