@@ -1026,11 +1026,17 @@ body.dark .hotkey-hint {
   border: 1px solid #3a3a3a;
   border-radius: 0.25em;
   height: 1em;
-  width: 1em;
+  width: auto;
+  min-width: 1em;
+  padding: 0 1px;
+  line-height: 1em;
+  text-align: center;
   font-size: 0.75rem;
+  opacity: 0.75;
   pointer-events: none;
 }
-body.dark .container-btn-action .hotkey-hint {
+body.dark .container-btn-action .btn-compact .hotkey-hint,
+body.dark .container-btn-action .btn-glyph-big .hotkey-hint {
   display: none;
 }
 body.dark .container-btn-action:hover .hotkey-hint {
@@ -1038,6 +1044,9 @@ body.dark .container-btn-action:hover .hotkey-hint {
 }
 body.dark button.btn-disabled .hotkey-hint {
   display: none !important;
+}
+body.dark #out-action-move-camp.btn-disabled .hotkey-hint {
+  display: block !important;
 }
 body.dark div.container-btn-action:hover + div.btn-callout,
 body.dark div.btn-callout:hover,
@@ -1254,6 +1263,17 @@ body.dark ul.tabs li span {
   display: inline-block;
   overflow-x: hidden;
   width: 100%;
+}
+body.dark ul.tabs li span.tab-hotkey-number {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  width: auto;
+  overflow-x: visible;
+  font-size: 0.65em;
+  font-weight: normal;
+  line-height: 1em;
+  color: rgba(255, 255, 255, 0.5);
 }
 body.dark div.popup {
   background: #282a28;
@@ -3062,6 +3082,18 @@ body.dark .map-overlay-cell.selected {
   background: #fdfdfd;
   outline: 5px solid rgba(255, 255, 255, 0.5);
 }
+body.dark #minimap-overlay .map-overlay-cell {
+  cursor: default;
+}
+body.dark .map-hint-cell {
+  position: absolute;
+  pointer-events: auto;
+  cursor: default;
+  border-radius: 50%;
+}
+body.dark .map-hint-cell:hover {
+  outline: 1px solid rgba(255, 255, 255, 0.5);
+}
 body.dark #map-sector-tooltip {
   position: fixed;
   z-index: 20;
@@ -3093,6 +3125,12 @@ body.dark #map-sector-tooltip .map-tooltip-header {
 body.dark #map-sector-tooltip .map-tooltip-pos {
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.85rem;
+}
+body.dark #map-sector-tooltip .map-tooltip-context {
+  margin: 0 0 3px 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  font-style: italic;
 }
 body.dark #map-sector-tooltip table {
   width: 100%;
@@ -3742,11 +3780,17 @@ body.sunlit .hotkey-hint {
   border: 1px solid #aaa;
   border-radius: 0.25em;
   height: 1em;
-  width: 1em;
+  width: auto;
+  min-width: 1em;
+  padding: 0 1px;
+  line-height: 1em;
+  text-align: center;
   font-size: 0.75rem;
+  opacity: 0.75;
   pointer-events: none;
 }
-body.sunlit .container-btn-action .hotkey-hint {
+body.sunlit .container-btn-action .btn-compact .hotkey-hint,
+body.sunlit .container-btn-action .btn-glyph-big .hotkey-hint {
   display: none;
 }
 body.sunlit .container-btn-action:hover .hotkey-hint {
@@ -3754,6 +3798,9 @@ body.sunlit .container-btn-action:hover .hotkey-hint {
 }
 body.sunlit button.btn-disabled .hotkey-hint {
   display: none !important;
+}
+body.sunlit #out-action-move-camp.btn-disabled .hotkey-hint {
+  display: block !important;
 }
 body.sunlit div.container-btn-action:hover + div.btn-callout,
 body.sunlit div.btn-callout:hover,
@@ -3970,6 +4017,17 @@ body.sunlit ul.tabs li span {
   display: inline-block;
   overflow-x: hidden;
   width: 100%;
+}
+body.sunlit ul.tabs li span.tab-hotkey-number {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  width: auto;
+  overflow-x: visible;
+  font-size: 0.65em;
+  font-weight: normal;
+  line-height: 1em;
+  color: rgba(0, 0, 0, 0.5);
 }
 body.sunlit div.popup {
   background: #fbfbfb;
@@ -5778,6 +5836,18 @@ body.sunlit .map-overlay-cell.selected {
   background: #202220;
   outline: 5px solid rgba(0, 0, 0, 0.5);
 }
+body.sunlit #minimap-overlay .map-overlay-cell {
+  cursor: default;
+}
+body.sunlit .map-hint-cell {
+  position: absolute;
+  pointer-events: auto;
+  cursor: default;
+  border-radius: 50%;
+}
+body.sunlit .map-hint-cell:hover {
+  outline: 1px solid rgba(0, 0, 0, 0.5);
+}
 body.sunlit #map-sector-tooltip {
   position: fixed;
   z-index: 20;
@@ -5809,6 +5879,12 @@ body.sunlit #map-sector-tooltip .map-tooltip-header {
 body.sunlit #map-sector-tooltip .map-tooltip-pos {
   color: rgba(0, 0, 0, 0.5);
   font-size: 0.85rem;
+}
+body.sunlit #map-sector-tooltip .map-tooltip-context {
+  margin: 0 0 3px 0;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+  font-style: italic;
 }
 body.sunlit #map-sector-tooltip table {
   width: 100%;

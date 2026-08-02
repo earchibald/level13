@@ -306,6 +306,12 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 			let dataToggling = $popup.attr("data-toggling");
 			if (dataToggling == true || dataToggling == "true") return;
 			$popup.attr("data-dismissed", "true");
+			// dismissing means cancelling when there is a cancel button (Esc must not confirm)
+			let $cancelButton = $popup.find("#confirmation-cancel");
+			if ($cancelButton.length > 0) {
+				$cancelButton.trigger("click");
+				return;
+			}
 			$popup.find(".button-popup-default").trigger("click");
 		},
 		

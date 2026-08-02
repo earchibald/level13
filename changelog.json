@@ -1,6 +1,101 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.7",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "B asks to go back to camp (Enter confirms, Esc cancels); when camp is unreachable it shows the requirements. Fix hotkey badges missing from localized buttons (Enter camp, Go, passages, collect all, movement)."
+				}
+			]
+		},
+		{
+			"version": "0.6.3.6",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "? opens settings with the hotkey list. Buttons with a hotkey show a small badge (hover-only on compact buttons)."
+				}
+			]
+		},
+		{
+			"version": "0.6.3.5",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Minimap tooltips: hover a minimap square or an off-map hint icon for sector details. New hotkeys: Shift-F/Shift-G collect 1 food/water, H refills water at a spring."
+				}
+			]
+		},
+		{
+			"version": "0.6.3.4",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Tab number annotations sit in the tab corner; ENTER on the embark tab leaves the camp"
+				}
+			]
+		},
+		{
+			"version": "0.6.3.3",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "DEV",
+					"summary": "Update page description with fork attribution"
+				}
+			]
+		},
+		{
+			"version": "0.6.3.2",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Number keys 1-9 select the visible tabs in order; tabs show the number. ENTER enters the camp or uses a passage in the current sector."
+				}
+			]
+		},
+		{
+			"version": "0.6.3.1",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Map: mouse wheel zoom, click targets and icons scale with zoom, hover tooltip for sectors"
+				},
+				{
+					"type": "DEV",
+					"summary": "Fix error when scouting greenhouse after discovering deity; fix map tooltip error when no sector is selected"
+				}
+			]
+		},
+		{
 			"version": "0.6.3",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

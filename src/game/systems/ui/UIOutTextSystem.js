@@ -33,7 +33,14 @@ define([
 					log.w("html element with class .text-key has no text key defined");
 					return;
 				}
-				$(this).text(Text.t(key));
+				// buttons processed by ActionButton have overlay children (label, cooldowns, hotkey hint);
+				// setting text on the button would wipe them, so the text goes into the label
+				let $label = $(this).children(".btn-label");
+				if ($label.length > 0) {
+					$label.text(Text.t(key));
+				} else {
+					$(this).text(Text.t(key));
+				}
 			});
 			GameGlobals.uiFunctions.updateTexts();
 		},

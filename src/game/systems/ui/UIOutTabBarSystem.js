@@ -52,6 +52,7 @@ define([
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.updateTabVisibility);
 			GlobalSignals.add(this, GlobalSignals.playerEnteredCampSignal, this.updateTabVisibility);
 			GlobalSignals.add(this, GlobalSignals.playerLeftCampSignal, this.updateTabVisibility);
+			GlobalSignals.add(this, GlobalSignals.settingsChangedSignal, this.onSettingsChanged);
 			GlobalSignals.add(this, GlobalSignals.populationChangedSignal, this.updateTabNames);
 			
 			this.updateTabVisibility();
@@ -99,6 +100,13 @@ define([
 			GameGlobals.uiFunctions.toggle("#switch-tabs #switch-trade", isInCamp && GameGlobals.gameState.unlockedFeatures.trade);
 			GameGlobals.uiFunctions.toggle("#switch-tabs #switch-projects", isInCamp && hasProjects);
 			GameGlobals.uiFunctions.toggle("#switch-tabs #switch-embark", isInCamp);
+
+			GameGlobals.uiFunctions.updateTabHotkeyNumbers();
+		},
+
+		onSettingsChanged: function () {
+			GameGlobals.uiFunctions.updateTabHotkeyNumbers();
+			GameGlobals.uiFunctions.updateHotkeyHints();
 		},
 		
 		updateTabNames: function () {

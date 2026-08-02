@@ -65,11 +65,15 @@ define([
 			this._onSectorHoverOut = $.proxy(this.onSectorHoverOut, this);
 			this._onMapScroll = $.proxy(this.hideSectorTooltip, this);
 			$("#mainmap-container").on("scroll", this._onMapScroll);
-			$("#mainmap-overlay").on("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
-			$("#mainmap-overlay").on("mousemove", ".map-overlay-cell", this._onSectorHoverMove);
-			$("#mainmap-overlay").on("mouseleave", ".map-overlay-cell", this._onSectorHoverOut);
+			$("#mainmap-overlay, #minimap-overlay").on("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
+			$("#mainmap-overlay, #minimap-overlay").on("mousemove", ".map-overlay-cell", this._onSectorHoverMove);
+			$("#mainmap-overlay, #minimap-overlay").on("mouseleave", ".map-overlay-cell", this._onSectorHoverOut);
+			$("#minimap-background-overlay").on("mouseenter", ".map-hint-cell", this._onSectorHoverIn);
+			$("#minimap-background-overlay").on("mousemove", ".map-hint-cell", this._onSectorHoverMove);
+			$("#minimap-background-overlay").on("mouseleave", ".map-hint-cell", this._onSectorHoverOut);
 			this.playerPositionNodes = engine.getNodeList(PlayerPositionNode);
 			this.playerLocationNodes = engine.getNodeList(PlayerLocationNode);
+			GlobalSignals.add(this, GlobalSignals.playerPositionChangedSignal, this.hideSectorTooltip);
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
 			GlobalSignals.add(this, GlobalSignals.gameStartedSignal, this.onGameStarted);
 			GlobalSignals.add(this, GlobalSignals.windowResizedSignal, this.onResize);
@@ -86,9 +90,12 @@ define([
 			if (this._onMapMouseWheel) $("#mainmap-container").off("wheel", this._onMapMouseWheel);
 			this.hideSectorTooltip();
 			if (this._onMapScroll) $("#mainmap-container").off("scroll", this._onMapScroll);
-			$("#mainmap-overlay").off("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
-			$("#mainmap-overlay").off("mousemove", ".map-overlay-cell", this._onSectorHoverMove);
-			$("#mainmap-overlay").off("mouseleave", ".map-overlay-cell", this._onSectorHoverOut);
+			$("#mainmap-overlay, #minimap-overlay").off("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
+			$("#mainmap-overlay, #minimap-overlay").off("mousemove", ".map-overlay-cell", this._onSectorHoverMove);
+			$("#mainmap-overlay, #minimap-overlay").off("mouseleave", ".map-overlay-cell", this._onSectorHoverOut);
+			$("#minimap-background-overlay").off("mouseenter", ".map-hint-cell", this._onSectorHoverIn);
+			$("#minimap-background-overlay").off("mousemove", ".map-hint-cell", this._onSectorHoverMove);
+			$("#minimap-background-overlay").off("mouseleave", ".map-hint-cell", this._onSectorHoverOut);
 			this.playerPositionNodes = null;
 			this.playerLocationNodes = null;
 		},
@@ -390,11 +397,22 @@ define([
 		SECTOR_TOOLTIP_CURSOR_GAP: 16,
 		SECTOR_TOOLTIP_EDGE_MARGIN: 8,
 
+		MAP_HINT_LABELS: {
+			"camp": "Camp",
+			"passage-up": "Passage up",
+			"passage-down": "Passage down",
+			"water": "Nearest known water",
+			"food": "Nearest known food",
+			"quest": "Point of interest",
+		},
+
 		onSectorHoverIn: function (e) {
 			let $cell = $(e.currentTarget);
 			let level = parseInt($cell.attr("data-level"));
 			let x = parseInt($cell.attr("data-x"));
 			let y = parseInt($cell.attr("data-y"));
+			let hintID = $cell.attr("data-hint-id");
+			let contextLabel = hintID ? this.MAP_HINT_LABELS[hintID] : null;
 
 			this.cancelSectorTooltip();
 			this.tooltipCursor = { x: e.clientX, y: e.clientY };
@@ -402,7 +420,7 @@ define([
 			let sys = this;
 			this.tooltipTimeout = setTimeout(function () {
 				sys.tooltipTimeout = null;
-				sys.showSectorTooltip(level, x, y);
+				sys.showSectorTooltip(level, x, y, contextLabel);
 			}, this.SECTOR_TOOLTIP_DELAY);
 		},
 
@@ -430,7 +448,7 @@ define([
 			$tooltip.hide().attr("aria-hidden", "true").empty();
 		},
 
-		showSectorTooltip: function (level, x, y) {
+		showSectorTooltip: function (level, x, y, contextLabel) {
 			let $tooltip = $("#map-sector-tooltip");
 			if ($tooltip.length == 0) return;
 
@@ -439,6 +457,11 @@ define([
 
 			let $content = this.getSectorTooltipContent(sector);
 			if (!$content) return;
+
+			// map hints (camp, passage, water etc off the minimap) say what the hinted sector is
+			if (contextLabel) {
+				$content.prepend($("<div class='map-tooltip-context'></div>").text(contextLabel));
+			}
 
 			$tooltip.empty().append($content);
 			// show before measuring so the pane has a real size to position against
@@ -854,7 +877,7 @@ define([
 			var hasCampOnLevel = levelEntity.get(CampComponent) !== null;
 			var sectorFeatures = sector.get(SectorFeaturesComponent);
 			var sectorPassages = sector.get(PassagesComponent);
-			var statusComponent = this.selectedSector.get(SectorStatusComponent);
+			var statusComponent = sector.get(SectorStatusComponent);
 			var localesComponent = sector.get(SectorLocalesComponent);
 			var improvements = sector.get(SectorImprovementsComponent);
 			var unScoutedLocales = localesComponent.locales.length - statusComponent.getNumLocalesScouted();
@@ -1054,7 +1077,7 @@ define([
 			let result = [];
 			
 			if (isScouted) {
-				let statusComponent = this.selectedSector.get(SectorStatusComponent);
+				let statusComponent = sector.get(SectorStatusComponent);
 				let featuresComponent = sector.get(SectorFeaturesComponent);
 
 				if (GameGlobals.sectorHelper.canBeInvestigated(sector)) {
