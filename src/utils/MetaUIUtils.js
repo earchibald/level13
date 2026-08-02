@@ -3,6 +3,9 @@ define(['jquery/jquery-3.7.1.min', 'game/GlobalSignals', 'game/constants/UIConst
 	let MetaUIUtils = {
 		
 		init: function () {
+			// subpages (faq, changelog, tools) get the touch class too so touch
+			// sizing rules apply outside the game
+			$("body").toggleClass("touch", UIConstants.isTouchScreen());
 			this.registerCollapsibleContainerListeners();
 		},
 		

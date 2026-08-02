@@ -210,6 +210,9 @@ define(['ash',
 				// tap toggles info callouts (hover is not available on touch)
 				$(document).on("click", ".info-callout-target", function (e) {
 					if ($(e.target).closest("button, a, input, select, textarea").length > 0) return;
+					// lists where tap already moves the item (trade, reward selection):
+					// there the callout would fight the primary action
+					if ($(this).closest(".inventorydivision, .resultlist, #resultlist-inventorymanagement").length > 0) return;
 					let $container = $(this).closest(".callout-container");
 					if ($container.length == 0) return;
 					let wasOpen = $container.hasClass("callout-visible");
@@ -217,20 +220,22 @@ define(['ash',
 					if (!wasOpen) {
 						uiFunctions.openCallout($container, $(this));
 					}
-					e.stopPropagation();
 				});
 
-				// tap on a disabled action button shows its callout (costs + disabled reason)
-				$(document).on("click", ".container-btn-action > button", function (e) {
-					if (!$(this).hasClass("btn-disabled")) return;
+				// tap on a disabled action button shows its callout (costs + disabled
+				// reason). Native disabled buttons swallow clicks, so the handler sits
+				// on the wrapper and CSS gives the disabled button pointer-events:none.
+				$(document).on("click", ".container-btn-action", function (e) {
+					let $btn = $(this).children("button");
+					if (!$btn.hasClass("btn-disabled")) return;
+					if ($(e.target).closest("button:not(.btn-disabled), a").length > 0) return;
 					let $container = $(this).closest(".callout-container");
 					if ($container.length == 0) return;
 					let wasOpen = $container.hasClass("callout-visible");
 					uiFunctions.closeAllCallouts();
 					if (!wasOpen) {
-						uiFunctions.openCallout($container, $(this));
+						uiFunctions.openCallout($container, $btn);
 					}
-					e.stopPropagation();
 				});
 
 				// long-press on an enabled action button previews its callout instead of acting
@@ -239,6 +244,8 @@ define(['ash',
 					if (e.pointerType === "mouse") return;
 					let btn = this;
 					let $btn = $(btn);
+					// a stale flag from an aborted long-press must not swallow this tap
+					btn.dataset.longPressFired = "false";
 					uiFunctions.cancelLongPress($btn);
 					let timer = setTimeout(function () {
 						btn.dataset.longPressFired = "true";
@@ -281,6 +288,10 @@ define(['ash',
 			},
 
 			closeAllCallouts: function () {
+				// fire the hover-out hooks so systems clear highlight state
+				$(".callout-container.callout-visible").each(function () {
+					$(this).children(".info-callout-target").trigger("mouseleave");
+				});
 				$(".callout-container.callout-visible").removeClass("callout-visible");
 			},
 
@@ -1742,53 +1753,52 @@ define(['ash',
 			},
 
 			registerLongTap: function (element, callback) {
-				// pointer events so hold-to-repeat works with both mouse and touch
+				// pointer events so hold-to-repeat works with both mouse and touch;
+				// state lives in a per-element closure so timers cannot leak
 				var $element = typeof (element) === "string" ? $(element) : element;
 				var minTime = 1000;
 				var intervalTime = 200;
 				var moveCancelThreshold = 15;
 
-				var cancelLongTap = function () {
-					var timer = $(this).attr("data-long-tap-timeout");
-					var interval = $(this).attr("data-long-tap-interval");
-					if (!timer && !interval) return;
-					clearTimeout(timer);
-					clearInterval(interval);
-					$(this).attr("data-long-tap-interval", 0);
-					$(this).attr("data-long-tap-timeout", 0);
-				};
-				$element.on('pointerdown', function (e) {
-					var target = e.target;
-					var $target = $(this);
-					$(this).attr("data-long-tap-start-x", Math.floor(e.pageX));
-					$(this).attr("data-long-tap-start-y", Math.floor(e.pageY));
-					cancelLongTap()
-					var timer = setTimeout(function () {
-						cancelLongTap()
-						var interval = setInterval(function () {
-							if (GameGlobals.gameState.uiStatus.mouseDown && GameGlobals.gameState.uiStatus.mouseDownElement == target) {
-								callback.apply($target, e);
-							} else {
-								cancelLongTap();
-							}
-						}, intervalTime);
-						$(this).attr("data-long-tap-interval", interval);
-					}, minTime);
-					$(this).attr("data-long-tap-timeout", timer);
-				});
-				$element.on('pointerleave pointercancel pointerup pointerout', function (e) {
-					cancelLongTap();
-				});
-				$element.on('pointermove', function (e) {
-					// small jitter (finger tremor) should not cancel the hold
-					var startX = parseInt($(this).attr("data-long-tap-start-x"));
-					var startY = parseInt($(this).attr("data-long-tap-start-y"));
-					if (isNaN(startX) || isNaN(startY)) return;
-					if (Math.abs(e.pageX - startX) < moveCancelThreshold && Math.abs(e.pageY - startY) < moveCancelThreshold) return;
-					cancelLongTap();
-				});
-				$element.on('contextmenu', function (e) {
-					e.preventDefault();
+				$element.each(function () {
+					var el = this;
+					var state = { timer: null, interval: null, startX: 0, startY: 0 };
+
+					var cancelLongTap = function () {
+						if (state.timer) clearTimeout(state.timer);
+						if (state.interval) clearInterval(state.interval);
+						state.timer = null;
+						state.interval = null;
+					};
+
+					$(el).on('pointerdown', function (e) {
+						var target = e.target;
+						var $target = $(el);
+						state.startX = Math.floor(e.pageX);
+						state.startY = Math.floor(e.pageY);
+						cancelLongTap();
+						state.timer = setTimeout(function () {
+							state.timer = null;
+							state.interval = setInterval(function () {
+								if (GameGlobals.gameState.uiStatus.mouseDown && GameGlobals.gameState.uiStatus.mouseDownElement == target) {
+									callback.apply($target, e);
+								} else {
+									cancelLongTap();
+								}
+							}, intervalTime);
+						}, minTime);
+					});
+					$(el).on('pointerleave pointercancel pointerup pointerout', function (e) {
+						cancelLongTap();
+					});
+					$(el).on('pointermove', function (e) {
+						// small jitter (finger tremor) should not cancel the hold
+						if (Math.abs(e.pageX - state.startX) < moveCancelThreshold && Math.abs(e.pageY - state.startY) < moveCancelThreshold) return;
+						cancelLongTap();
+					});
+					$(el).on('contextmenu', function (e) {
+						e.preventDefault();
+					});
 				});
 			},
 

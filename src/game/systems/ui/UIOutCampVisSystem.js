@@ -481,6 +481,7 @@ define([
 		
 		onMouseEnterBuilding: function (e) {
 			e.data.system.hoveredBuilding = e.data.building;
+			e.data.system.lastBuildingEnterTime = Date.now();
 			e.data.system.updateInfoOverlay();
 		},
 		
@@ -491,7 +492,14 @@ define([
 
 		onClickBuilding: function (e) {
 			let system = e.data.system;
-			system.hoveredBuilding = system.hoveredBuilding == e.data.building ? null : e.data.building;
+			// on touch a tap fires a synthesized mouseenter just before the click;
+			// treat that sequence as "open", not as a toggle back off
+			let justEntered = system.lastBuildingEnterTime && Date.now() - system.lastBuildingEnterTime < 500;
+			if (system.hoveredBuilding == e.data.building && !justEntered) {
+				system.hoveredBuilding = null;
+			} else {
+				system.hoveredBuilding = e.data.building;
+			}
 			system.updateInfoOverlay();
 		},
 		

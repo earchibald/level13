@@ -168,6 +168,7 @@ define([
 			container.addEventListener("touchmove", function (e) {
 				if (!pinch.active || e.touches.length != 2) return;
 				if (sys.selectedMapStyle != sys.MAP_STYLE_CANVAS) return;
+				if (!sys.playerPositionNodes || !sys.playerPositionNodes.head) return;
 				e.preventDefault();
 				if (pinch.startDist <= 0) return;
 				let dist = getTouchDistance(e);
@@ -421,6 +422,10 @@ define([
 		},
 
 		onSectorHoverIn: function (e) {
+			// touch screens use the tap paths (details panel / tap tooltip); a tap's
+			// synthesized mouseenter must not schedule the hover tooltip, which would
+			// otherwise appear and stick (no mouseleave follows on touch)
+			if (UIConstants.isTouchScreen()) return;
 			let $cell = $(e.currentTarget);
 			let level = parseInt($cell.attr("data-level"));
 			let x = parseInt($cell.attr("data-x"));

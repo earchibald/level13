@@ -22,9 +22,9 @@
 	<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css" />
-	<link rel="stylesheet" type="text/css" href="css/main.css" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3-mobile3" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3-mobile3" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3-mobile3" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
 </head>
@@ -542,7 +542,7 @@
 								</div>
 							</div>
 							<div id="mainmap-container-ascii">
-								<textarea rows="12" readonly></textarea>
+								<textarea rows="12" readonly wrap="off"></textarea>
 								<div id="mainmap-ascii-legend" class="lvl13-box-1"></div>
 							</div>
 							<div id="mainmap-sector-details" class="lvl13-box-1" style="margin: 5px; padding: 5px;">
@@ -779,7 +779,7 @@
 
 	<!-- mobile log drawer toggle (shown in small layout only) -->
 
-	<button id="btn-log-toggle" class="hidden-by-popups" aria-label="Toggle message log">log</button>
+	<button id="btn-log-toggle" class="hidden-by-popups hidden-when-down" aria-label="Toggle message log">log</button>
 
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
@@ -1028,7 +1028,7 @@
 	<script data-goatcounter="https://level13.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 
 	<!-- GlitchTip (exception tracker) -->
-	 <script src="https://browser.sentry-cdn.com/7.60.0/bundle.min.js" crossorigin="anonymous"></script>
+	 <script src="https://browser.sentry-cdn.com/7.60.0/bundle.min.js" crossorigin="anonymous" defer></script>
 
 	<!-- RequireJS -->
 	<script data-main="src/config" src="lib/requirejs/require.min.js"></script>

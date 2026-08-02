@@ -94,12 +94,12 @@ sticky `.buttonbox` at the popup bottom so close/confirm stays reachable. Specif
 - **Settings**: hotkey list height capped; checkboxes get real label-tap behavior.
 
 ### 5. Chrome (header, tabs, footer, log) compacts and stays reachable
-- **Mobile header**: tighter paddings, resource strips scroll horizontally instead of
-  wrapping into tall stacks. Restore the parity items upstream commented out: equipment
-  stats, header item list, header explorer list. The JS height-measure keeps padding-top
-  correct at any header height.
-- **Tab bar**: single-row horizontally scrollable strip at ≤ 568px (scroll snap, edge fade,
-  selected tab auto-scrolled into view). All 11 tabs keep their notification bubbles.
+- **Mobile header**: tighter paddings; strips wrap as upstream does (a scroll strip
+  would clip the tap callouts that open from chips inside it). Restore the parity items
+  upstream commented out: equipment stats, header item list, header explorer list. The JS
+  height-measure keeps padding-top correct at any header height.
+- **Tab bar**: single-row horizontally scrollable strip at ≤ 568px (scroll snap, selected
+  tab auto-scrolled into view). All 11 tabs keep their notification bubbles.
 - **Footer**: the unconditional 95px left padding becomes layout-regular-only; the bar wraps
   at phone widths; buttons get touch padding.
 - **Log**: in layout-small the log becomes reachable through a floating "log" toggle that
@@ -135,6 +135,23 @@ responsive handling (horizontal-scroll table containers at phone widths).
 - `prefers-reduced-motion: reduce` disables the global 1s opacity transitions.
 - Tracking: `isTrackingEnabled: false` on this branch — a code-modified fork must not
   report errors into upstream's GlitchTip project. GoatCounter stays (hostname-keyed).
+
+## Accepted limitations (audited)
+
+- Item detail callouts inside the trade and reward-selection lists stay
+  desktop-only: there, tap must keep its primary meaning (move the item), and
+  long-press is the hold-to-repeat gesture. Item stats remain readable from
+  the bag.
+- The software keyboard can cover the centered input popup on iOS
+  (visualViewport is not wired); the input popup is short, so the field
+  itself stays visible.
+- iOS rubber-band scrolling of the page behind an open popup is not fully
+  suppressed (body overflow lock only) — cosmetic.
+- A callout opened at the very top of the content area can slide under the
+  fixed header while scrolled to the top (stacking-context limit) — rare and
+  recoverable by scrolling.
+- Camp-vis building sprites keep their fixed world coordinates; on very
+  narrow screens far-out decorative buildings are clipped, as upstream does.
 
 ## Explicit non-goals
 

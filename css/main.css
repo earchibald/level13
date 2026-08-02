@@ -6013,6 +6013,13 @@ body.touch button.btn-disabled-vision {
 body.touch .callout-container.callout-visible button.btn-disabled-vision {
   opacity: 0.65;
 }
+body.touch .callout-container:not(.callout-visible) > div.btn-callout,
+body.touch .callout-container:not(.callout-visible) > div.info-callout {
+  display: none !important;
+}
+body.touch .container-btn-action > button.btn-disabled {
+  pointer-events: none;
+}
 body.touch {
   -webkit-tap-highlight-color: transparent;
 }
@@ -6088,19 +6095,28 @@ body.touch .stepper input.amount {
 }
 body.touch .horizontal-select-option {
   padding: 6px 10px;
+  min-height: 36px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+}
+body.touch .item,
+body.touch .res {
+  padding: 8px;
 }
 body.touch .collapsible-header {
   padding-top: 10px;
   padding-bottom: 10px;
 }
 div.popup {
+  box-sizing: border-box;
   max-height: 94vh;
   max-height: calc(100dvh - 10px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 @media screen and (max-width: 850px) {
-  div.popup {
+  body[class] div.popup {
     max-width: 90%;
   }
   div.popup .buttonbox {
@@ -6109,11 +6125,11 @@ div.popup {
     background: inherit;
     padding: 5px 0;
   }
-  #hotkeys-list {
+  body[class] #hotkeys-list {
     max-height: 40vh;
     max-height: 40dvh;
   }
-  .scrollable-container {
+  body[class] .scrollable-container {
     max-height: 65vh;
     max-height: 65dvh;
   }
@@ -6144,11 +6160,11 @@ div.popup {
   max-width: 90vw;
 }
 @media screen and (max-width: 568px) {
-  #manage-save-popup {
+  body[class] #manage-save-popup {
     width: auto;
     max-width: 100% !important;
   }
-  #save-list-container {
+  body[class] #save-list-container {
     flex-direction: column;
   }
   #manage-save-popup textarea {
@@ -6158,10 +6174,10 @@ div.popup {
   }
 }
 @media screen and (max-width: 568px) {
-  .fight-damage-indicator {
+  body[class] .fight-damage-indicator {
     right: 0;
   }
-  .fight-status-indicator {
+  body[class] .fight-status-indicator {
     right: 3em;
   }
 }
@@ -6177,12 +6193,16 @@ div.popup {
   ul#switch-tabs::-webkit-scrollbar {
     display: none;
   }
+  ul#switch-tabs {
+    scroll-snap-type: x proximity;
+  }
   ul#switch-tabs li {
     flex: 0 0 auto;
     margin: 0 !important;
     top: 0;
     border-radius: 0;
     border-bottom-width: 1px !important;
+    scroll-snap-align: center;
   }
   ul#switch-tabs li.selected {
     padding-bottom: 5px;
@@ -6198,14 +6218,6 @@ body.layout-small .mobile-header-section {
 #mobile-header-bag,
 #mobile-header-camp {
   max-width: 100%;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-#statsbar-resources-mobile::-webkit-scrollbar,
-#mobile-header-bag::-webkit-scrollbar,
-#mobile-header-camp::-webkit-scrollbar {
-  display: none;
 }
 #container-equipment-stats-mobile {
   display: flex;
@@ -6231,11 +6243,26 @@ body.layout-small .mobile-header-section {
 body.layout-small #footer {
   padding-left: 5px;
 }
+body.layout-small .sticky-footer {
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+body.layout-small #unit-main {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+body.layout-small #footer {
+  padding-right: 84px;
+}
 @media screen and (max-width: 568px) {
-  .sticky-footer {
+  body[class] .sticky-footer {
     height: auto;
     min-height: 55px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  body[class] .sticky-footer-wrapper {
+    margin-bottom: 0;
+  }
+  .sticky-footer-push {
+    display: none;
   }
   body.layout-small #footer {
     flex-wrap: wrap;
@@ -6309,13 +6336,28 @@ body.layout-small.log-drawer-open #log {
   #in-improvements table,
   #in-improvements tbody,
   #recruits-container table,
-  #recruits-container tbody {
+  #recruits-container tbody,
+  #in-improvements-level table,
+  #in-improvements-level tbody,
+  #in-improvements-colony table,
+  #in-improvements-colony tbody,
+  #in-improvements-level-built table,
+  #in-improvements-level-built tbody,
+  #in-improvements-colony-built table,
+  #in-improvements-colony-built tbody,
+  #trade-caravans-outgoing-container table,
+  #trade-caravans-outgoing-container tbody {
     display: block;
     width: 100%;
   }
   #out-improvements tr,
   #in-improvements tr,
-  #recruits-container tr {
+  #recruits-container tr,
+  #in-improvements-level tr,
+  #in-improvements-colony tr,
+  #in-improvements-level-built tr,
+  #in-improvements-colony-built tr,
+  #trade-caravans-outgoing-container tr {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -6323,11 +6365,16 @@ body.layout-small.log-drawer-open #log {
   }
   #out-improvements td,
   #in-improvements td,
-  #recruits-container td {
+  #recruits-container td,
+  #in-improvements-level td,
+  #in-improvements-colony td,
+  #in-improvements-level-built td,
+  #in-improvements-colony-built td,
+  #trade-caravans-outgoing-container td {
     display: block;
   }
   .trade-caravans-outgoing-plan td {
-    display: block;
+    width: 100%;
     text-align: center;
   }
   .trade-caravans-outgoing-plan input[type=range] {
@@ -6348,6 +6395,10 @@ body.layout-small #camp-overview tr.hide-in-small-layout {
 body.layout-small #camp-overview th.hide-in-small-layout,
 body.layout-small #camp-overview td.hide-in-small-layout {
   display: table-cell;
+  visibility: visible;
+}
+body.layout-small #camp-overview span.hide-in-small-layout {
+  display: inline-block;
   visibility: visible;
 }
 #mainmap-container-container {
@@ -6392,13 +6443,24 @@ body.layout-small #camp-overview td.hide-in-small-layout {
   }
 }
 @media screen and (max-width: 568px) {
-  div.btn-callout-content,
-  div.info-callout-content {
+  body[class] div.btn-callout-content,
+  body[class] div.info-callout-content {
     font-size: 0.95rem;
   }
-  .progress-label {
+  body[class] .progress-label {
     font-size: 0.9rem;
   }
+  body[class] .item-count,
+  body[class] span.time,
+  body[class] span.msg-camp-level,
+  body[class] .change-indicator,
+  body[class] .stats-value-container .forecast {
+    font-size: 0.85rem;
+  }
+}
+#changelog-container #changelog {
+  max-height: none;
+  overflow-y: visible;
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -6406,5 +6468,6 @@ body.layout-small #camp-overview td.hide-in-small-layout {
   *::after {
     transition-duration: 0.01s !important;
     animation-duration: 0.01s !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -1354,7 +1354,9 @@ define([
 			this.currentThemeTransitionID = setTimeout(function () {
 				sys.elements.body.toggleClass("sunlit", newValue);
 				sys.elements.body.toggleClass("dark", !newValue);
-				
+				// keep the browser chrome color in sync with the theme (mobile)
+				$("meta[name='theme-color']").attr("content", newValue ? "#fbfbfb" : "#202220");
+
 				sys.updatePageBackgroundColor();
 				sys.updateVisionStatus();
 				sys.updateThemedIcons();
