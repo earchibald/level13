@@ -206,6 +206,9 @@ define(['ash',
 				this.registerHotkey("Scout", "KeyM", defaultModifier, tabs.out, false, false, "scout");
 				this.registerHotkey("Collect water", "KeyG", defaultModifier, tabs.out, false, false, "use_out_collector_water");
 				this.registerHotkey("Collect food", "KeyF", defaultModifier, tabs.out, false, false, "use_out_collector_food");
+				this.registerHotkey("Collect 1 water", "KeyG", "shiftKey", tabs.out, false, false, "use_out_collector_water_one");
+				this.registerHotkey("Collect 1 food", "KeyF", "shiftKey", tabs.out, false, false, "use_out_collector_food_one");
+				this.registerHotkey("Refill water", "KeyH", defaultModifier, tabs.out, false, false, "use_spring");
 
 				this.registerHotkey("Teleport home", "KeyH", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TELEPORT_HOME));
 				this.registerHotkey("Pass time", "KeyK", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TIME + " " + 1));
@@ -294,7 +297,11 @@ define(['ash',
 			getActionHotkeyHint: function (action) {
 				if (!action) return null;
 				let hotkey = this.getActionHotkey(action);
-				if (hotkey) return hotkey.displayKeyShort;
+				if (hotkey) {
+					let modifier = this.getActualHotkeyModifier(hotkey.modifier);
+					let prefix = modifier == "shiftKey" ? "&#8679;" : "";
+					return prefix + hotkey.displayKeyShort;
+				}
 				if (this.contextHotkeyActions.indexOf(action) >= 0) return "&#9166;";
 				return null;
 			},

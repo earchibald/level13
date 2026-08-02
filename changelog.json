@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.5",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Minimap tooltips: hover a minimap square or an off-map hint icon for sector details. New hotkeys: Shift-F/Shift-G collect 1 food/water, H refills water at a spring."
+				}
+			]
+		},
+		{
 			"version": "0.6.3.4",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

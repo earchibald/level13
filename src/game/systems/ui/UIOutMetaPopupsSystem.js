@@ -112,6 +112,9 @@ define([
                     if (hotkey.isUniversal) continue;
                     if (hotkey.isHiddenFromList) continue;
                     let modifier = GameGlobals.uiFunctions.getActualHotkeyModifier(hotkey.modifier);
+                    if (modifier == "shiftKey") modifier = "Shift";
+                    if (modifier == "ctrlKey") modifier = "Ctrl";
+                    if (modifier == "altKey") modifier = "Alt";
                     let hotkeyValue = "";
                     if (modifier) hotkeyValue += modifier + " + ";
                     hotkeyValue += hotkey.displayKey;
