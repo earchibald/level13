@@ -53,6 +53,72 @@
 	outline: 5px solid @color-text-meta;
 }
 
+// hover tooltip for map sectors
+// lives at body level and is positioned with position:fixed, so the map scroll
+// container cannot clip it. pointer-events are off so it never blocks the map.
+
+#map-sector-tooltip {
+	position: fixed;
+	z-index: 20;
+	pointer-events: none;
+	box-sizing: border-box;
+	min-width: 190px;
+	max-width: 320px;
+	// matches the 8px edge margin the positioning code keeps, so the pane can
+	// never be taller than the space that code assumes it has
+	max-height: ~"calc(100vh - 16px)";
+	overflow: hidden;
+	padding: 7px 9px 8px 9px;
+	background: @color-bg-box-1;
+	border: 1px solid @color-border-strong;
+	box-shadow: 0 1px @shadow-blur-radius @color-shadow;
+	color: @color-text-default;
+	font-size: @font-size-small;
+	line-height: @line-height-condensed;
+	text-align: left;
+}
+
+#map-sector-tooltip .map-tooltip-header {
+	margin: 0 0 5px 0;
+	padding-bottom: 4px;
+	border-bottom: 1px solid @color-border-box-1;
+	font-size: @font-size-default;
+	line-height: @line-height-condensed;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#map-sector-tooltip .map-tooltip-pos {
+	color: @color-text-meta;
+	font-size: @font-size-small;
+}
+
+#map-sector-tooltip table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+#map-sector-tooltip td {
+	padding: 2px 0;
+	vertical-align: top;
+	border: none;
+}
+
+#map-sector-tooltip td.map-tooltip-label {
+	width: 38%;
+	padding-right: 8px;
+	color: @color-text-meta;
+	white-space: nowrap;
+}
+
+#map-sector-tooltip td.map-tooltip-value {
+	// long values wrap inside the pane instead of widening or overflowing it
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	word-break: break-word;
+}
+
 // TECH TREE
 
 #researched-upgrades-vis-container {

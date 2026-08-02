@@ -59,6 +59,15 @@ define([
 			GameGlobals.uiMapHelper.enableScrollingForMap("mainmap");
 			this._onMapMouseWheel = $.proxy(this.onMapMouseWheel, this);
 			$("#mainmap-container").on("wheel", this._onMapMouseWheel);
+			// delegated so the handlers survive the overlay being rebuilt (on zoom, level change etc)
+			this._onSectorHoverIn = $.proxy(this.onSectorHoverIn, this);
+			this._onSectorHoverMove = $.proxy(this.onSectorHoverMove, this);
+			this._onSectorHoverOut = $.proxy(this.onSectorHoverOut, this);
+			this._onMapScroll = $.proxy(this.hideSectorTooltip, this);
+			$("#mainmap-container").on("scroll", this._onMapScroll);
+			$("#mainmap-overlay").on("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
+			$("#mainmap-overlay").on("mousemove", ".map-overlay-cell", this._onSectorHoverMove);
+			$("#mainmap-overlay").on("mouseleave", ".map-overlay-cell", this._onSectorHoverOut);
 			this.playerPositionNodes = engine.getNodeList(PlayerPositionNode);
 			this.playerLocationNodes = engine.getNodeList(PlayerLocationNode);
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
@@ -75,6 +84,11 @@ define([
 			$("#select-header-mapstyle").off("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.disableScrollingForMap("mainmap");
 			if (this._onMapMouseWheel) $("#mainmap-container").off("wheel", this._onMapMouseWheel);
+			this.hideSectorTooltip();
+			if (this._onMapScroll) $("#mainmap-container").off("scroll", this._onMapScroll);
+			$("#mainmap-overlay").off("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
+			$("#mainmap-overlay").off("mousemove", ".map-overlay-cell", this._onSectorHoverMove);
+			$("#mainmap-overlay").off("mouseleave", ".map-overlay-cell", this._onSectorHoverOut);
 			this.playerPositionNodes = null;
 			this.playerLocationNodes = null;
 		},
@@ -305,9 +319,153 @@ define([
 			}
 		},
 
+		// SECTOR HOVER TOOLTIP
+
+		SECTOR_TOOLTIP_DELAY: 450,
+		SECTOR_TOOLTIP_CURSOR_GAP: 16,
+		SECTOR_TOOLTIP_EDGE_MARGIN: 8,
+
+		onSectorHoverIn: function (e) {
+			let $cell = $(e.currentTarget);
+			let level = parseInt($cell.attr("data-level"));
+			let x = parseInt($cell.attr("data-x"));
+			let y = parseInt($cell.attr("data-y"));
+
+			this.cancelSectorTooltip();
+			this.tooltipCursor = { x: e.clientX, y: e.clientY };
+
+			let sys = this;
+			this.tooltipTimeout = setTimeout(function () {
+				sys.tooltipTimeout = null;
+				sys.showSectorTooltip(level, x, y);
+			}, this.SECTOR_TOOLTIP_DELAY);
+		},
+
+		onSectorHoverMove: function (e) {
+			this.tooltipCursor = { x: e.clientX, y: e.clientY };
+			// once shown the pane stays put, so it does not jitter under the cursor
+		},
+
+		onSectorHoverOut: function (e) {
+			this.cancelSectorTooltip();
+			this.hideSectorTooltip();
+		},
+
+		cancelSectorTooltip: function () {
+			if (this.tooltipTimeout) {
+				clearTimeout(this.tooltipTimeout);
+				this.tooltipTimeout = null;
+			}
+		},
+
+		hideSectorTooltip: function () {
+			this.cancelSectorTooltip();
+			let $tooltip = $("#map-sector-tooltip");
+			if ($tooltip.length == 0) return;
+			$tooltip.hide().attr("aria-hidden", "true").empty();
+		},
+
+		showSectorTooltip: function (level, x, y) {
+			let $tooltip = $("#map-sector-tooltip");
+			if ($tooltip.length == 0) return;
+
+			let sector = GameGlobals.levelHelper.getSectorByPosition(level, x, y);
+			if (!sector) return;
+
+			let $content = this.getSectorTooltipContent(sector);
+			if (!$content) return;
+
+			$tooltip.empty().append($content);
+			// show before measuring so the pane has a real size to position against
+			$tooltip.css({ left: "0px", top: "0px" }).show().attr("aria-hidden", "false");
+			this.positionSectorTooltip($tooltip);
+		},
+
+		getSectorTooltipContent: function (sector) {
+			let statusComponent = sector.get(SectorStatusComponent);
+			let sectorFeatures = sector.get(SectorFeaturesComponent);
+			let isScouted = statusComponent.scouted;
+			let isVisited = GameGlobals.sectorHelper.isVisited(sector);
+			let features = GameGlobals.sectorHelper.getTextFeatures(sector);
+			let position = sector.get(PositionComponent).getPosition();
+
+			let name = isVisited ? TextConstants.getSectorName(isScouted, features) : "Sector";
+
+			let $header = $("<div class='map-tooltip-header'></div>");
+			$header.append($("<span></span>").text(name));
+			$header.append(" ");
+			$header.append($("<span class='map-tooltip-pos'></span>").text(position.getInGameFormat(false)));
+
+			// same fields and label keys as the click-through details panel
+			let rows = [
+				{ key: "ui.map.sector_detail_district_label", text: this.getDistrictText(sector) },
+				{ key: "ui.map.sector_detail_distance_label", text: this.getDistanceText(sector) },
+				{ key: "ui.map.sector_detail_poi_label", text: this.getPOIText(sector, isScouted) },
+				{ key: "ui.map.sector_detail_scavenging_label", text: this.getResScaText(sector, isScouted, statusComponent, sectorFeatures) },
+				{ key: "ui.map.sector_detail_collectors_label", text: this.getCollectorsText(sector, isScouted) },
+				{ key: "ui.map.sector_detail_threats_label", text: this.getThreatsText(sector, isScouted) },
+				{ key: "ui.map.sector_detail_blockers_label", text: this.getBlockersHTML(sector, isScouted) },
+				{ key: "ui.map.sector_detail_environment_label", html: this.getEnvironmentHTML(sector, isScouted) },
+				{ key: "ui.map.sector_detail_other_label", html: this.getMiscHTML(sector, isScouted) },
+			];
+
+			let $table = $("<table></table>");
+			let numRows = 0;
+
+			for (let i = 0; i < rows.length; i++) {
+				let row = rows[i];
+				let value = row.html != null ? row.html : row.text;
+				// skip empty fields so the pane stays compact
+				if (value == null) continue;
+				let str = ("" + value).trim();
+				if (str.length == 0 || str == "-") continue;
+
+				let $tr = $("<tr></tr>");
+				$tr.append($("<td class='map-tooltip-label'></td>").text(Text.t(row.key)));
+				let $value = $("<td class='map-tooltip-value'></td>");
+				if (row.html != null) $value.html(str); else $value.text(str);
+				$tr.append($value);
+				$table.append($tr);
+				numRows++;
+			}
+
+			let $content = $("<div></div>");
+			$content.append($header);
+			if (numRows > 0) $content.append($table);
+
+			return $content;
+		},
+
+		positionSectorTooltip: function ($tooltip) {
+			let cursor = this.tooltipCursor || { x: 0, y: 0 };
+			let gap = this.SECTOR_TOOLTIP_CURSOR_GAP;
+			let margin = this.SECTOR_TOOLTIP_EDGE_MARGIN;
+
+			let viewportW = $(window).width();
+			let viewportH = $(window).height();
+
+			let width = $tooltip.outerWidth();
+			let height = $tooltip.outerHeight();
+
+			// prefer below-right of the cursor, flip to the other side when it would not fit
+			let left = cursor.x + gap;
+			if (left + width > viewportW - margin) left = cursor.x - gap - width;
+			if (left < margin) left = margin;
+			// if it still cannot fit, pin it to the left edge rather than let it run off screen
+			if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
+
+			let top = cursor.y + gap;
+			if (top + height > viewportH - margin) top = cursor.y - gap - height;
+			if (top < margin) top = margin;
+			if (top + height > viewportH - margin) top = Math.max(margin, viewportH - margin - height);
+
+			$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
+		},
+
 		onMapMouseWheel: function (e) {
 			if (this.selectedMapStyle != this.MAP_STYLE_CANVAS) return;
 			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
+			this.hideSectorTooltip();
 			let originalEvent = e.originalEvent || e;
 			let deltaY = originalEvent.deltaY;
 			if (!deltaY) return;
@@ -882,6 +1040,8 @@ define([
 		},
 
 		onSectorSelected: function (level, x, y) {
+			// the details panel below the map takes over on click
+			this.hideSectorTooltip();
 			this.selectSector(level, x, y);
 		},
 
@@ -893,10 +1053,13 @@ define([
 		},
 		
 		onResize: function () {
+			// the pane is positioned against the old viewport, so drop it rather than let it clip
+			this.hideSectorTooltip();
 			this.updateHeight();
 		},
 
 		onTabChanged: function (tabID, tabProps) {
+			this.hideSectorTooltip();
 			if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
 			
 			this.updateBubble();
