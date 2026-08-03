@@ -986,6 +986,14 @@ body.layout-small #unit-main {
 	padding-right: ~"env(safe-area-inset-right)" !important;
 }
 
+// #unit-main is four-fifths wide to leave room for the log column, but in
+// small layout the log lives in a drawer instead. gridism only collapses
+// units to full width below 568px, so from 569 to 850 (phone landscape,
+// small tablets) a fifth of the screen stayed empty.
+body.layout-small #unit-main {
+	width: 100% !important;
+}
+
 // reserve room for the floating log toggle so it cannot cover the
 // footer buttons
 body.layout-small #footer {

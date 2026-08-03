@@ -6604,6 +6604,9 @@ body.layout-small #unit-main {
   padding-left: env(safe-area-inset-left) !important;
   padding-right: env(safe-area-inset-right) !important;
 }
+body.layout-small #unit-main {
+  width: 100% !important;
+}
 body.layout-small #footer {
   padding-right: 84px;
 }

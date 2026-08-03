@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m6",
+            "version": "0.6.3.m7",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the game column no longer sits 15px right of centre, so panels stop bleeding off the right edge. Tapping a debuff, perk or resource chip opens its tooltip in iOS Safari. The log button no longer stretches down the screen while pressed."
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: in landscape and on small tablets the game fills the screen instead of leaving the old log column's fifth empty"
                 },
                 {
                     "type": "UI",
