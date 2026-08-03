@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m37",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Go button on the embark page is no longer cut off the bottom of the screen and out of reach"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m36",
             "requiredVersion": "0.6.1",
             "phase": "beta",

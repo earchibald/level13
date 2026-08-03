@@ -1227,12 +1227,13 @@ define([
 			this.updateOutControlsPlacement(isShell);
 			this.updateSectorBarPlacement(isShell);
 			this.updateMapDockPlacement(isShell);
+			this.updateActionMirrorPlacement(isShell);
 			this.updateFooterPlacement(isShell, hasOutPanel);
 			this.updateLogButtonPlacement(hasOutPanel);
 
 			// nothing above needs a height: the column sorts that out. The floating
 			// log pill is the one thing still positioned against the bottom chrome,
-			// which is the action bar and the map panel together.
+			// which is whichever bands the current tab ends with.
 			this.updateBottomChromeState(isShell);
 
 			// the panel was just rebuilt in this same pass, so a height read now
@@ -1255,12 +1256,13 @@ define([
 			return flag.trim() === "1";
 		},
 
-		// the action bar and the map panel are two separate bands of the shell
-		// column, and the log pill has to clear both
+		// the bands the shell column ends with: the action bar and the map panel
+		// on the exploration tab, a pinned action bar on the tabs that have one.
+		// The log pill has to clear whichever are there.
 		getBottomChromeHeight: function (isShell) {
 			if (!isShell) return 0;
 			let height = 0;
-			$("#out-sector-bar, #out-container-compass").each(function () {
+			$("#out-sector-bar, #out-container-compass, #unit-main > .action-mirror").each(function () {
 				let $el = $(this);
 				if (!$el.is(":visible")) return;
 				height += Math.ceil($el.outerHeight());
@@ -1362,6 +1364,50 @@ define([
 			} else if (this.mapHome) {
 				$(this.mapHome).append($map);
 			}
+		},
+
+		// The pinned action bar belonging to the tab that is on screen. Which tabs
+		// have one is the markup's business, not a list kept in here: the element
+		// carries .action-mirror and its tab container carries the tab id.
+		getCurrentActionMirror: function () {
+			let currentTab = GameGlobals.gameState.uiStatus.currentTab;
+			return $(".action-mirror").filter(function () {
+				return $(this).closest(".tabcontainer").data("tab") === currentTab;
+			}).first();
+		},
+
+		// Safari clips a position: fixed element that lives inside a scrolling
+		// container - the same bug that made the map panel vanish. The pinned
+		// action bars are the same shape, fixed and inside the pane, and on a
+		// phone that left the embark page's "Go" half off the bottom of the
+		// screen and untappable, with nothing to scroll to now that the page's
+		// own copy of it is gone.
+		//
+		// So they get the map panel's treatment: lifted out of the pane and hung
+		// off #unit-main as a static band of the shell column, where there is no
+		// fixed positioning to lose and nothing above it that can clip it.
+		updateActionMirrorPlacement: function (shouldDock) {
+			let $unit = $("#unit-main");
+			if ($unit.length === 0) return;
+
+			let $wanted = shouldDock ? this.getCurrentActionMirror() : $();
+			let $docked = $unit.children(".action-mirror");
+
+			// one bar at a time: the tab changed under it, or the shell went away
+			if ($docked.length > 0 && !$docked.is($wanted)) {
+				if (this.actionMirrorMarker) $(this.actionMirrorMarker).before($docked);
+			}
+
+			if ($wanted.length === 0) return;
+			if ($wanted.parent().is($unit)) return;
+
+			// a marker where it came from, so it goes back to its own place in its
+			// own tab rather than the front of it. The old one has done its job
+			// above, and each bar has a different home.
+			if (this.actionMirrorMarker) $(this.actionMirrorMarker).remove();
+			this.actionMirrorMarker = document.createComment("action-mirror");
+			$wanted.after(this.actionMirrorMarker);
+			$unit.append($wanted);
 		},
 
 		// The strip along the bottom of the map panel: the footer at the left, the

@@ -6776,12 +6776,12 @@ body.layout-small.tab-switch-out #btn-log-toggle {
 body.layout-small.tab-switch-embark #grid-switch-content,
 body.layout-small.tab-switch-milestones #grid-switch-content,
 body.layout-small.tab-switch-projects #grid-switch-content {
-  padding-bottom: 76px;
+  padding-bottom: 8px;
 }
 body.layout-small.tab-switch-embark #btn-log-toggle,
 body.layout-small.tab-switch-milestones #btn-log-toggle,
 body.layout-small.tab-switch-projects #btn-log-toggle {
-  bottom: calc(72px + env(safe-area-inset-bottom));
+  bottom: calc(var(--l13-out-bottom-height, 72px) + 12px);
 }
 @media screen and (max-height: 480px) {
   body.layout-small .action-mirror {
@@ -7254,6 +7254,7 @@ body.layout-small #unit-main {
 body.layout-small #unit-main > #grid-switch-content,
 body.layout-small #unit-main > #mobile-chrome,
 body.layout-small #unit-main > #out-sector-bar,
+body.layout-small #unit-main > .action-mirror,
 body.layout-small #unit-main > #out-container-compass {
   margin-top: 0;
   margin-bottom: 0;
@@ -7274,6 +7275,12 @@ body.layout-small #grid-switch-content {
 body.layout-small #unit-main > #out-container-compass {
   position: static;
   flex: 0 0 auto;
+}
+body.layout-small #unit-main > .action-mirror {
+  position: static;
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 body.layout-small #grid-switch-content > #footer {
   width: 100%;

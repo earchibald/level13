@@ -1317,18 +1317,24 @@ body.layout-small.tab-switch-out #btn-log-toggle {
 	bottom: ~"calc(var(--l13-out-bottom-height, 300px) + 12px)";
 }
 
-// content has to clear the bar; only the tabs that actually carry one
+// The bar is a band of the column on these tabs too now, so the pane simply
+// ends where it begins and there is nothing to reserve for it - the 76px that
+// used to clear a fixed bar would be 76px of dead scroll. The only layout where
+// the bar is still fixed is the short-viewport one below, and that block zeroes
+// this padding for its own reasons.
 body.layout-small.tab-switch-embark #grid-switch-content,
 body.layout-small.tab-switch-milestones #grid-switch-content,
 body.layout-small.tab-switch-projects #grid-switch-content {
-	padding-bottom: 76px;
+	padding-bottom: 8px;
 }
 
-// and the floating log pill sits above it rather than on top of it
+// and the floating log pill sits above the bar rather than on top of it. The
+// bar is measured into --l13-out-bottom-height with every other bottom band,
+// so this is the same sum the exploration tab uses.
 body.layout-small.tab-switch-embark #btn-log-toggle,
 body.layout-small.tab-switch-milestones #btn-log-toggle,
 body.layout-small.tab-switch-projects #btn-log-toggle {
-	bottom: ~"calc(72px + env(safe-area-inset-bottom))";
+	bottom: ~"calc(var(--l13-out-bottom-height, 72px) + 12px)";
 }
 
 // landscape: a fixed bar would eat a 390px-tall viewport, so it flows
@@ -2036,6 +2042,7 @@ body.layout-small #unit-main {
 body.layout-small #unit-main > #grid-switch-content,
 body.layout-small #unit-main > #mobile-chrome,
 body.layout-small #unit-main > #out-sector-bar,
+body.layout-small #unit-main > .action-mirror,
 body.layout-small #unit-main > #out-container-compass {
 	margin-top: 0;
 	margin-bottom: 0;
@@ -2069,6 +2076,17 @@ body.layout-small #unit-main > #out-container-compass {
 	// it keeps the `order: 2` set on the fixed rule above, which is what puts it
 	// last in this column - every other child of #unit-main is 0. Do not "clean
 	// that up" as dead once the panel is static here.
+}
+
+// The pinned action bar, docked by updateActionMirrorPlacement for the same
+// reason the map panel is: Safari clips a fixed element inside a scroller, and
+// the pane is one. Static here, so there is no fixed positioning left to lose.
+// It keeps its own padding, edge and shadow - it still reads as bottom chrome.
+body.layout-small #unit-main > .action-mirror {
+	position: static;
+	flex: 0 0 auto;
+	width: 100%;
+	box-sizing: border-box;
 }
 
 // The footer carries save and restart, and it sat after the scrolling page.
