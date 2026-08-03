@@ -506,6 +506,7 @@ define(['ash',
 				this.currentTransition = transition;
 
 				$("body").toggleClass("ui-transition", true);
+				transition.startTimestamp = new Date().getTime();
 				if (blockUI) GameGlobals.gameState.uiStatus.isTransitioning = true;
 				GlobalSignals.transitionStartedSignal.dispatch();
 
@@ -611,6 +612,33 @@ define(['ash',
 				}
 			},
 
+			// transitions complete via chained setTimeouts, which throttled timers or an exception
+			// can break; a stuck isTransitioning freezes most UI updates and swallows clicks
+			checkStuckTransition: function () {
+				if (!GameGlobals.gameState.uiStatus.isTransitioning) {
+					this.transitionStuckSince = null;
+					return;
+				}
+				let transition = this.currentTransition;
+				if (transition) {
+					if (!transition.startTimestamp) return;
+					if (new Date().getTime() - transition.startTimestamp < 5000) return;
+					log.w("ui transition seems stuck; force completing");
+					this.completeTransition();
+					return;
+				}
+				// no ui transition object: movement transitions have their own watchdog,
+				// so a flag stuck this long with neither in progress is an orphan
+				if (!this.transitionStuckSince) {
+					this.transitionStuckSince = new Date().getTime();
+					return;
+				}
+				if (new Date().getTime() - this.transitionStuckSince < 8000) return;
+				log.w("ui stuck in transitioning state; force clearing");
+				this.transitionStuckSince = null;
+				GameGlobals.gameState.uiStatus.isTransitioning = false;
+			},
+
 			completeTransition: function () {
 				let transition = this.currentTransition;
 
@@ -620,7 +648,7 @@ define(['ash',
 
 				if (!transition) return;
 
-				clearTimeout(transition.timeoutID);
+				clearTimeout(transition.currentTimeoutID);
 
 				this.transitionElementsComplete(transition.elements);
 				
