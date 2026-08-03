@@ -6670,7 +6670,7 @@ body.layout-small.tab-switch-out #grid-switch-content {
   padding-bottom: 8px;
 }
 body.layout-small.tab-switch-out #btn-log-toggle {
-  bottom: calc(var(--l13-out-map-height, 240px) + 12px);
+  bottom: calc(var(--l13-out-bottom-height, 300px) + 12px);
 }
 body.layout-small.tab-switch-embark #grid-switch-content,
 body.layout-small.tab-switch-milestones #grid-switch-content,

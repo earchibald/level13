@@ -960,7 +960,8 @@ body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
 
 // The map is the thing you check between every move, and it sat at the far end
 // of the tab. Pin it to the bottom of the screen instead. UIOutHeaderSystem
-// measures it into --l13-out-map-height so the content and the log pill clear
+// measures it, with the action bar, into --l13-out-bottom-height so the log
+// pill clears
 // it, and getPinnedBottomHeight keeps tooltips off it.
 body.layout-small.tab-switch-out #out-container-compass {
 	position: fixed;
@@ -1122,7 +1123,7 @@ body.layout-small.tab-switch-out #grid-switch-content {
 }
 
 body.layout-small.tab-switch-out #btn-log-toggle {
-	bottom: ~"calc(var(--l13-out-map-height, 240px) + 12px)";
+	bottom: ~"calc(var(--l13-out-bottom-height, 300px) + 12px)";
 }
 
 // content has to clear the bar; only the tabs that actually carry one
@@ -2001,6 +2002,12 @@ body.layout-small #unit-main.out-map-hidden > #out-sector-bar {
 // One continuous surface: the panel drops its own edge whenever a VISIBLE bar
 // sits above it. Keyed on the visibility classes, not on the element, so a
 // hidden bar leaves the panel's divider intact.
+//
+// This selector is DOM-based, but the panel's position is not: it carries
+// `order: 2` while every other child of #unit-main is 0, so it renders last
+// whatever the DOM says. Keep updateSectorBarPlacement inserting the bar
+// BEFORE the panel - if the two ever disagree the column still looks right
+// and this rule silently stops matching, leaving a double border at the seam.
 body.layout-small.tab-switch-out #out-sector-bar.has-actions + #out-container-compass,
 body.layout-small.tab-switch-out #out-sector-bar.has-collectors + #out-container-compass {
 	border-top: none;

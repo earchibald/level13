@@ -171,6 +171,7 @@ define([
 			GlobalSignals.add(this, GlobalSignals.launchCompletedSignal, this.onLaunchCompleted);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
 			GlobalSignals.add(this, GlobalSignals.windowResizedSignal, this.onWindowResized);
+			GlobalSignals.add(this, GlobalSignals.featureUnlockedSignal, this.onFeatureUnlocked);
 
 			this.generateStatsCallouts();
 			this.updateGameVersion();
@@ -189,9 +190,14 @@ define([
 				// the minimap pins to the bottom on the exploration tab, so its
 				// height is a layout metric too (see mobile.less)
 				let mapElement = document.getElementById("out-container-compass");
+				// the action bar's own height changes with the sector - scout
+				// leaving, a collector chip appearing - without resizing anything
+				// else, so it is a layout metric in its own right
+				let barElement = document.getElementById("out-sector-bar");
 				if (headerElement) this.headerResizeObserver.observe(headerElement);
 				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
 				if (mapElement) this.headerResizeObserver.observe(mapElement);
+				if (barElement) this.headerResizeObserver.observe(barElement);
 			}
 		},
 
@@ -1142,6 +1148,13 @@ define([
 			}
 		},
 
+		// unlocking scouting shows the map panel, which changes the shell column's
+		// shape and the height the log pill has to clear - and nothing else reruns
+		// the layout at that moment
+		onFeatureUnlocked: function () {
+			this.updateLayout();
+		},
+
 		updateLayoutMode: function () {
 			let wasSmallLayout = this.elements.body.hasClass("layout-small");
 			let isSmallLayout =  $(window).width() <= UIConstants.SMALL_LAYOUT_THRESHOLD;
@@ -1181,10 +1194,9 @@ define([
 			$("#unit-main").toggleClass("out-map-hidden", isShell && !$("#out-container-compass").is(":visible"));
 
 			// nothing above needs a height: the column sorts that out. The floating
-			// log pill is the one thing still positioned against the map panel.
-			let $map = $("#out-container-compass");
-			let mapHeight = isShell && $map.length > 0 && $map.is(":visible") ? Math.ceil($map.outerHeight()) : 0;
-			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
+			// log pill is the one thing still positioned against the bottom chrome,
+			// which is the action bar and the map panel together.
+			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
 
 			// the panel was just rebuilt in this same pass, so a height read now
 			// can be one layout behind; read it again on the next frame
@@ -1206,13 +1218,24 @@ define([
 			return flag.trim() === "1";
 		},
 
+		// the action bar and the map panel are two separate bands of the shell
+		// column, and the log pill has to clear both
+		getBottomChromeHeight: function (isShell) {
+			if (!isShell) return 0;
+			let height = 0;
+			$("#out-sector-bar, #out-container-compass").each(function () {
+				let $el = $(this);
+				if (!$el.is(":visible")) return;
+				height += Math.ceil($el.outerHeight());
+			});
+			return height;
+		},
+
 		// the measuring half of updateLayout, without any of the DOM moves, so it
 		// is safe to run again from a frame callback
 		updateMeasurements: function () {
-			let $map = $("#out-container-compass");
 			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
-			let mapHeight = isShell && $map.length > 0 && $map.is(":visible") ? Math.ceil($map.outerHeight()) : 0;
-			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
+			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
 		},
 
 		// The level title sits between the chrome and the tab content in the
