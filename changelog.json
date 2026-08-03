@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m29",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Mobile: fix the stats bar scrolling away and the map panel coming loose in the middle of the page - the page itself no longer scrolls, only the middle band does, so neither can detach"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the footer (save, restart, version) scrolls with the page instead of sitting after it, and \"back to camp\" clears the right edge"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m28",
             "requiredVersion": "0.6.1",
             "phase": "beta",

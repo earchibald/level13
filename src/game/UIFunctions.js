@@ -1222,6 +1222,18 @@ define(['ash',
 
 			scrollToTabTop: function () {
 				let element = $(document.getElementById("grid-location-header"));
+				if (element.length == 0) return;
+
+				// on a phone the document is locked and the tab content is its
+				// own scroller (see APP SHELL in mobile.less), so scrolling the
+				// window would do nothing at all
+				let $pane = $("#grid-switch-content");
+				if ($pane.length > 0 && $pane.css("position") == "fixed") {
+					let offset = element.offset().top - $pane.offset().top;
+					if (offset < 0) $pane.animate({ scrollTop: $pane.scrollTop() + offset }, 250);
+					return;
+				}
+
 				let elementTop = element.offset().top;
 			    let offset = elementTop - $(window).scrollTop();
 

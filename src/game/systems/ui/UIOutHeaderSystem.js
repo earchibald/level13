@@ -1170,8 +1170,12 @@ define([
 			let chromeHeight = isSmallLayout && isHeaderFixed ? Math.ceil($chrome.outerHeight()) : 0;
 
 			let padding = isSmallLayout && isHeaderFixed ? chromeHeight + 7 : 15;
-			$("#unit-main").css("padding-top", padding + "px");
+			// the scroll pane starts where the chrome ends (see APP SHELL in
+			// mobile.less); the pane is fixed, so this is its top, not padding
+			document.documentElement.style.setProperty("--l13-chrome-height", chromeHeight + "px");
+			$("#unit-main").css("padding-top", isSmallLayout && isHeaderFixed ? "0px" : padding + "px");
 			$("#log-container").css("padding-top", (padding + 10) + "px");
+			this.updateFooterPlacement(isSmallLayout && isHeaderFixed);
 
 			// the minimap pins to the bottom of the exploration tab; the content
 			// above it and the log pill both have to clear it
@@ -1180,6 +1184,55 @@ define([
 			this.updateOutControlsPlacement(isSmallLayout && isMapFixed);
 			let mapHeight = isMapFixed ? Math.ceil($map.outerHeight()) : 0;
 			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
+
+			// Both bands were just measured, and both may have been mutated in the
+			// same pass - the controls move into the map panel a few lines up. A
+			// height read before the browser has settled that leaves the scroll
+			// pane ending in the wrong place, which hides the end of the tab behind
+			// the panel. Read again on the next frame and correct it.
+			if (!this.isRemeasureScheduled && typeof window.requestAnimationFrame == "function") {
+				let sys = this;
+				this.isRemeasureScheduled = true;
+				window.requestAnimationFrame(function () {
+					sys.isRemeasureScheduled = false;
+					sys.updateMeasurements();
+				});
+			}
+		},
+
+		// the measuring half of updateLayout, without any of the DOM moves, so it
+		// is safe to run again from a frame callback
+		updateMeasurements: function () {
+			let $chrome = $("#mobile-chrome");
+			if ($chrome.length > 0 && $chrome.css("position") == "fixed") {
+				document.documentElement.style.setProperty("--l13-chrome-height", Math.ceil($chrome.outerHeight()) + "px");
+			}
+
+			let $map = $("#out-container-compass");
+			if ($map.length > 0 && $map.css("position") == "fixed") {
+				document.documentElement.style.setProperty("--l13-out-map-height", Math.ceil($map.outerHeight()) + "px");
+			}
+		},
+
+		// With the document locked to the viewport, anything after the scrolling
+		// pane is off-screen for good - and the footer is where save, restart and
+		// the version live. Move it inside the pane so it scrolls with the page.
+		updateFooterPlacement: function (shouldDock) {
+			let $footer = $("#footer");
+			let $pane = $("#grid-switch-content");
+			if ($footer.length === 0 || $pane.length === 0) return;
+
+			let isDocked = $footer.parent().is($pane);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				// remember where it came from, so the desktop layout gets it back
+				// in its own place rather than a guessed one
+				if (!this.footerHome) this.footerHome = $footer.parent()[0];
+				$pane.append($footer);
+			} else if (this.footerHome) {
+				$(this.footerHome).append($footer);
+			}
 		},
 
 		// The stats bar and the tab bar are one block of chrome, but they were two
