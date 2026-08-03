@@ -1067,8 +1067,6 @@ define([
 		},
 
 		onSectorSelected: function (level, x, y) {
-			// the details panel below the map takes over on click
-			this.hideSectorTooltip();
 			this.selectSector(level, x, y);
 		},
 
