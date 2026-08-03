@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m31",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Scavenge, scout, refill water and the bucket and trap collect actions moved into a bar above the map, so they never scroll away"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Scout disappears once a sector is scouted, and a built bucket or trap shows its fill level and collect buttons instead of a build button"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m30",
             "requiredVersion": "0.6.1",
             "phase": "beta",
