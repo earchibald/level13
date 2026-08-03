@@ -537,7 +537,10 @@ body.touch button {
 
 body.layout-small #grid-switch {
 	position: fixed;
-	top: var(--l13-tabs-top, 0px);
+	// the info bar height is rounded up into --l13-tabs-top, so its real bottom
+	// edge can sit a fraction of a pixel above this: pull the tab bar up by 1px
+	// to overlap rather than leave a hairline the scrolling page shows through
+	top: ~"calc(var(--l13-tabs-top, 0px) - 1px)";
 	left: 0;
 	right: 0;
 	z-index: 5;

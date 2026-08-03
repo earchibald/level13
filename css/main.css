@@ -6301,7 +6301,7 @@ body.touch button {
 }
 body.layout-small #grid-switch {
   position: fixed;
-  top: var(--l13-tabs-top, 0px);
+  top: calc(var(--l13-tabs-top, 0px) - 1px);
   left: 0;
   right: 0;
   z-index: 5;
