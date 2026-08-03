@@ -1201,9 +1201,23 @@ define([
 			if (shouldMove === isMoved) return;
 
 			if (shouldMove) {
+				// the map and its readout become one column, so the panel is a
+				// plain two-child row that cannot wrap the controls underneath
+				let $column = $("#out-map-column");
+				if ($column.length === 0) {
+					$column = $("<div id='out-map-column'></div>");
+					$map.prepend($column);
+				}
+				$column.append($map.children("#minimap-background-container"));
+				$column.append($map.children(".infobox"));
 				$map.append($controls);
 			} else {
 				$("#container-tab-two-out-actions").prepend($controls);
+				let $column = $("#out-map-column");
+				if ($column.length > 0) {
+					$map.append($column.children());
+					$column.remove();
+				}
 			}
 		},
 

@@ -6565,25 +6565,27 @@ body.layout-small.tab-switch-out #out-container-compass {
   text-align: center;
   background: var(--l13-mobile-bg);
   border-top: 1px solid var(--l13-mobile-border);
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "map controls" "info controls";
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-items: center;
-  column-gap: 4px;
+  justify-content: center;
+  gap: 6px;
 }
-body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
-  grid-area: map;
+body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
+  flex: 0 0 auto;
+}
+body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.layout-small.tab-switch-out #out-map-column > #minimap-background-container {
   zoom: 0.72;
 }
-body.layout-small.tab-switch-out #out-container-compass > .infobox {
-  grid-area: info;
+body.layout-small.tab-switch-out #out-map-column > .infobox {
   margin: 2px 0 0 0;
   padding: 0;
 }
-body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
-  grid-area: controls;
-  width: 100%;
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions {
   padding: 0;
   margin: 0;
 }
@@ -6607,12 +6609,6 @@ body.layout-small.tab-switch-out #out-container-compass #out-actions-movement {
 body.layout-small.tab-switch-out #out-container-compass #out-actions-movement button {
   width: 100%;
   max-width: 150px;
-}
-@media screen and (max-width: 319px) {
-  body.layout-small.tab-switch-out #out-container-compass {
-    grid-template-columns: 1fr;
-    grid-template-areas: "map" "info" "controls";
-  }
 }
 body.layout-small.tab-switch-out #grid-switch-content {
   padding-bottom: calc(var(--l13-out-map-height, 240px) + 8px);

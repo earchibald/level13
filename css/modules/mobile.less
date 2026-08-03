@@ -928,19 +928,23 @@ body.layout-small.tab-switch-out #out-container-compass {
 	background: var(--l13-mobile-bg);
 	border-top: 1px solid var(--l13-mobile-border);
 
-	// map on the left with its readout beneath, the controls that
-	// UIOutHeaderSystem moves in here on the right
-	display: grid;
-	// minmax(0,...) so the controls column cannot be forced wider than the
-	// space left by the map - a plain 1fr keeps its min-content width and
-	// pushes the compass off the screen
-	grid-template-columns: auto minmax(0, 1fr);
-	grid-template-areas:
-		"map controls"
-		"info controls";
+	// A plain non-wrapping row: the map column that UIOutHeaderSystem builds,
+	// then the controls it moves in. nowrap is the point - the controls can
+	// never end up underneath the map, at any width, whatever the map measures.
+	display: flex;
+	flex-wrap: nowrap;
 	align-items: center;
-	justify-items: center;
-	column-gap: 4px;
+	justify-content: center;
+	gap: 6px;
+}
+
+body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
+	flex: 0 0 auto;
+}
+
+body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
+	flex: 1 1 auto;
+	min-width: 0;
 }
 
 // The minimap is a fixed 226px block - the canvas has a hard 198px minimum, so
@@ -948,20 +952,16 @@ body.layout-small.tab-switch-out #out-container-compass {
 // the compass beside it, at every phone width, and the panel stops eating a
 // third of the screen. `zoom` and not `transform` because zoom scales layout
 // and hit testing together, so the map's own tap targets stay true.
-body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
-	grid-area: map;
+body.layout-small.tab-switch-out #out-map-column > #minimap-background-container {
 	zoom: 0.72;
 }
 
-body.layout-small.tab-switch-out #out-container-compass > .infobox {
-	grid-area: info;
+body.layout-small.tab-switch-out #out-map-column > .infobox {
 	margin: 2px 0 0 0;
 	padding: 0;
 }
 
-body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
-	grid-area: controls;
-	width: 100%;
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions {
 	padding: 0;
 	margin: 0;
 }
@@ -998,17 +998,6 @@ body.layout-small.tab-switch-out #out-container-compass #out-actions-movement bu
 	max-width: 150px;
 }
 
-// Below 320px there is not enough room for the map and the grid on one row
-// even scaled, so the panel stacks as a last resort.
-@media screen and (max-width: 319px) {
-	body.layout-small.tab-switch-out #out-container-compass {
-		grid-template-columns: 1fr;
-		grid-template-areas:
-			"map"
-			"info"
-			"controls";
-	}
-}
 
 body.layout-small.tab-switch-out #grid-switch-content {
 	padding-bottom: ~"calc(var(--l13-out-map-height, 240px) + 8px)";
