@@ -1131,9 +1131,13 @@ define(['ash',
 				$("#switch-tabs li").removeClass("selected");
 				$("#switch-tabs li#" + tabID).addClass("selected");
 				$("#tab-header h2").text(tabID);
-				// the camp tab repeats the location header's title; mobile css
-				// hides the duplicate on this class
-				$("body").toggleClass("tab-camp", tabID === this.elementIDs.tabs.in);
+				// mobile css keys off the active tab: it hides the camp tab's
+				// duplicate title and reserves room for that tab's pinned action bar
+				let $body = $("body");
+				$body.removeClass(function (i, className) {
+					return (className.match(/(^|\s)tab-\S+/g) || []).join(" ");
+				});
+				$body.addClass("tab-" + tabID);
 				this.scrollTabIntoView();
 
 				GameGlobals.gameState.uiStatus.currentTab = tabID;

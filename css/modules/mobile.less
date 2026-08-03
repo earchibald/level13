@@ -696,6 +696,13 @@ body.touch #mobile-header .item::after {
 	inset: -8px -4px;
 }
 
+// the whole chip is the tap target for its tooltip; without this a tap can
+// land on the icon image, which iOS treats as an image gesture instead
+body.touch #mobile-header .item img,
+body.touch #mobile-header .res img {
+	pointer-events: none;
+}
+
 body.layout-small #mobile-header .notification-player {
 	margin-top: 2px;
 }
@@ -728,18 +735,62 @@ body.layout-small #statsbar-deity-mobile {
 }
 
 // ---------------------------------------------------------------------------
-// MIRRORED MAIN ACTIONS
-// Long single-action pages (embark, milestones, colony launch) repeat their
-// one main action at the top so a phone does not have to scroll to the
-// bottom to use it. Desktop shows those pages in full, so it keeps one copy.
+// PINNED ACTION BAR
+// Long single-action pages (embark, milestones, colony launch) keep their one
+// main action pinned to the bottom of the screen, so it never has to be
+// scrolled to. The page keeps its own copy at the end of the content.
+// Desktop shows those pages in full, so it keeps one copy and no bar.
 
 .action-mirror {
 	display: none;
 }
 
 body.layout-small .action-mirror {
-	display: block;
-	margin-bottom: 10px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 8px;
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 9;
+	margin: 0;
+	// the bottom inset clears the phone's home indicator and browser chrome
+	padding: 8px ~"calc(10px + env(safe-area-inset-right))" ~"calc(8px + env(safe-area-inset-bottom))" ~"calc(10px + env(safe-area-inset-left))";
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	border-top: 1px solid var(--l13-mobile-border);
+}
+
+// content has to clear the bar; only the tabs that actually carry one
+body.layout-small.tab-switch-embark #grid-switch-content,
+body.layout-small.tab-switch-milestones #grid-switch-content,
+body.layout-small.tab-switch-projects #grid-switch-content {
+	padding-bottom: 76px;
+}
+
+// and the floating log pill sits above it rather than on top of it
+body.layout-small.tab-switch-embark #btn-log-toggle,
+body.layout-small.tab-switch-milestones #btn-log-toggle,
+body.layout-small.tab-switch-projects #btn-log-toggle {
+	bottom: ~"calc(72px + env(safe-area-inset-bottom))";
+}
+
+// landscape: a fixed bar would eat a 390px-tall viewport, so it flows
+@media screen and (max-height: 480px) {
+	body.layout-small .action-mirror {
+		position: static;
+		border-top: none;
+		padding: 0 0 10px 0;
+		justify-content: flex-start;
+	}
+
+	body.layout-small.tab-switch-embark #grid-switch-content,
+	body.layout-small.tab-switch-milestones #grid-switch-content,
+	body.layout-small.tab-switch-projects #grid-switch-content {
+		padding-bottom: 0;
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -778,7 +829,7 @@ body.layout-small #grid-location-header {
 }
 
 // camp tab: the location h1 directly above already shows camp name + level
-body.layout-small.tab-camp #tab-header h2 {
+body.layout-small.tab-switch-in #tab-header h2 {
 	display: none;
 }
 

@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m3",
+            "version": "0.6.3.m4",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -26,6 +26,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the pinned info bar is now a ruled grid of label-over-value cells, three columns in camp (evidence/rumours/stamina, storage/reputation/population, materials) and two outside (evidence/rumours, vision/stamina, bag and party). Fixes camp storage vanishing from the header after re-entering camp, blank labels caused by a broken text refresh, and stat limits missing on small screens"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: a page's main action is pinned to the bottom of the screen instead of repeated at the top, clearing the phone's home indicator and browser chrome, with the log button lifted above it"
                 }
             ]
         },

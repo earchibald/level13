@@ -6420,6 +6420,10 @@ body.touch #mobile-header .item::after {
   position: absolute;
   inset: -8px -4px;
 }
+body.touch #mobile-header .item img,
+body.touch #mobile-header .res img {
+  pointer-events: none;
+}
 body.layout-small #mobile-header .notification-player {
   margin-top: 2px;
 }
@@ -6446,8 +6450,43 @@ body.layout-small #statsbar-deity-mobile {
   display: none;
 }
 body.layout-small .action-mirror {
-  display: block;
-  margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9;
+  margin: 0;
+  padding: 8px calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: var(--l13-mobile-bg);
+  border-top: 1px solid var(--l13-mobile-border);
+}
+body.layout-small.tab-switch-embark #grid-switch-content,
+body.layout-small.tab-switch-milestones #grid-switch-content,
+body.layout-small.tab-switch-projects #grid-switch-content {
+  padding-bottom: 76px;
+}
+body.layout-small.tab-switch-embark #btn-log-toggle,
+body.layout-small.tab-switch-milestones #btn-log-toggle,
+body.layout-small.tab-switch-projects #btn-log-toggle {
+  bottom: calc(72px + env(safe-area-inset-bottom));
+}
+@media screen and (max-height: 480px) {
+  body.layout-small .action-mirror {
+    position: static;
+    border-top: none;
+    padding: 0 0 10px 0;
+    justify-content: flex-start;
+  }
+  body.layout-small.tab-switch-embark #grid-switch-content,
+  body.layout-small.tab-switch-milestones #grid-switch-content,
+  body.layout-small.tab-switch-projects #grid-switch-content {
+    padding-bottom: 0;
+  }
 }
 @media screen and (max-width: 850px) {
   body[class] h1 {
@@ -6471,7 +6510,7 @@ body.layout-small .action-mirror {
 body.layout-small #grid-location-header {
   padding-top: 2px;
 }
-body.layout-small.tab-camp #tab-header h2 {
+body.layout-small.tab-switch-in #tab-header h2 {
   display: none;
 }
 body.layout-small div.grid-content {
