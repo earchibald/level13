@@ -828,15 +828,82 @@ Replace with:
 				if (barElement) this.headerResizeObserver.observe(barElement);
 ```
 
+- [ ] **Step 3c: Re-run the layout when a feature unlocks**
+
+Unlocking scouting shows the map panel
+(`UIOutLevelSystem.updateUnlockedFeatures` toggles `#out-container-compass` on
+`unlockedFeatures.scout`), which changes both the shell column's shape and the
+height the log pill must clear. Nothing reruns `updateLayout` at that moment,
+so two things go stale until the next move or tab switch: the measured bottom
+height, and the `out-map-hidden` class that gives the bar the home-indicator
+inset while it is the last band. On a notched iPhone that leaves roughly 34px
+of dead strip between the bar's buttons and the map.
+
+In `initListeners`, after the existing
+`GlobalSignals.add(this, GlobalSignals.levelTypeRevealedSignal, this.onLevelTypeRevealed);`
+line, add:
+
+```javascript
+			GlobalSignals.add(this, GlobalSignals.featureUnlockedSignal, this.onFeatureUnlocked);
+```
+
+Then add this method immediately before `updateLayoutMode`:
+
+```javascript
+		// unlocking scouting shows the map panel, which changes the shell column's
+		// shape and the height the log pill has to clear - and nothing else reruns
+		// the layout at that moment
+		onFeatureUnlocked: function () {
+			this.updateLayout();
+		},
+
+```
+
+- [ ] **Step 3d: Record why DOM order is load-bearing**
+
+`#out-container-compass` carries `order: 2` and the docked override does not
+reset it, while every other child of `#unit-main` is `order: 0`. The map
+therefore renders last whatever the DOM order is — but the rule that suppresses
+its top border is an adjacent-sibling selector, which is DOM-based. The two
+agree today. If they ever diverge, the layout would still *look* right while
+the seam silently grew a double border, with the position clue removed.
+
+In `css/modules/mobile.less`, find the divider-suppression rule added by Task 3
+and extend its comment. Replace:
+
+```less
+// One continuous surface: the panel drops its own edge whenever a VISIBLE bar
+// sits above it. Keyed on the visibility classes, not on the element, so a
+// hidden bar leaves the panel's divider intact.
+```
+
+with:
+
+```less
+// One continuous surface: the panel drops its own edge whenever a VISIBLE bar
+// sits above it. Keyed on the visibility classes, not on the element, so a
+// hidden bar leaves the panel's divider intact.
+//
+// This selector is DOM-based, but the panel's position is not: it carries
+// `order: 2` while every other child of #unit-main is 0, so it renders last
+// whatever the DOM says. Keep updateSectorBarPlacement inserting the bar
+// BEFORE the panel - if the two ever disagree the column still looks right
+// and this rule silently stops matching, leaving a double border at the seam.
+```
+
 - [ ] **Step 4: Verify the JS parses and the old name is gone**
 
 ```bash
 node --check src/game/systems/ui/UIOutHeaderSystem.js
 grep -rn "l13-out-map-height" src/
 grep -c "headerResizeObserver.observe" src/game/systems/ui/UIOutHeaderSystem.js
+grep -c "onFeatureUnlocked" src/game/systems/ui/UIOutHeaderSystem.js
+grep -c "getBottomChromeHeight" src/game/systems/ui/UIOutHeaderSystem.js
 ```
 
-Expected: `node --check` exits 0; the first grep returns nothing; the count is `4`.
+Expected: `node --check` exits 0; the first grep returns nothing; the observe
+count is `4`; `onFeatureUnlocked` appears `2` times (listener plus definition);
+`getBottomChromeHeight` appears `3` times (definition plus two call sites).
 
 - [ ] **Step 5: Point the log pill at the new property**
 
