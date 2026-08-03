@@ -1243,6 +1243,63 @@ body.layout-small.log-drawer-open #log {
 		display: block;
 	}
 
+	// COLLECTORS (bucket, trap): build + improve + collect all + collect one +
+	// fill level never fit one phone row, and plain wrapping left the fill
+	// level orphaned on a line of its own under the build button, reading as
+	// if it belonged to nothing. Lay each collector out as a small card: the
+	// name and its fill level on top, the collect actions beneath.
+	// (the ancestor id keeps this above `#out-improvements tr { display: flex }`)
+	#out-improvements tr#out-improvements-collector-water,
+	#out-improvements tr#out-improvements-collector-food {
+		display: grid;
+		// fixed action columns so "1" and the upgrade arrow line up between
+		// the bucket and the trap whatever their fill levels read
+		grid-template-columns: 1fr 3.2em 3.6em;
+		grid-template-areas:
+			"build  storage storage"
+			"useall useone  improve";
+		align-items: center;
+		column-gap: 6px;
+		// tight inside the card, loose between cards, so the two lines read as
+		// one collector rather than as four unrelated button rows
+		row-gap: 2px;
+		padding: 0;
+		margin: 0 0 22px 0;
+	}
+
+	#out-improvements-collector-water > td:nth-child(1),
+	#out-improvements-collector-food > td:nth-child(1) {
+		grid-area: build;
+	}
+
+	#out-improvements-collector-water > td:nth-child(2),
+	#out-improvements-collector-food > td:nth-child(2) {
+		grid-area: improve;
+	}
+
+	#out-improvements-collector-water > td:nth-child(3),
+	#out-improvements-collector-food > td:nth-child(3) {
+		grid-area: useall;
+	}
+
+	#out-improvements-collector-water > td:nth-child(4),
+	#out-improvements-collector-food > td:nth-child(4) {
+		grid-area: useone;
+	}
+
+	#out-improvements-collector-water > td.list-storage,
+	#out-improvements-collector-food > td.list-storage {
+		grid-area: storage;
+		text-align: right;
+		white-space: nowrap;
+	}
+
+	// collect all is the action of the row: give it the spare width
+	#out-improvements-collector-water > td:nth-child(3) button,
+	#out-improvements-collector-food > td:nth-child(3) button {
+		width: 100%;
+	}
+
 	// incoming trader rows: content-width buttons (they have no .action
 	// class, so the global 95pt width would apply)
 	#trade-caravans-incoming-container button {

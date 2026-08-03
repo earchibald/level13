@@ -6787,6 +6787,43 @@ body.layout-small.log-drawer-open #log {
   #trade-caravans-outgoing-container td {
     display: block;
   }
+  #out-improvements tr#out-improvements-collector-water,
+  #out-improvements tr#out-improvements-collector-food {
+    display: grid;
+    grid-template-columns: 1fr 3.2em 3.6em;
+    grid-template-areas: "build  storage storage" "useall useone  improve";
+    align-items: center;
+    column-gap: 6px;
+    row-gap: 2px;
+    padding: 0;
+    margin: 0 0 22px 0;
+  }
+  #out-improvements-collector-water > td:nth-child(1),
+  #out-improvements-collector-food > td:nth-child(1) {
+    grid-area: build;
+  }
+  #out-improvements-collector-water > td:nth-child(2),
+  #out-improvements-collector-food > td:nth-child(2) {
+    grid-area: improve;
+  }
+  #out-improvements-collector-water > td:nth-child(3),
+  #out-improvements-collector-food > td:nth-child(3) {
+    grid-area: useall;
+  }
+  #out-improvements-collector-water > td:nth-child(4),
+  #out-improvements-collector-food > td:nth-child(4) {
+    grid-area: useone;
+  }
+  #out-improvements-collector-water > td.list-storage,
+  #out-improvements-collector-food > td.list-storage {
+    grid-area: storage;
+    text-align: right;
+    white-space: nowrap;
+  }
+  #out-improvements-collector-water > td:nth-child(3) button,
+  #out-improvements-collector-food > td:nth-child(3) button {
+    width: 100%;
+  }
   #trade-caravans-incoming-container button {
     width: auto;
     min-width: 70px;

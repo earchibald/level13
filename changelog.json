@@ -1,12 +1,16 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m8",
+            "version": "0.6.3.m9",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
             "released": "2026-08-02",
             "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the bucket and the trap are laid out as cards - name and fill level on one line, collect all / collect one / upgrade beneath - instead of a five-widget row that wrapped and left the fill level stranded under the build button"
+                },
                 {
                     "type": "UI",
                     "summary": "Mobile: fix debuff and status tooltips never opening - the halo that widened their tap target was attached to the chip's list item, which covered the target itself and swallowed every tap"
