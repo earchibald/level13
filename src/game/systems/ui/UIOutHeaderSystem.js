@@ -1159,20 +1159,17 @@ define([
 			let isInCampTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.camp;
 			GameGlobals.uiFunctions.toggle("#mobile-header-status", isSmallLayout && !isInCamp);
 			GameGlobals.uiFunctions.toggle("#mobile-header-camp-res", isSmallLayout && isInCamp);
+			this.updateChromeGrouping(isSmallLayout);
+
 			// in short (landscape) viewports the mobile header is static and scrolls
 			// away, so the content needs no padding to clear it (see mobile.less)
-			let isHeaderFixed = $("#mobile-header").css("position") == "fixed";
-			// outerHeight includes padding and border, so safe-area insets count
-			let headerHeight = isSmallLayout && isHeaderFixed ? Math.ceil($("#mobile-header").outerHeight()) : 0;
+			let $chrome = $("#mobile-chrome");
+			let isHeaderFixed = $chrome.length > 0 && $chrome.css("position") == "fixed";
+			// one measurement for the whole top chrome: the tab bar sits inside it
+			// now, so nothing has to be told where the header ends
+			let chromeHeight = isSmallLayout && isHeaderFixed ? Math.ceil($chrome.outerHeight()) : 0;
 
-			// the tab bar pins directly below the header, so it needs the header
-			// height to position itself and the content must clear both
-			let $tabs = $("#grid-switch");
-			let isTabsFixed = $tabs.css("position") == "fixed";
-			document.documentElement.style.setProperty("--l13-tabs-top", headerHeight + "px");
-			let tabsHeight = isTabsFixed ? Math.ceil($tabs.outerHeight()) : 0;
-
-			let padding = isSmallLayout && isHeaderFixed ? headerHeight + tabsHeight + 7 : 15;
+			let padding = isSmallLayout && isHeaderFixed ? chromeHeight + 7 : 15;
 			$("#unit-main").css("padding-top", padding + "px");
 			$("#log-container").css("padding-top", (padding + 10) + "px");
 
@@ -1183,6 +1180,40 @@ define([
 			this.updateOutControlsPlacement(isSmallLayout && isMapFixed);
 			let mapHeight = isMapFixed ? Math.ceil($map.outerHeight()) : 0;
 			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
+		},
+
+		// The stats bar and the tab bar are one block of chrome, but they were two
+		// separately positioned fixed elements, with the tab bar placed from a
+		// measurement of the header's height. Any lag in that measurement - the
+		// header gaining a row on entering camp, say - left the tab bar sitting
+		// too high, and its first row disappeared behind the header. Putting both
+		// in one fixed wrapper means the tab bar is always exactly below the
+		// header with nothing to measure, however many rows either of them grows.
+		updateChromeGrouping: function (shouldGroup) {
+			let $header = $("#mobile-header");
+			let $tabs = $("#grid-switch");
+			if ($header.length === 0 || $tabs.length === 0) return;
+
+			let $chrome = $("#mobile-chrome");
+			let isGrouped = $chrome.length > 0 && $header.parent().is($chrome);
+			if (shouldGroup === isGrouped) return;
+
+			if (shouldGroup) {
+				if ($chrome.length === 0) {
+					$chrome = $("<div id='mobile-chrome'></div>");
+					// it is the element updateLayout measures, so watch it too
+					if (this.headerResizeObserver) this.headerResizeObserver.observe($chrome[0]);
+				}
+				$header.before($chrome);
+				$chrome.append($header);
+				$chrome.append($tabs);
+			} else {
+				// back where they came from: header first, tab bar above the
+				// tab content it labels
+				$chrome.before($header);
+				$("#grid-switch-content").before($tabs);
+				$chrome.remove();
+			}
 		},
 
 		// The compass and "back to camp" are what you reach for between every

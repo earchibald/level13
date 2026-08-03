@@ -137,6 +137,14 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 			}
 
 			this.currentMessages = shownMessages;
+
+			// reading the log is opening the drawer, so anything that arrives
+			// while it is already open counts as read straight away
+			if ($("body").hasClass("log-drawer-open")) {
+				this.markLogMessagesSeen();
+			} else {
+				this.updateLogBadge();
+			}
 		},
 
 		createLogListItem: function () {
@@ -216,6 +224,32 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 					this.currentMessages[i].markedAsSeen = true;
 				}
 			}
+
+			this.updateLogBadge();
+		},
+
+		// On a phone the log lives behind a button, so entries arriving unread
+		// are otherwise invisible. This counts the same messages the log itself
+		// treats as unseen, so opening the drawer clears the badge through the
+		// game's existing seen-marking rather than a counter of its own.
+		updateLogBadge: function () {
+			let $button = $("#btn-log-toggle");
+			if ($button.length == 0) return;
+
+			let unread = 0;
+			if (this.currentMessages) {
+				for (let i = 0; i < this.currentMessages.length; i++) {
+					let message = this.currentMessages[i];
+					if (!message.markedAsSeen && !message.loadedFromSave) unread++;
+				}
+			}
+
+			if (unread <= 0) {
+				$button.removeAttr("data-unread");
+				return;
+			}
+
+			$button.attr("data-unread", unread > 99 ? "99+" : unread);
 		},
 
 		updateOpacity: function () {

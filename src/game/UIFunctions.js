@@ -203,7 +203,11 @@ define(['ash',
 				// mobile log drawer toggle (small layout only, see mobile css)
 				$("#btn-log-toggle").click(function () {
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					let isOpening = !$("body").hasClass("log-drawer-open");
 					$("body").toggleClass("log-drawer-open");
+					// opening the drawer is reading the log: clear the unread
+					// badge through the game's own seen-marking
+					if (isOpening) GlobalSignals.markLogMessagesSeenSignal.dispatch();
 				});
 
 				// keep popups centered within the VISIBLE viewport (the software

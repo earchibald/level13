@@ -17,6 +17,8 @@ body.dark {
 	// under the chrome rather than joining it
 	--l13-mobile-divider: #6e7064;
 	--l13-mobile-divider-shadow: rgba(0, 0, 0, 0.6);
+	--l13-mobile-badge-bg: #cccccc;
+	--l13-mobile-badge-fg: #202220;
 }
 
 body.sunlit {
@@ -24,6 +26,8 @@ body.sunlit {
 	--l13-mobile-border: #aaaaaa;
 	--l13-mobile-divider: #5f5f5f;
 	--l13-mobile-divider-shadow: rgba(0, 0, 0, 0.28);
+	--l13-mobile-badge-bg: #333333;
+	--l13-mobile-badge-fg: #ffffff;
 }
 
 // ---------------------------------------------------------------------------
@@ -543,20 +547,26 @@ body.touch button {
 // UIOutHeaderSystem.updateLayout sets --l13-tabs-top to the info bar height
 // and pads #unit-main by the height of both.
 
-body.layout-small #grid-switch {
+// The whole top chrome is one fixed block, built by
+// UIOutHeaderSystem.updateChromeGrouping. The tab bar simply follows the stats
+// bar inside it, so however many rows either grows, the tab bar cannot end up
+// behind the header - which is what a measured offset kept doing.
+body.layout-small #mobile-chrome {
 	position: fixed;
-	// the info bar height is rounded up into --l13-tabs-top, so its real bottom
-	// edge can sit a fraction of a pixel above this: pull the tab bar up by 1px
-	// to overlap rather than leave a hairline the scrolling page shows through
-	top: ~"calc(var(--l13-tabs-top, 0px) - 1px)";
+	top: 0;
 	left: 0;
 	right: 0;
-	z-index: 5;
-	margin: 0;
+	z-index: 6;
 	background: var(--l13-mobile-bg);
 	// the bottom edge of the whole top chrome: the page scrolls under here
 	border-bottom: 3px solid var(--l13-mobile-divider);
 	box-shadow: 0 5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+
+body.layout-small #grid-switch {
+	position: static;
+	margin: 0;
+	background: var(--l13-mobile-bg);
 	padding-left: ~"env(safe-area-inset-left)";
 	padding-right: ~"env(safe-area-inset-right)";
 }
@@ -581,7 +591,9 @@ body.layout-small ul#switch-tabs {
 body.layout-small ul#switch-tabs li {
 	text-indent: 0;
 	vertical-align: top;
-	margin: 0 !important;
+	// a row gap so wrapped rows do not sit tight against each other - without
+	// it the rows touch and the "!" markers overlap the row above
+	margin: 0 0 5px 0 !important;
 	top: 0;
 	border-radius: 0;
 	border-bottom-width: 1px !important;
@@ -644,6 +656,7 @@ body.layout-small ul#switch-tabs li.selected {
 // and stay correct however the cells wrap.
 body.layout-small #mobile-header {
 	display: grid;
+	position: static;
 	grid-template-columns: repeat(2, 1fr);
 	align-items: stretch;
 	gap: 1px;
@@ -858,8 +871,10 @@ body.layout-small #statsbar-deity-mobile {
 // in short (landscape) viewports the fixed header would eat most of the
 // screen; let it scroll away with the page instead
 @media screen and (max-height: 480px) {
-	body.layout-small #mobile-header {
+	body.layout-small #mobile-chrome {
 		position: static;
+		border-bottom: none;
+		box-shadow: none;
 	}
 }
 
@@ -1319,6 +1334,30 @@ body.layout-small #btn-log-toggle {
 // stretched it the full height of the screen.
 body.layout-small #btn-log-toggle:active {
 	top: auto;
+}
+
+// unread count: UIOutLogSystem sets data-unread to the number of log entries
+// the game itself still calls unseen, and clears it when the drawer opens.
+// Monochrome on purpose - the palette has no accent colour, so the badge is
+// simply the inverse of the pill.
+body.layout-small #btn-log-toggle[data-unread]::before {
+	content: attr(data-unread);
+	position: absolute;
+	top: -7px;
+	right: -7px;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 5px;
+	box-sizing: border-box;
+	border-radius: 10px;
+	background: var(--l13-mobile-badge-bg);
+	color: var(--l13-mobile-badge-fg);
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 20px;
+	text-align: center;
+	text-transform: none;
+	pointer-events: none;
 }
 
 // invisible halo: the pill floats alone, so the free space around it can

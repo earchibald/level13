@@ -5948,12 +5948,16 @@ body.dark {
   --l13-mobile-border: #3a3a3a;
   --l13-mobile-divider: #6e7064;
   --l13-mobile-divider-shadow: rgba(0, 0, 0, 0.6);
+  --l13-mobile-badge-bg: #cccccc;
+  --l13-mobile-badge-fg: #202220;
 }
 body.sunlit {
   --l13-mobile-bg: #ffffff;
   --l13-mobile-border: #aaaaaa;
   --l13-mobile-divider: #5f5f5f;
   --l13-mobile-divider-shadow: rgba(0, 0, 0, 0.28);
+  --l13-mobile-badge-bg: #333333;
+  --l13-mobile-badge-fg: #ffffff;
 }
 #rotate-notice {
   display: none;
@@ -6303,16 +6307,20 @@ body.touch button {
     right: 3em;
   }
 }
-body.layout-small #grid-switch {
+body.layout-small #mobile-chrome {
   position: fixed;
-  top: calc(var(--l13-tabs-top, 0px) - 1px);
+  top: 0;
   left: 0;
   right: 0;
-  z-index: 5;
-  margin: 0;
+  z-index: 6;
   background: var(--l13-mobile-bg);
   border-bottom: 3px solid var(--l13-mobile-divider);
   box-shadow: 0 5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+body.layout-small #grid-switch {
+  position: static;
+  margin: 0;
+  background: var(--l13-mobile-bg);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
@@ -6330,7 +6338,7 @@ body.layout-small ul#switch-tabs {
 body.layout-small ul#switch-tabs li {
   text-indent: 0;
   vertical-align: top;
-  margin: 0 !important;
+  margin: 0 0 5px 0 !important;
   top: 0;
   border-radius: 0;
   border-bottom-width: 1px !important;
@@ -6367,6 +6375,7 @@ body.layout-small ul#switch-tabs li.selected {
 }
 body.layout-small #mobile-header {
   display: grid;
+  position: static;
   grid-template-columns: repeat(2, 1fr);
   align-items: stretch;
   gap: 1px;
@@ -6515,8 +6524,10 @@ body.layout-small #statsbar-deity-mobile {
   padding: 0 6px;
 }
 @media screen and (max-height: 480px) {
-  body.layout-small #mobile-header {
+  body.layout-small #mobile-chrome {
     position: static;
+    border-bottom: none;
+    box-shadow: none;
   }
 }
 .action-mirror {
@@ -6801,6 +6812,25 @@ body.layout-small #btn-log-toggle {
 }
 body.layout-small #btn-log-toggle:active {
   top: auto;
+}
+body.layout-small #btn-log-toggle[data-unread]::before {
+  content: attr(data-unread);
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: var(--l13-mobile-badge-bg);
+  color: var(--l13-mobile-badge-fg);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  text-transform: none;
+  pointer-events: none;
 }
 body.layout-small #btn-log-toggle::after {
   content: "";
