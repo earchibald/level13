@@ -89,10 +89,6 @@ define(['ash',
 					$(this).append("<span class='tab-hotkey-number' aria-hidden='true'></span>");
 				});
 
-				GlobalSignals.popupClosedSignal.add(function () {
-					uiFunctions.lastPopupClosedTimestamp = new Date().getTime();
-				});
-
 				// Collapsible divs
 				this.registerCollapsibleContainerListeners("");
 
@@ -165,6 +161,7 @@ define(['ash',
 					);
 				});
 				
+				$(document).on("keydown", this.onKeyDown);
 				$(document).on("keyup", this.onKeyUp);
 			},
 
@@ -1009,30 +1006,41 @@ define(['ash',
 				this.updateStepperButtons("#" + $(input).parent().attr("id"));
 			},
 			
+			onKeyDown: function (e) {
+				// remember per key whether a popup consumed the press; the popup may be gone by keyup
+				// (Enter clicks the focused popup button on keydown, and the close signal is async)
+				let uiFunctions = GameGlobals.uiFunctions;
+				if (!uiFunctions.keyDownHadPopup) uiFunctions.keyDownHadPopup = {};
+				uiFunctions.keyDownHadPopup[e.originalEvent.code] = uiFunctions.popupManager.hasOpenPopup();
+			},
+
 			onKeyUp: function (e) {
+				let uiFunctions = GameGlobals.uiFunctions;
+				let code = e.originalEvent.code;
+				let hadPopupOnKeyDown = uiFunctions.keyDownHadPopup && uiFunctions.keyDownHadPopup[code];
+				if (uiFunctions.keyDownHadPopup) uiFunctions.keyDownHadPopup[code] = false;
 				if (e.originalEvent.isTextInput) return;
 				// number inputs (steppers) don't set isTextInput; never treat typing in a field as a hotkey
 				let targetTagName = e.target ? e.target.tagName : null;
 				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA") return;
 				// Enter on a focused button already clicked it on keydown; don't also trigger the hotkey
-				let code = e.originalEvent.code;
 				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && $(e.target).is("button, a, [tabindex]")) return;
-				if (!GameGlobals.uiFunctions.triggerHotkey(code, e)) return;
+				if (!uiFunctions.triggerHotkey(code, e, hadPopupOnKeyDown)) return;
 			},
 
-			triggerHotkey: function (code, modifiers) {
+			triggerHotkey: function (code, modifiers, hadPopupOnKeyDown) {
 				if (!this.hotkeys[code]) return false;
 				let currentTab = GameGlobals.gameState.uiStatus.currentTab;
 				let hasPopups = GameGlobals.uiFunctions.popupManager.hasOpenPopup();
 				let hasModifier = modifiers.shiftKey || modifiers.altKey || modifiers.ctrlKey || modifiers.metaKey;
-				// a popup dismissed on keydown (Enter clicks the focused button) must not leak the keyup to game hotkeys
-				let msSincePopupClosed = new Date().getTime() - (this.lastPopupClosedTimestamp || 0);
 
 				for (let i = 0; i < this.hotkeys[code].length; i++) {
 					let hotkey = this.hotkeys[code][i];
 					if (hotkey.tab && hotkey.tab !== currentTab) continue;
 					if (!hotkey.isUniversal && hasPopups) continue;
-					if (!hotkey.isUniversal && msSincePopupClosed < 300) continue;
+					// a key pressed while a popup was open belongs to the popup, even if the popup
+					// closed before keyup (Enter confirms on keydown and the close signal is async)
+					if (!hotkey.isUniversal && hadPopupOnKeyDown) continue;
 					if (hotkey.activeCondition && !hotkey.activeCondition()) continue;
 					if (!GameGlobals.gameState.settings.hotkeysEnabled && !hotkey.isUniversal) continue;
 

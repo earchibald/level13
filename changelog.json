@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.10",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Fix Enter from a dialog confirmation leaking to the passage/camp hotkey"
+				}
+			]
+		},
+		{
 			"version": "0.6.3.7",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",
