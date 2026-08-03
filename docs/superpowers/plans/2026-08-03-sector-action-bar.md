@@ -1333,6 +1333,157 @@ git commit -m "Colour the collector icons, fit both chips on one row, and close 
 
 ---
 
+### Task 7: Actually fit the two chips, and cache-bust the strings file
+
+**Files:**
+- Modify: `css/modules/mobile.less` (`SECTOR ACTION BAR` section)
+- Modify: `src/text/TextLoader.js:63-77`
+- Modify: `css/main.css` (generated), `changelog.json`, `src/config.js`, `index.html`, `changelog.html`, `sw.js`
+
+Task 6's width override was measured in the browser and is **not sufficient**:
+each chip still comes out at 209px, so two need 424px against the 380px a
+390px phone offers, and they still wrap. Two further savings close the gap.
+A second, unrelated defect surfaced during the same measurement.
+
+- [ ] **Step 1: Recover the wrapper margin and tighten the button**
+
+Measured breakdown of a 209px chip: icon 16, fill readout 45, and two
+`.callout-container` wrappers of 68 each. Each wrapper is a 56px button plus
+12px of side margin contributed by `.container-btn-action`. That margin is
+plain spacing — not a tap halo; the button itself is 56×44 and already meets
+the touch target — and the chip's own `gap` already separates the controls.
+
+In `css/modules/mobile.less`, in the `SECTOR ACTION BAR` section, replace the
+rule added by Task 6:
+
+```less
+#out-sector-bar .collector-chip button.action {
+	width: auto;
+	min-width: 3em;
+	padding: 8px 10px;
+	margin: 0;
+}
+
+// Each button wrapper adds 6px of side margin, so the pair costs 24px per chip
+// - which is the whole difference between the two chips sharing a row and
+// wrapping onto two. The chip's own gap already separates them. Safe to drop:
+// this is spacing, not a hit halo. The button stays 44px tall, and the compact
+// "1" button keeps the ::after halo it already had.
+#out-sector-bar .collector-chip .container-btn-action {
+	margin: 0;
+}
+
+#out-sector-bar .collector-chip {
+	gap: 6px;
+}
+```
+
+Measured result with this rule: chip 176px, so two plus the row gap come to
+358px against 380px — 22px of headroom for a wider fill readout such as
+`18.5 / 40`.
+
+- [ ] **Step 2: Cache-bust `strings/strings.json`**
+
+`strings.json` is the only asset the game fetches with no cache-buster:
+`src/config.js` `urlArgs` covers every requirejs module and the `?v=` queries
+cover the CSS, but `TextLoader.loadTextsFile` calls `$.getJSON` on a bare path
+and only disables caching for debug builds. Adding a new string key therefore
+lands new code beside a possibly stale strings file, and the button renders its
+raw key — `ui.exploration.collect_all_short_label` — instead of its text. This
+was reproduced: a fresh fetch of the file has the key, the browser's cached copy
+does not, and `Text.hasKey` returns false.
+
+Reuse requirejs's own `urlArgs` so this moves with the existing release ritual
+and adds no sixth thing to bump. In `src/text/TextLoader.js`, replace the body
+of `loadTextsFile`:
+
+```javascript
+            loadTextsFile: function (source) {
+                return new Promise((resolve, reject) => {
+                    var url = source.source;
+                    // The one asset requirejs does not cache-bust for us. Without
+                    // this a release lands new code beside a stale strings file and
+                    // any newly added key renders as its raw key on screen. Reuse
+                    // the loader's own urlArgs so it moves with every version bump
+                    // rather than becoming another thing to remember.
+                    var urlArgs = null;
+                    try {
+                        urlArgs = requirejs.s.contexts._.config.urlArgs;
+                    } catch (e) {
+                        urlArgs = null;
+                    }
+                    if (urlArgs) url += (url.indexOf("?") >= 0 ? "&" : "?") + urlArgs;
+                    log.i("Loading texts: " + url);
+                    if (GameConstants.isDebugVersion) $.ajaxSetup({ cache: false });
+                    $.getJSON(url, function (json) {
+                        Text.setTexts(source.language, json);
+                        resolve();
+                    })
+                    .fail(function (jqxhr, textStatus, error) {
+                        log.e("Failed to load texts: " + error);
+                        reject();
+                    });
+                });
+            },
+```
+
+The `try`/`catch` matters: `requirejs.s` is an internal, and a missing one must
+degrade to today's behaviour rather than throwing during boot.
+
+- [ ] **Step 3: Verify**
+
+```bash
+node --check src/text/TextLoader.js
+npx -p less lessc css/main.less css/main.css
+grep -c "container-btn-action" css/main.css
+grep -c "urlArgs" src/text/TextLoader.js
+```
+
+Expected: `node --check` exits 0 silently; `lessc` exits 0 (its two
+`vision.less` deprecation warnings are pre-existing); the
+`container-btn-action` count is 2 or more; the `urlArgs` count is 2.
+
+- [ ] **Step 4: Bump to 0.6.3.m33**
+
+Add a new first entry to the `versions` array in `changelog.json`, matching the
+indentation of its neighbours:
+
+```json
+   {
+    "version": "0.6.3.m33",
+    "requiredVersion": "0.6.1",
+    "phase": "beta",
+    "final": true,
+    "released": "2026-08-03",
+    "changes": [
+     {
+      "type": "BUGFIX",
+      "summary": "The bucket and trap now really do fit on one row, and a new text label can no longer show up as its raw key after an update"
+     }
+    ]
+   },
+```
+
+Then:
+
+```bash
+sed -i '' 's/0\.6\.3\.m32/0.6.3.m33/g' src/config.js index.html changelog.html sw.js
+grep -c "0\.6\.3\.m32" src/config.js index.html changelog.html sw.js
+grep -c "0\.6\.3\.m33" src/config.js index.html changelog.html sw.js
+```
+
+Expected: the first grep reports `0` for all four files; the second reports
+`src/config.js:1`, `index.html:3`, `changelog.html:3`, `sw.js:1`.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add css/modules/mobile.less css/main.css src/text/TextLoader.js changelog.json src/config.js index.html changelog.html sw.js
+git commit -m "Fit both collector chips on one row and cache-bust the strings file"
+```
+
+---
+
 ## Verification (controller, browser)
 
 Not a subagent task. Run after Task 5, against the harness described in the
