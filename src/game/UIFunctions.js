@@ -232,9 +232,9 @@ define(['ash',
 					}
 				});
 
-				// crafting opens a dialog instead of a callout card (see
-				// showCraftPopup). Capture phase, so it runs before the action
-				// handler and before the callout handlers below.
+				// crafting and location scouting open a dialog instead of a callout
+				// card (see showActionConfirmPopup). Capture phase, so it runs
+				// before the action handler and before the callout handlers below.
 				document.addEventListener("click", function (e) {
 					if (!$("body").hasClass("layout-small")) return;
 					if (!e.target.closest) return;
@@ -243,14 +243,14 @@ define(['ash',
 					let button = container.querySelector("button.action");
 					if (!button) return;
 					let $button = $(button);
-					if (!uiFunctions.isCraftButton($button)) return;
-					// the popup's own Craft button is an action button too, and it
-					// must be allowed through
+					if (!uiFunctions.isDialogActionButton($button)) return;
+					// the popup's own confirm button is an action button too, and
+					// it must be allowed through
 					if (container.closest("#common-popup")) return;
 					e.preventDefault();
 					e.stopPropagation();
 					uiFunctions.closeAllCallouts();
-					uiFunctions.showCraftPopup($button);
+					uiFunctions.showActionConfirmPopup($button);
 				}, true);
 
 				// tap on a disabled action button shows its callout (costs + disabled
@@ -273,9 +273,9 @@ define(['ash',
 				let longPressDelay = 500;
 				$(document).on("pointerdown", ".container-btn-action > button", function (e) {
 					if (e.pointerType === "mouse") return;
-					// craft buttons answer a tap with a dialog; a long-press card
+					// these buttons answer a tap with a dialog; a long-press card
 					// would be the very thing that was falling off the screen
-					if ($("body").hasClass("layout-small") && uiFunctions.isCraftButton($(this))) return;
+					if ($("body").hasClass("layout-small") && uiFunctions.isDialogActionButton($(this))) return;
 					let btn = this;
 					let $btn = $(btn);
 					// a stale flag from an aborted long-press must not swallow this tap
@@ -395,22 +395,28 @@ define(['ash',
 				});
 			},
 
-			// CRAFTING ON A PHONE
-			// The cost card hung off a button in a long scrolling list and kept
-			// running past the bottom of the screen. On small layout a tap opens
-			// a dialog instead: the same costs and reasons, in a box that is
-			// centred and scrollable, with an explicit Craft.
+			// COMMITTING ACTIONS ON A PHONE
+			// Crafting an item and scouting a location both cost real resources,
+			// and both showed those costs on a card hanging off a button in a long
+			// scrolling list, where it ran past the bottom of the screen. On small
+			// layout a tap opens a dialog instead: the same costs and reasons, in a
+			// box that is centred and scrollable, with an explicit confirm.
 
-			isCraftButton: function ($btn) {
+			isDialogActionButton: function ($btn) {
 				let action = $btn.attr("action");
-				return !!action && action.indexOf("craft_") === 0;
+				if (!action) return false;
+				if (action.indexOf("craft_") === 0) return true;
+				// scouting a named location is a one-off with a real cost
+				if (action.indexOf("scout_locale_") === 0) return true;
+				if (action === "clear_workshop") return true;
+				return false;
 			},
 
-			showCraftPopup: function ($btn) {
+			showActionConfirmPopup: function ($btn) {
 				let action = $btn.attr("action");
-				let title = $btn.find(".btn-label").text() || $btn.text() || "Craft";
+				let title = ($btn.find(".btn-label").text() || $btn.text() || "").trim() || "Confirm";
 				let isDisabled = $btn.hasClass("btn-disabled");
-				let msg = this.getCraftPopupMessage($btn);
+				let msg = this.getActionPopupMessage($btn);
 
 				if (isDisabled) {
 					// nothing to confirm, so the only way out is back
@@ -419,21 +425,32 @@ define(['ash',
 				}
 
 				// the popup builds a real action button, so the game's own rules
-				// decide what crafting does and costs
-				this.popupManager.showPopup(title, msg, "Craft", "Cancel", null, null, null, {
+				// decide what the action costs and does
+				this.popupManager.showPopup(title, msg, this.getActionPopupConfirmLabel($btn, action), "Cancel", null, null, null, {
 					isDismissable: true,
 					action: action,
 				});
 			},
 
+			getActionPopupConfirmLabel: function ($btn, action) {
+				if (action.indexOf("craft_") === 0) return "Craft";
+				if (action.indexOf("scout_locale_") === 0) return "Scout";
+				if (action === "clear_workshop") return "Scout";
+				let baseActionID = GameGlobals.playerActionsHelper.getBaseActionID(action);
+				let key = "game.actions." + baseActionID + "_name";
+				let name = Text.t(key);
+				if (name && name !== key) return name;
+				return ($btn.find(".btn-label").text() || "Confirm").trim();
+			},
+
 			// reuse the callout's own markup so the costs keep the colours and
 			// wording the rest of the game uses for what you cannot afford
-			getCraftPopupMessage: function ($btn) {
+			getActionPopupMessage: function ($btn) {
 				let $content = $btn.parent().siblings("div.btn-callout").children(".btn-callout-content");
 				if ($content.length == 0) return "";
 				let $clone = $content.clone();
 				$clone.find("[id]").removeAttr("id");
-				return $("<div class='craft-dialog'></div>").append($clone).prop("outerHTML");
+				return $("<div class='action-dialog'></div>").append($clone).prop("outerHTML");
 			},
 
 			// the phone toolbars hide and show as the page scrolls, which changes

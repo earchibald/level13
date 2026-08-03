@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m12",
+            "version": "0.6.3.m13",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: scouting a locale or a workshop asks first, the same way crafting does - a dialog with the cost, cancel only when you cannot afford it, cancel or scout when you can"
                 },
                 {
                     "type": "UI",
