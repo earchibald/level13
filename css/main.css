@@ -6465,6 +6465,29 @@ body.layout-small .action-mirror {
   background: var(--l13-mobile-bg);
   border-top: 1px solid var(--l13-mobile-border);
 }
+body.layout-small.tab-switch-out #grid-switch-content {
+  display: flex;
+  flex-direction: column;
+}
+body.layout-small.tab-switch-out #grid-switch-content > .grid {
+  margin-left: 0;
+  margin-right: 0;
+  align-self: stretch;
+}
+body.layout-small.tab-switch-out #container-tab-two-out-actions {
+  order: 1;
+}
+body.layout-small.tab-switch-out #container-tab-two-out {
+  order: 2;
+  display: flex;
+  flex-direction: column;
+}
+body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
+  order: 1;
+}
+body.layout-small.tab-switch-out #out-container-compass {
+  order: 2;
+}
 body.layout-small.tab-switch-embark #grid-switch-content,
 body.layout-small.tab-switch-milestones #grid-switch-content,
 body.layout-small.tab-switch-projects #grid-switch-content {

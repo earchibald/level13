@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m4",
+            "version": "0.6.3.m5",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -30,6 +30,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: a page's main action is pinned to the bottom of the screen instead of repeated at the top, clearing the phone's home indicator and browser chrome, with the log button lifted above it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the exploration tab leads with its actions (compass, enter camp, scavenge) instead of the minimap, so the most-used controls in the game are reachable without scrolling"
                 }
             ]
         },
