@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m23",
+            "version": "0.6.3.m24",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix the map panel stacking and filling the screen - jQuery writes an inline display when it shows the panel, and an inline style beat the rule that lays it out as a row"
                 },
                 {
                     "type": "UI",

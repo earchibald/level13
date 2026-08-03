@@ -948,8 +948,20 @@ body.layout-small.tab-switch-out #out-container-compass {
 	// A plain non-wrapping row: the map column that UIOutHeaderSystem builds,
 	// then the controls it moves in. nowrap is the point - the controls can
 	// never end up underneath the map, at any width, whatever the map measures.
-	display: flex;
+	//
+	// !important because the panel is shown and hidden through jQuery, which
+	// writes an inline `display` when it restores an element - and an inline
+	// style beats a stylesheet. That is the only way this rule's `position` and
+	// `border-top` could land while its `display` did not, which is exactly
+	// what a phone was showing: pinned, bordered, and stacked. An important
+	// author declaration outranks a normal inline style, so it cannot happen
+	// again whatever writes the attribute.
+	display: flex !important;
 	flex-wrap: nowrap;
+	// a last-resort bound: if the row ever fails again the panel scrolls its
+	// own content instead of swallowing the screen and leaving nothing to read
+	max-height: 42vh;
+	overflow-y: auto;
 	align-items: center;
 	justify-content: center;
 	gap: 6px;

@@ -6572,8 +6572,10 @@ body.layout-small.tab-switch-out #out-container-compass {
   background: var(--l13-mobile-bg);
   border-top: 3px solid var(--l13-mobile-divider);
   box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
-  display: flex;
+  display: flex !important;
   flex-wrap: nowrap;
+  max-height: 42vh;
+  overflow-y: auto;
   align-items: center;
   justify-content: center;
   gap: 6px;
