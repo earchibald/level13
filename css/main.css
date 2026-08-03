@@ -7152,6 +7152,7 @@ body.layout-small #unit-main {
 }
 body.layout-small #unit-main > #grid-switch-content,
 body.layout-small #unit-main > #mobile-chrome,
+body.layout-small #unit-main > #out-sector-bar,
 body.layout-small #unit-main > #out-container-compass {
   margin-top: 0;
   margin-bottom: 0;
@@ -7242,6 +7243,27 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 .collector-chip-fill {
   white-space: nowrap;
   font-size: 0.85em;
+}
+body.layout-small #unit-main > #out-sector-bar {
+  position: static;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 6px calc(5px + env(safe-area-inset-right)) 6px calc(5px + env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: var(--l13-mobile-bg);
+  border-top: 3px solid var(--l13-mobile-divider);
+  box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+body.layout-small #unit-main.out-map-hidden > #out-sector-bar {
+  padding-bottom: calc(6px + env(safe-area-inset-bottom));
+}
+body.layout-small.tab-switch-out #out-sector-bar.has-actions + #out-container-compass,
+body.layout-small.tab-switch-out #out-sector-bar.has-collectors + #out-container-compass {
+  border-top: none;
+  box-shadow: none;
+}
+body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
+  display: none !important;
 }
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],

@@ -1172,7 +1172,13 @@ define([
 			this.updateFooterPlacement(isShell);
 			this.updateLocationHeaderPlacement(isShell);
 			this.updateOutControlsPlacement(isShell);
+			this.updateSectorBarPlacement(isShell);
 			this.updateMapDockPlacement(isShell);
+
+			// before scouting is unlocked the map panel is hidden and the action bar
+			// becomes the last element in the column, so it has to carry the bottom
+			// inset instead
+			$("#unit-main").toggleClass("out-map-hidden", isShell && !$("#out-container-compass").is(":visible"));
 
 			// nothing above needs a height: the column sorts that out. The floating
 			// log pill is the one thing still positioned against the map panel.
@@ -1231,6 +1237,34 @@ define([
 				$pane.prepend($header);
 			} else if (this.locationHeaderMarker) {
 				$(this.locationHeaderMarker).before($header);
+			}
+		},
+
+		// The action bar is the top half of the bottom chrome. Like the map panel
+		// it is lifted out of the pane and hung off #unit-main, so the pane's own
+		// scrolling cannot take it with it. It has to land BEFORE the map panel:
+		// the css that removes the panel's top edge, so the two read as one block,
+		// uses an adjacent-sibling selector.
+		updateSectorBarPlacement: function (shouldDock) {
+			let $bar = $("#out-sector-bar");
+			let $unit = $("#unit-main");
+			if ($bar.length === 0 || $unit.length === 0) return;
+
+			let isDocked = $bar.parent().is($unit);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				if (!this.sectorBarHome) this.sectorBarHome = $bar.parent()[0];
+				let $map = $("#out-container-compass");
+				// the map may already be docked from an earlier pass, in which case
+				// appending would put the bar after it
+				if ($map.length > 0 && $map.parent().is($unit)) {
+					$map.before($bar);
+				} else {
+					$unit.append($bar);
+				}
+			} else if (this.sectorBarHome) {
+				$(this.sectorBarHome).prepend($bar);
 			}
 		},
 

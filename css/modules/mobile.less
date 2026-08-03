@@ -1843,6 +1843,7 @@ body.layout-small #unit-main {
 // and the gaps between the bands: the column is flush from edge to edge
 body.layout-small #unit-main > #grid-switch-content,
 body.layout-small #unit-main > #mobile-chrome,
+body.layout-small #unit-main > #out-sector-bar,
 body.layout-small #unit-main > #out-container-compass {
 	margin-top: 0;
 	margin-bottom: 0;
@@ -1973,6 +1974,43 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 .collector-chip-fill {
 	white-space: nowrap;
 	font-size: 0.85em;
+}
+
+// Pinned form: a static band of the shell column, between the scrolling pane
+// and the map panel. Static, never fixed - iOS drops a fixed element wherever a
+// momentum scroll left it, which is why the shell locks the document and stacks
+// its bands instead.
+body.layout-small #unit-main > #out-sector-bar {
+	position: static;
+	flex: 0 0 auto;
+	margin: 0;
+	padding: 6px ~"calc(5px + env(safe-area-inset-right))" 6px ~"calc(5px + env(safe-area-inset-left))";
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	// the top edge of the whole bottom chrome; the map panel below gives up its
+	// own edge so the two read as one panel
+	border-top: 3px solid var(--l13-mobile-divider);
+	box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+
+// no map panel yet (scouting not unlocked), so the bar is the bottom edge
+body.layout-small #unit-main.out-map-hidden > #out-sector-bar {
+	padding-bottom: ~"calc(6px + env(safe-area-inset-bottom))";
+}
+
+// One continuous surface: the panel drops its own edge whenever a VISIBLE bar
+// sits above it. Keyed on the visibility classes, not on the element, so a
+// hidden bar leaves the panel's divider intact.
+body.layout-small.tab-switch-out #out-sector-bar.has-actions + #out-container-compass,
+body.layout-small.tab-switch-out #out-sector-bar.has-collectors + #out-container-compass {
+	border-top: none;
+	box-shadow: none;
+}
+
+// Docked on #unit-main the bar is outside the tab container, so setTab can no
+// longer hide it - the same problem the map panel has, solved the same way.
+body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
+	display: none !important;
 }
 
 // ---------------------------------------------------------------------------
