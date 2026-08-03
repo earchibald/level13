@@ -1274,9 +1274,19 @@ grep -c "l13-chip-mask" css/main.css
 
 Expected: both `node --check` exit 0 silently; the JSON print is `all`; the
 `index.html` count is `2`; the `base-classes.less` count is `0`;
-`updateBottomChromeState` appears `3` times (definition plus two call sites);
-`lessc` exits 0 (its two `vision.less` deprecation warnings are pre-existing);
-the `l13-chip-mask` count is greater than 0.
+`updateBottomChromeState` appears **`4`** times — the definition, two call
+sites, and the Step 6 comment that names it; `lessc` exits 0 (its two
+`vision.less` deprecation warnings are pre-existing); the `l13-chip-mask` count
+is greater than 0.
+
+Also confirm the width override survived compilation, since it is what lets the
+two chips share a row:
+
+```bash
+grep -c "collector-chip button.action" css/main.css
+```
+
+Expected: at least `1`.
 
 - [ ] **Step 8: Bump to 0.6.3.m32**
 
