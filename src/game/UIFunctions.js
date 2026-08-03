@@ -406,16 +406,23 @@ define(['ash',
 				let action = $btn.attr("action");
 				if (!action) return false;
 				if (action.indexOf("craft_") === 0) return true;
-				// scouting a location - the sector itself or a named locale
-				if (action === "scout") return true;
+				// scouting a named location. The plain sector scout is deliberately
+				// not here: it is repeated many times per excursion, so a confirm
+				// on it is a tax rather than a safeguard.
 				if (action.indexOf("scout_locale_") === 0) return true;
 				if (action === "clear_workshop") return true;
+				// research, and upgrading a camp building or a collector: one-off
+				// and expensive, and their cost cards were the worst offenders in
+				// a long list
+				if (action.indexOf("unlock_upgrade_") === 0) return true;
+				if (action.indexOf("improve_in_") === 0) return true;
+				if (action.indexOf("improve_out_") === 0) return true;
 				return false;
 			},
 
 			showActionConfirmPopup: function ($btn) {
 				let action = $btn.attr("action");
-				let title = ($btn.find(".btn-label").text() || $btn.text() || "").trim() || "Confirm";
+				let title = this.getActionPopupTitle($btn, action);
 				let isDisabled = $btn.hasClass("btn-disabled");
 				let msg = this.getActionPopupMessage($btn);
 
@@ -433,15 +440,60 @@ define(['ash',
 				});
 			},
 
+			// the upgrade arrow is a glyph, so it cannot name the dialog itself;
+			// the row it sits in is named by its build button
+			getActionPopupTitle: function ($btn, action) {
+				let label = ($btn.find(".btn-label").text() || $btn.text() || "").trim();
+				let isGlyph = !(label.length > 0 && /[a-z0-9]/i.test(label));
+				// the upgrade arrow is a glyph and every research button just says
+				// "unlock" - in both cases the row names the thing, in its first cell
+				let preferRow = isGlyph || action.indexOf("unlock_upgrade_") === 0;
+
+				if (preferRow) {
+					let rowLabel = this.getRowLabel($btn);
+					if (rowLabel) return rowLabel;
+				}
+
+				if (!isGlyph) return label;
+
+				let name = this.getActionName(action);
+				return name || "Confirm";
+			},
+
 			getActionPopupConfirmLabel: function ($btn, action) {
 				if (action.indexOf("craft_") === 0) return "Craft";
 				if (action.indexOf("scout_locale_") === 0) return "Scout";
 				if (action === "clear_workshop") return "Scout";
+				if (action.indexOf("unlock_upgrade_") === 0) return "Unlock";
+				if (action.indexOf("improve_") === 0) return "Upgrade";
+				let name = this.getActionName(action);
+				if (name) return name;
+				return ($btn.find(".btn-label").text() || "Confirm").trim();
+			},
+
+			// what the row calls itself: its own button's label, or its first cell
+			// with the hidden callout cards stripped out (they carry the whole
+			// description and cost list and would swallow the title)
+			getRowLabel: function ($btn) {
+				let $cell = $btn.closest("tr").children("td").first();
+				if ($cell.length === 0) return null;
+
+				let label = $cell.find(".btn-label").first().text().replace(/\s+/g, " ").trim();
+				if (!label) {
+					let $clone = $cell.clone();
+					$clone.find("div.btn-callout, div.info-callout").remove();
+					label = $clone.text().replace(/\s+/g, " ").trim();
+				}
+
+				if (!label || label.length > 40) return null;
+				return label;
+			},
+
+			getActionName: function (action) {
 				let baseActionID = GameGlobals.playerActionsHelper.getBaseActionID(action);
 				let key = "game.actions." + baseActionID + "_name";
 				let name = Text.t(key);
-				if (name && name !== key) return name;
-				return ($btn.find(".btn-label").text() || "Confirm").trim();
+				return name && name !== key ? name : null;
 			},
 
 			// reuse the callout's own markup so the costs keep the colours and

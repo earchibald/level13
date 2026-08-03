@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m15",
+            "version": "0.6.3.m16",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: research and camp or collector upgrades ask first, with their cost, the same way crafting does. The plain sector scout does not - it is repeated too often for a confirm to help"
                 },
                 {
                     "type": "UI",
