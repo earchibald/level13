@@ -1180,8 +1180,31 @@ define([
 			// above it and the log pill both have to clear it
 			let $map = $("#out-container-compass");
 			let isMapFixed = $map.length > 0 && $map.css("position") == "fixed";
+			this.updateOutControlsPlacement(isSmallLayout && isMapFixed);
 			let mapHeight = isMapFixed ? Math.ceil($map.outerHeight()) : 0;
 			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
+		},
+
+		// The compass and "back to camp" are what you reach for between every
+		// move, and they lived in the middle of a scrolling tab. When the minimap
+		// is pinned to the bottom of the screen they move into that panel, beside
+		// the map, and out of the scroll entirely. They fit in the column next to
+		// a 224px map, so the panel is no taller for it.
+		updateOutControlsPlacement: function (shouldMove) {
+			let $controls = $("#out-container-compass-actions");
+			if ($controls.length === 0) return;
+
+			let $map = $("#out-container-compass");
+			if ($map.length === 0) return;
+
+			let isMoved = $controls.parent().is($map);
+			if (shouldMove === isMoved) return;
+
+			if (shouldMove) {
+				$map.append($controls);
+			} else {
+				$("#container-tab-two-out-actions").prepend($controls);
+			}
 		},
 
 		updateTabVisibility: function () {

@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m16",
+            "version": "0.6.3.m17",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the compass, enter camp and back to camp move into the pinned minimap panel, beside the map, and out of the scrolling middle of the exploration tab"
                 },
                 {
                     "type": "UI",

@@ -6561,14 +6561,67 @@ body.layout-small.tab-switch-out #out-container-compass {
   z-index: 8;
   order: 2;
   margin: 0;
-  padding: 4px 0 calc(4px + env(safe-area-inset-bottom)) 0;
+  padding: 4px 2px calc(4px + env(safe-area-inset-bottom)) 2px !important;
   text-align: center;
   background: var(--l13-mobile-bg);
   border-top: 1px solid var(--l13-mobile-border);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "map controls" "info controls";
+  align-items: center;
+  justify-items: center;
+  column-gap: 4px;
 }
-body.layout-small.tab-switch-out #out-container-compass .infobox {
+body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
+  grid-area: map;
+}
+body.layout-small.tab-switch-out #out-container-compass > .infobox {
+  grid-area: info;
   margin: 2px 0 0 0;
   padding: 0;
+}
+body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
+  grid-area: controls;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions h3 {
+  display: none;
+}
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement {
+  margin: 0 auto;
+}
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
+  width: 40px;
+  min-width: 40px;
+}
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement td {
+  padding: 0;
+}
+body.layout-small.tab-switch-out #out-container-compass #out-actions-movement {
+  margin-top: 4px;
+  gap: 3px;
+}
+body.layout-small.tab-switch-out #out-container-compass #out-actions-movement button {
+  width: 100%;
+  max-width: 150px;
+}
+@media screen and (min-width: 360px) and (max-width: 374px) {
+  body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
+    width: 36px;
+    min-width: 36px;
+  }
+}
+@media screen and (max-width: 359px) {
+  body.layout-small.tab-switch-out #out-container-compass {
+    grid-template-columns: 1fr;
+    grid-template-areas: "map" "info" "controls";
+  }
+  body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
+    width: 44px;
+    min-width: 44px;
+  }
 }
 body.layout-small.tab-switch-out #grid-switch-content {
   padding-bottom: calc(var(--l13-out-map-height, 240px) + 8px);
