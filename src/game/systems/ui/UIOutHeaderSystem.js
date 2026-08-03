@@ -538,7 +538,9 @@ define([
 			let now = GameGlobals.gameState.gameTime;
 			let previousValue = this.previousStats[stat] || 0;
 			let previousUpdate = this.previousStatsUpdates[stat] || 0;
-			let suffix = isSmallLayout ? "" : " / " + currentLimit;
+			// the small-layout header used to drop the limit to save width; the
+			// stacked cell layout has room for it and the cap is what matters
+			let suffix = currentLimit > 0 ? " / " + currentLimit : "";
 		
 			$container.children(".value").toggleClass("warning", isAtLimit);
 

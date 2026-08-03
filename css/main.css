@@ -6300,58 +6300,117 @@ body.layout-small ul#switch-tabs li.selected {
   }
 }
 body.layout-small #mobile-header {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  column-gap: 4px;
-  row-gap: 0;
-  padding: calc(2px + env(safe-area-inset-top)) 4px 3px 4px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: stretch;
+  gap: 1px;
+  padding: calc(2px + env(safe-area-inset-top)) 0 0 0;
   box-sizing: border-box;
   max-width: 100%;
+  background: var(--l13-mobile-border);
   z-index: 6;
 }
-body.layout-small #mobile-header > div {
-  display: contents;
+body.layout-small.location-inside #mobile-header {
+  grid-template-columns: repeat(3, 1fr);
 }
-body.layout-small #mobile-header > div > div,
-body.layout-small #mobile-header > div > span,
-body.layout-small #mobile-header > div > ul {
-  flex: 0 0 auto;
-  max-width: 100%;
-  box-sizing: border-box;
+body.layout-small #mobile-header > div:not(#mobile-header-bag):not(#mobile-header-explorers),
+body.layout-small #mobile-header .statsbar-tribe-stats,
+body.layout-small #mobile-header .player-stats-container {
+  display: contents;
 }
 body.layout-small #mobile-header > div > div:empty,
 body.layout-small #mobile-header > div > span:empty,
 body.layout-small #mobile-header > div > ul:empty {
   display: none;
 }
-body.layout-small #mobile-header .player-stats-container,
-body.layout-small #mobile-header .statsbar-tribe-stats,
-body.layout-small #mobile-header .container-equipment-stats,
-body.layout-small #mobile-header .statsbar-resources,
-body.layout-small #mobile-header .bag-resources {
+body.layout-small #mobile-header .callout-container:has(.stat-indicator[data-visible="false"]),
+body.layout-small #mobile-header .info-callout-target-small:has(> .stat-indicator[data-visible="false"]) {
+  display: none;
+}
+body.layout-small #statsbar-tribe-stats-mobile > .callout-container,
+body.layout-small #mobile-header .player-stats-container > .info-callout-target-small,
+body.layout-small #mobile-header-camp > .stat-indicator,
+body.layout-small #mobile-header-camp > .callout-container,
+body.layout-small #mobile-header-bag,
+body.layout-small #mobile-header-explorers {
+  display: block;
+  width: 100%;
+  background: var(--l13-mobile-bg);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+body.layout-small.location-inside #mobile-header-bag,
+body.layout-small.location-inside #mobile-header-explorers,
+body.layout-small.location-outside #mobile-header-camp,
+body.layout-small.location-outside #mobile-header-camp-res {
+  display: none !important;
+}
+body.layout-small #container-equipment-stats-mobile {
+  display: none !important;
+}
+body.layout-small #mobile-header .stat-indicator {
+  display: block;
+  text-align: center;
+  padding: 2px 4px;
+  line-height: 1.15;
+  white-space: normal;
+  background: var(--l13-mobile-bg);
+}
+body.layout-small #mobile-header .stat-indicator > .label,
+body.layout-small #mobile-header .stats-value-container {
+  display: block;
+}
+body.layout-small #mobile-header .stat-indicator > .label {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+body.layout-small #statsbar-resources-mobile,
+body.layout-small #mobile-header > div > .container-equipment-stats,
+body.layout-small #mobile-header-status > .itemlist,
+body.layout-small #mobile-header > div > .notification-player {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  padding: 2px 0;
+  background: var(--l13-mobile-bg);
+  box-sizing: border-box;
 }
-body.layout-small #mobile-header .player-stats-container > *,
-body.layout-small #mobile-header .statsbar-tribe-stats > *,
-body.layout-small #mobile-header .container-equipment-stats > *,
-body.layout-small #mobile-header .statsbar-resources > *,
-body.layout-small #mobile-header .bag-resources > * {
+body.layout-small #statsbar-resources-mobile > .callout-container,
+body.layout-small #mobile-header .container-equipment-stats > * {
+  width: auto;
   flex: 0 0 auto;
 }
-body.layout-small #mobile-header .stat-indicator {
-  padding: 0 6px;
+body.layout-small #mobile-header-bag,
+body.layout-small #mobile-header-explorers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 4px;
 }
-body.layout-small #mobile-header .stats-value-container {
-  display: inline-block;
+body.layout-small #mobile-header-bag > *,
+body.layout-small #mobile-header-explorers > * {
+  background: none;
+  padding: 0;
+  max-width: 100%;
 }
-body.layout-small #mobile-header .notification-player {
-  flex-basis: 100%;
+body.layout-small #mobile-header-bag .bag-resources,
+body.layout-small #mobile-header-bag .itemlist,
+body.layout-small #mobile-header-explorers .itemlist {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+body.layout-small #mobile-header-explorers::before {
+  content: "party";
+  text-transform: lowercase;
+}
+body.layout-small #mobile-header-explorers:not(:has(li)),
+body.layout-small #mobile-header-explorers:has(> ul[data-visible="false"]) {
+  display: none;
 }
 body.layout-small #mobile-header .item {
   padding: 3px;

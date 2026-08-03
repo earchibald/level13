@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m2",
+            "version": "0.6.3.m3",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -22,6 +22,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the info bar is a compact aligned grid, the tab bar is pinned below it and wraps to an indented overflow row instead of scrolling, and long single-action pages (leave camp, milestones, colony launch) repeat their main action at the top"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned info bar is now a ruled grid of label-over-value cells, three columns in camp (evidence/rumours/stamina, storage/reputation/population, materials) and two outside (evidence/rumours, vision/stamina, bag and party). Fixes camp storage vanishing from the header after re-entering camp, blank labels caused by a broken text refresh, and stat limits missing on small screens"
                 }
             ]
         },

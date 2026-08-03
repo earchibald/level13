@@ -1478,9 +1478,16 @@ define(['ash',
 				if (!show)
 					show = false;
 
-				if (this.isElementToggled($element) === show)
+				if (this.isElementToggled($element) === show) {
+					// The element is already right, but its callout wrappers may
+					// not be: hiding cascades up to them, and a later show that
+					// no-ops here would leave them hidden for good (camp storage
+					// disappeared from the header after leaving and re-entering).
+					this.toggleParentCalloutContainer($element, ".info-callout-target", show);
+					this.toggleParentCalloutContainer($element, ".callout-container", show);
 					return;
-					
+				}
+
 				this.cancelDelayedToggle($element);
 				
 				if (!delay || delay <= 0) {
@@ -1587,25 +1594,46 @@ define(['ash',
 					return;
 				}
 
-				this.texts[selector] = { key: key, options: options };
+				// callers pass jQuery objects as well as selector strings. Used as
+				// an object key every jQuery object collapses to "[object Object]",
+				// so entries overwrite each other and the refresh below throws on
+				// the stringified key, leaving every later label blank.
+				let entry = null;
+				for (let i = 0; i < this.texts.length; i++) {
+					if (this.texts[i].selector === selector) {
+						entry = this.texts[i];
+						break;
+					}
+				}
+				if (!entry) {
+					entry = { selector: selector };
+					this.texts.push(entry);
+				}
+				entry.key = key;
+				entry.options = options;
+
 				this.updateText($(selector), Text.t(key, options));
 			},
 
 			updateTexts: function () {
-				for (let selector in this.texts) {
-					let saved = this.texts[selector];
-					let $elem = typeof selector === "string" ? $(selector) : selector;
-					this.updateText($elem, Text.t(saved.key, saved.options));
+				for (let i = 0; i < this.texts.length; i++) {
+					let saved = this.texts[i];
+					this.updateText($(saved.selector), Text.t(saved.key, saved.options));
 				}
 			},
 
 			updateText: function ($elem, text) {
-				// buttons processed by ActionButton keep their overlay children; the text lives in the label
-				let $label = $elem.children(".btn-label");
-				let $target = $label.length > 0 ? $label : $elem;
-				let current = $target.text();
-				if (current == text) return;
-				$target.text(text);
+				// A selector like ".header-camp-storage .label" matches the mobile
+				// and the desktop copy. Comparing the combined text would skip the
+				// update as soon as one of them already had it, so check each.
+				$elem.each(function () {
+					let $each = $(this);
+					// buttons processed by ActionButton keep their overlay children; the text lives in the label
+					let $label = $each.children(".btn-label");
+					let $target = $label.length > 0 ? $label : $each;
+					if ($target.text() == text) return;
+					$target.text(text);
+				});
 			},
 
 			stopButtonCooldown: function (button) {
