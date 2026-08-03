@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.11",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "New hotkeys: M shows the map, I opens manage inventory, K opens a keyboard-navigable craft dialog (arrows navigate and fold sections, Enter crafts with confirmation, Esc closes). Scout moved from M to T."
+				}
+			]
+		},
+		{
 			"version": "0.6.3.10",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

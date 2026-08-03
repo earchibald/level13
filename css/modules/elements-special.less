@@ -855,6 +855,47 @@ div.grid-content {
     text-align: left;
 }
 
+// CRAFT POPUP (hotkey K)
+
+#craft-popup-list {
+	min-width: 280px;
+	max-height: 55vh;
+	overflow-y: auto;
+	text-align: left;
+	margin: 10px 0;
+}
+
+.craft-popup-row {
+	padding: 2px 6px;
+	cursor: pointer;
+	border: 1px solid transparent;
+}
+
+.craft-popup-row.selected {
+	border-color: @color-border-strong;
+	background: @color-bg-box-1;
+}
+
+.craft-popup-header {
+	font-weight: bold;
+	margin-top: 4px;
+}
+
+.craft-popup-header .header-count {
+	color: @color-text-meta;
+	font-weight: normal;
+}
+
+.craft-popup-item-costs {
+	margin-left: 8px;
+	color: @color-text-meta;
+	font-size: @font-size-small;
+}
+
+.craft-popup-item-unavailable .craft-popup-item-name {
+	color: @color-text-meta;
+}
+
 // MOBILE OVERLAY
 
 #mobile-overlay {

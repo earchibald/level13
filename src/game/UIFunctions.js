@@ -203,7 +203,7 @@ define(['ash',
 				this.registerHotkey("Move SE", "Numpad3", defaultModifier, tabs.out, false, false, "move_sector_se");
 
 				this.registerHotkey("Scavenge", "KeyN", defaultModifier, tabs.out, false, false, "scavenge");
-				this.registerHotkey("Scout", "KeyM", defaultModifier, tabs.out, false, false, "scout");
+				this.registerHotkey("Scout", "KeyT", defaultModifier, tabs.out, false, false, "scout");
 				this.registerHotkey("Collect water", "KeyG", defaultModifier, tabs.out, false, false, "use_out_collector_water");
 				this.registerHotkey("Collect food", "KeyF", defaultModifier, tabs.out, false, false, "use_out_collector_food");
 				this.registerHotkey("Collect 1 water", "KeyG", "shiftKey", tabs.out, false, false, "use_out_collector_water_one");
@@ -233,6 +233,11 @@ define(['ash',
 
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
+
+				// fast-jump hotkeys; these work from any tab
+				this.registerHotkey("Show map", "KeyM", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.map));
+				this.registerHotkey("Craft", "KeyK", defaultModifier, null, false, false, () => GlobalSignals.openCraftPopupSignal.dispatch());
+				this.registerHotkey("Manage inventory", "KeyI", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showInventoryContext());
 
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
@@ -325,6 +330,20 @@ define(['ash',
 				}
 			},
 
+			// costs of an action as span strings, color coded like the button callouts
+			getActionCostsSpanList: function (action) {
+				let costs = GameGlobals.playerActionsHelper.getCosts(action);
+				let costKeys = costs ? Object.keys(costs) : [];
+				let result = [];
+				for (let i = 0; i < costKeys.length; i++) {
+					let key = costKeys[i];
+					let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
+					let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
+					result.push("<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span>");
+				}
+				return result;
+			},
+
 			showBackToCampRequirementsPopup: function (action) {
 				let msg = "";
 
@@ -333,16 +352,10 @@ define(['ash',
 					msg += "<span class='btn-disabled-reason action-cost-blocker'>" + Text.t(reqsResult.reason) + "</span><br/><br/>";
 				}
 
-				let costs = GameGlobals.playerActionsHelper.getCosts(action);
-				let costKeys = costs ? Object.keys(costs) : [];
-				if (costKeys.length > 0) {
+				let costSpans = this.getActionCostsSpanList(action);
+				if (costSpans.length > 0) {
 					msg += "<span class='p-meta'>Costs:</span><br/>";
-					for (let i = 0; i < costKeys.length; i++) {
-						let key = costKeys[i];
-						let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
-						let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
-						msg += "<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span><br/>";
-					}
+					msg += costSpans.join("<br/>") + "<br/>";
 				}
 
 				if (msg.length == 0) msg = "Cannot go back to camp right now.";
@@ -1727,6 +1740,24 @@ define(['ash',
 				if (index < 0 || index >= visibleTabElements.length) return;
 				visibleTabElements[index].click();
 				GameGlobals.uiFunctions.scrollToTabTop();
+			},
+
+			showTabById: function (tabID) {
+				let $tab = $("#switch-tabs li#" + tabID);
+				if ($tab.length == 0) return false;
+				if ($tab.attr("data-visible") != "true") return false;
+				if ($("#switch-tabs li.selected")[0] != $tab[0]) {
+					$tab[0].click();
+				}
+				this.scrollToTabTop();
+				return true;
+			},
+
+			showInventoryContext: function () {
+				if (this.popupManager.hasOpenPopup()) return;
+				if (!this.showTabById(this.elementIDs.tabs.bag)) return;
+				// same popup as the bag tab's manage inventory button
+				GameGlobals.playerActionFunctions.startInventoryManagement();
 			},
 
 			updateTabHotkeyNumbers: function () {
