@@ -406,7 +406,8 @@ define(['ash',
 				let action = $btn.attr("action");
 				if (!action) return false;
 				if (action.indexOf("craft_") === 0) return true;
-				// scouting a named location is a one-off with a real cost
+				// scouting a location - the sector itself or a named locale
+				if (action === "scout") return true;
 				if (action.indexOf("scout_locale_") === 0) return true;
 				if (action === "clear_workshop") return true;
 				return false;
@@ -1671,6 +1672,21 @@ define(['ash',
 
 				if (($element).length === 0)
 					return;
+
+				// The regular and the mobile header hold copies of the same stat,
+				// so a class selector like .stat-indicator-rumours matches both.
+				// Toggled as one set, the callout wrapper cascade below counts the
+				// children of every parent at once, never sees the single child it
+				// looks for, and does nothing - which left rumours and reputation
+				// showing a visible value inside a wrapper that stayed hidden from
+				// when the stat was still zero. Handle each element on its own.
+				if (($element).length > 1) {
+					let uiFunctions = this;
+					$element.each(function () {
+						uiFunctions.toggle($(this), show, signalParams, delay);
+					});
+					return;
+				}
 
 				if (typeof (show) === "undefined")
 					show = false;

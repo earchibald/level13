@@ -5989,7 +5989,8 @@ body.sunlit {
 }
 body.layout-small .callout-container:has(> .container-btn-action > button[action^="craft_"]) > div.btn-callout,
 body.layout-small .callout-container:has(> .container-btn-action > button[action^="scout_locale_"]) > div.btn-callout,
-body.layout-small .callout-container:has(> .container-btn-action > button[action="clear_workshop"]) > div.btn-callout {
+body.layout-small .callout-container:has(> .container-btn-action > button[action="clear_workshop"]) > div.btn-callout,
+body.layout-small .callout-container:has(> .container-btn-action > button[action="scout"]) > div.btn-callout {
   display: none !important;
 }
 body.layout-small div.info-callout.callout-scrollable,

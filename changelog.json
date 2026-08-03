@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m13",
+            "version": "0.6.3.m14",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,14 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Fix rumours and reputation staying hidden in the header after you had earned some: the value was shown but its callout wrapper was left behind, because toggling the regular and mobile copies as one set silently skipped the wrapper"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: scouting a sector now asks first too, alongside locales and workshops"
                 },
                 {
                     "type": "UI",
