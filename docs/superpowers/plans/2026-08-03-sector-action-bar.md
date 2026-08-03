@@ -902,8 +902,12 @@ grep -c "getBottomChromeHeight" src/game/systems/ui/UIOutHeaderSystem.js
 ```
 
 Expected: `node --check` exits 0; the first grep returns nothing; the observe
-count is `4`; `onFeatureUnlocked` appears `2` times (listener plus definition);
+count is `5`; `onFeatureUnlocked` appears `2` times (listener plus definition);
 `getBottomChromeHeight` appears `3` times (definition plus two call sites).
+
+The observe count is 5, not 4: `addToEngine` holds four calls after this change
+(header, tabs, map, bar) and `updateChromeGrouping` holds a fifth, pre-existing
+one that observes `#mobile-chrome` when it builds that wrapper.
 
 - [ ] **Step 5: Point the log pill at the new property**
 
