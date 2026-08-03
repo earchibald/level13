@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m1",
+            "version": "0.6.3.m2",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -18,6 +18,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile compactness overhaul: dense two-row header, mobile type scale, camp view scales to screen width, callouts clamp to the viewport, log stays in its drawer, tighter tables and popups, bigger touch targets"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the info bar is a compact aligned grid, the tab bar is pinned below it and wraps to an indented overflow row instead of scrolling, and long single-action pages (leave camp, milestones, colony launch) repeat their main action at the top"
                 }
             ]
         },

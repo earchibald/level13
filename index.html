@@ -22,9 +22,9 @@
 	<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m1" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m1" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m1" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m2" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m2" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m2" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
 </head>
@@ -184,7 +184,7 @@
 					</div>
 				</div><!-- grid for the whole stats bar -->
 				
-				<div class="grid">
+				<div class="grid" id="grid-location">
 					<div id="grid-location-header" class="unit whole vision-container">
 						<div class='info-callout-target info-callout-target-side'><img id="level-icon" /></div>
 						<h1>Camp</h1>
@@ -318,6 +318,9 @@
 					<!-- "embark" page when leaving camp -->
 					<div class="grid tabcontainer" id="container-tab-enter-out" data-tab="switch-embark">
 						<div class="unit whole">
+							<div class="actionbox action-mirror">
+								<button class="action text-key" id="in-action-leave-top" action="leave_camp" data-text-key="ui.embark.leave_camp_button_label"></button>
+							</div>
 							<p class="text-key" data-text-key="ui.embark.page_description"></p>
 							<div class="grid">
 								<div class="unit one-third" id="embark-resources-container">
@@ -618,6 +621,9 @@
 					<div class="grid tabcontainer" id="container-tab-two-projects" data-tab="switch-projects" style="display:none">
 						<div class="unit whole">
 							<div class="actionbox" id="container-in-improvements-colony">
+								<div class="actionbox action-mirror">
+									<button id="in-action-launch-top" class="action" action="launch">Launch</button>
+								</div>
 								<div class="subheader"><h3>Colony projects</h3></div>
 								<div id="in-improvements-colony" class="actionbox">
 									<table class="fullwidth"></table>
@@ -714,6 +720,7 @@
 					
 					<div class="grid tabcontainer" id="container-tab-two-milestones" data-tab="switch-milestones" style="display:none">
 						<div class="unit whole">
+							<div id="milestone-top-button-container" class="action-mirror"></div>
 							<div class="milestone-container" id="milestone-container-current">
 								<h3>Current: <span id='milestone-current-name' class="hl-functionality"></span></h3>
 								<p id="milestone-current-description"></p>

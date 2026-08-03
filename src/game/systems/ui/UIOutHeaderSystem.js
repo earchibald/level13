@@ -180,12 +180,14 @@ define([
 			this.updateLayoutMode();
 			this.updateLayout();
 
-			// the fixed mobile header grows and shrinks as rows show and hide;
-			// the content padding that clears it must follow every change
-			let headerElement = document.getElementById("mobile-header");
-			if (headerElement && window.ResizeObserver) {
+			// the fixed header and tab bar grow and shrink as rows and tabs show
+			// and hide; the content padding that clears them must follow along
+			if (window.ResizeObserver) {
 				this.headerResizeObserver = new ResizeObserver(function () { sys.updateLayout(); });
-				this.headerResizeObserver.observe(headerElement);
+				let headerElement = document.getElementById("mobile-header");
+				let tabsElement = document.getElementById("grid-switch");
+				if (headerElement) this.headerResizeObserver.observe(headerElement);
+				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
 			}
 		},
 
@@ -627,6 +629,9 @@ define([
 		},
 
 		updateItems: function (forced, inCamp) {
+			// several callers omit the flag; without this the camp header shows
+			// the outside item list
+			if (typeof inCamp === "undefined") inCamp = GameGlobals.playerHelper.isInCamp();
 			GameGlobals.uiFunctions.toggle("#list-header-items-mobile", !inCamp);
 			if (inCamp) return;
 
@@ -1152,7 +1157,16 @@ define([
 			// away, so the content needs no padding to clear it (see mobile.less)
 			let isHeaderFixed = $("#mobile-header").css("position") == "fixed";
 			// outerHeight includes padding and border, so safe-area insets count
-			let padding = isSmallLayout && isHeaderFixed ? Math.ceil($("#mobile-header").outerHeight()) + 7 : 15;
+			let headerHeight = isSmallLayout && isHeaderFixed ? Math.ceil($("#mobile-header").outerHeight()) : 0;
+
+			// the tab bar pins directly below the header, so it needs the header
+			// height to position itself and the content must clear both
+			let $tabs = $("#grid-switch");
+			let isTabsFixed = $tabs.css("position") == "fixed";
+			document.documentElement.style.setProperty("--l13-tabs-top", headerHeight + "px");
+			let tabsHeight = isTabsFixed ? Math.ceil($tabs.outerHeight()) : 0;
+
+			let padding = isSmallLayout && isHeaderFixed ? headerHeight + tabsHeight + 7 : 15;
 			$("#unit-main").css("padding-top", padding + "px");
 			$("#log-container").css("padding-top", (padding + 10) + "px");
 		},
