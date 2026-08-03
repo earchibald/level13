@@ -1161,35 +1161,27 @@ define([
 			GameGlobals.uiFunctions.toggle("#mobile-header-camp-res", isSmallLayout && isInCamp);
 			this.updateChromeGrouping(isSmallLayout);
 
-			// in short (landscape) viewports the mobile header is static and scrolls
-			// away, so the content needs no padding to clear it (see mobile.less)
-			let $chrome = $("#mobile-chrome");
-			let isHeaderFixed = $chrome.length > 0 && $chrome.css("position") == "fixed";
-			// one measurement for the whole top chrome: the tab bar sits inside it
-			// now, so nothing has to be told where the header ends
-			let chromeHeight = isSmallLayout && isHeaderFixed ? Math.ceil($chrome.outerHeight()) : 0;
+			// The shell layout - chrome, scrolling pane and map panel as one flex
+			// column the height of the viewport - is declared in mobile.less, and
+			// --l13-shell says whether it is in force. Asking the stylesheet beats
+			// re-deriving the media query here, which would drift from it.
+			let isShell = isSmallLayout && this.isShellLayout();
 
-			let padding = isSmallLayout && isHeaderFixed ? chromeHeight + 7 : 15;
-			// the scroll pane starts where the chrome ends (see APP SHELL in
-			// mobile.less); the pane is fixed, so this is its top, not padding
-			document.documentElement.style.setProperty("--l13-chrome-height", chromeHeight + "px");
-			$("#unit-main").css("padding-top", isSmallLayout && isHeaderFixed ? "0px" : padding + "px");
-			$("#log-container").css("padding-top", (padding + 10) + "px");
-			this.updateFooterPlacement(isSmallLayout && isHeaderFixed);
+			$("#unit-main").css("padding-top", isShell ? "0px" : "15px");
+			$("#log-container").css("padding-top", isShell ? "25px" : "25px");
+			this.updateFooterPlacement(isShell);
+			this.updateLocationHeaderPlacement(isShell);
+			this.updateOutControlsPlacement(isShell);
+			this.updateMapDockPlacement(isShell);
 
-			// the minimap pins to the bottom of the exploration tab; the content
-			// above it and the log pill both have to clear it
+			// nothing above needs a height: the column sorts that out. The floating
+			// log pill is the one thing still positioned against the map panel.
 			let $map = $("#out-container-compass");
-			let isMapFixed = $map.length > 0 && $map.css("position") == "fixed";
-			this.updateOutControlsPlacement(isSmallLayout && isMapFixed);
-			let mapHeight = isMapFixed ? Math.ceil($map.outerHeight()) : 0;
+			let mapHeight = isShell && $map.length > 0 && $map.is(":visible") ? Math.ceil($map.outerHeight()) : 0;
 			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
 
-			// Both bands were just measured, and both may have been mutated in the
-			// same pass - the controls move into the map panel a few lines up. A
-			// height read before the browser has settled that leaves the scroll
-			// pane ending in the wrong place, which hides the end of the tab behind
-			// the panel. Read again on the next frame and correct it.
+			// the panel was just rebuilt in this same pass, so a height read now
+			// can be one layout behind; read it again on the next frame
 			if (!this.isRemeasureScheduled && typeof window.requestAnimationFrame == "function") {
 				let sys = this;
 				this.isRemeasureScheduled = true;
@@ -1200,17 +1192,66 @@ define([
 			}
 		},
 
+		// the property is declared on body, not on the root, so it has to be read
+		// from body - custom properties only inherit downwards
+		isShellLayout: function () {
+			if (!document.body) return false;
+			let flag = window.getComputedStyle(document.body).getPropertyValue("--l13-shell");
+			return flag.trim() === "1";
+		},
+
 		// the measuring half of updateLayout, without any of the DOM moves, so it
 		// is safe to run again from a frame callback
 		updateMeasurements: function () {
-			let $chrome = $("#mobile-chrome");
-			if ($chrome.length > 0 && $chrome.css("position") == "fixed") {
-				document.documentElement.style.setProperty("--l13-chrome-height", Math.ceil($chrome.outerHeight()) + "px");
-			}
-
 			let $map = $("#out-container-compass");
-			if ($map.length > 0 && $map.css("position") == "fixed") {
-				document.documentElement.style.setProperty("--l13-out-map-height", Math.ceil($map.outerHeight()) + "px");
+			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
+			let mapHeight = isShell && $map.length > 0 && $map.is(":visible") ? Math.ceil($map.outerHeight()) : 0;
+			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
+		},
+
+		// The level title sits between the chrome and the tab content in the
+		// markup. As a band of the shell column it would hold a permanent 48px of
+		// screen for one line of text; inside the pane it scrolls away like the
+		// rest of the tab, which is where it was before the shell.
+		updateLocationHeaderPlacement: function (shouldDock) {
+			let $header = $("#grid-location");
+			let $pane = $("#grid-switch-content");
+			if ($header.length === 0 || $pane.length === 0) return;
+
+			let isDocked = $header.parent().is($pane);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				// a marker where it came from, so the desktop layout gets it back in
+				// its own place in the order rather than at the front
+				if (!this.locationHeaderMarker) {
+					this.locationHeaderMarker = document.createComment("grid-location");
+					$header.after(this.locationHeaderMarker);
+				}
+				$pane.prepend($header);
+			} else if (this.locationHeaderMarker) {
+				$(this.locationHeaderMarker).before($header);
+			}
+		},
+
+		// Safari clips a position: fixed element that lives inside a scrolling
+		// container, so the map panel disappeared outright once the tab content
+		// became its own scroller. Lift the panel out of the pane and hang it off
+		// #unit-main instead: it is fixed, so its parent costs it no layout, and
+		// out there nothing can clip it.
+		updateMapDockPlacement: function (shouldDock) {
+			let $map = $("#out-container-compass");
+			let $unit = $("#unit-main");
+			if ($map.length === 0 || $unit.length === 0) return;
+
+			let isDocked = $map.parent().is($unit);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				if (!this.mapHome) this.mapHome = $map.parent()[0];
+				$unit.append($map);
+			} else if (this.mapHome) {
+				$(this.mapHome).append($map);
 			}
 		},
 

@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m30",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Mobile: fix the map and movement controls disappearing, and the footer opening the page instead of ending it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the stats bar, the tab content and the map panel are one column the height of the screen, so no band can drift, be clipped, or be measured wrong"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m29",
             "requiredVersion": "0.6.1",
             "phase": "beta",

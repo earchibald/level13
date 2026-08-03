@@ -1115,9 +1115,9 @@ body.layout-small.tab-switch-out #out-container-compass #out-action-move-camp-de
 }
 
 
-// the scroll pane ends where the map panel starts (see APP SHELL)
+// the map panel is the next item in the shell column, so the pane simply ends
+// where it begins - nothing to measure (see APP SHELL)
 body.layout-small.tab-switch-out #grid-switch-content {
-	bottom: var(--l13-out-map-height, 200px);
 	padding-bottom: 8px;
 }
 
@@ -1839,21 +1839,76 @@ body.layout-small {
 	overflow: hidden;
 }
 
+// The shell is one flex column the height of the viewport: chrome, then the
+// scrolling pane, then the map panel. Nothing in it is `position: fixed` and
+// nothing measures anything - the pane's height is whatever is left over, which
+// is a number the browser keeps right on its own. Every "the panel is stale by
+// one measurement" defect is gone with it, and so is Safari clipping a fixed
+// element that lives inside a scrolling container, which had made the map panel
+// vanish outright.
+//
+// UIOutHeaderSystem reads --l13-shell to tell whether this layout is in force.
+body.layout-small {
+	--l13-shell: 1;
+}
+
+// the sticky-footer trick sets `height: auto !important` and pulls the footer
+// up with a -55px bottom margin; neither survives a viewport-height column
+body.layout-small > .sticky-footer-wrapper,
+body.layout-small #grid-main {
+	height: 100% !important;
+	min-height: 0;
+	margin-bottom: 0;
+	display: block;
+}
+
+body.layout-small #unit-main {
+	// !important because setGameElementsVisibility writes an inline display;
+	// the guard at the end of the file keeps its hide working
+	display: flex !important;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	float: none;
+	// gridism pads every .unit 15px at the bottom, which would leave the map
+	// panel floating short of the bottom edge
+	padding-bottom: 0 !important;
+}
+
+// and the gaps between the bands: the column is flush from edge to edge
+body.layout-small #unit-main > #grid-switch-content,
+body.layout-small #unit-main > #mobile-chrome,
+body.layout-small #unit-main > #out-container-compass {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+body.layout-small #mobile-chrome {
+	position: static;
+	flex: 0 0 auto;
+}
+
 body.layout-small #grid-switch-content {
-	position: fixed;
-	top: var(--l13-chrome-height, 0px);
-	bottom: 0;
-	left: 0;
-	right: 0;
+	position: static;
+	flex: 1 1 auto;
+	// without this a flex item refuses to shrink below its content, and the
+	// pane grows to fit the tab instead of scrolling it
+	min-height: 0;
 	overflow-y: auto;
 	overflow-x: hidden;
-	-webkit-overflow-scrolling: touch;
+	// NOT -webkit-overflow-scrolling: touch - it is a no-op on current iOS and
+	// it is the property that makes Safari clip fixed-position descendants
+	//
 	// a scroll that runs out at the end of the pane must not become a
 	// document-level rubber band, which is what used to shake the chrome loose
 	overscroll-behavior: contain;
 	box-sizing: border-box;
-	padding-left: ~"env(safe-area-inset-left)";
-	padding-right: ~"env(safe-area-inset-right)";
+}
+
+body.layout-small #unit-main > #out-container-compass {
+	position: static;
+	flex: 0 0 auto;
+	// it is the last thing in the column, so it needs no order of its own
 }
 
 // The footer carries save and restart, and it sat after the scrolling page.
@@ -1865,6 +1920,16 @@ body.layout-small #grid-switch-content > #footer {
 	margin: 12px 0 0 0;
 	padding: 10px 4px ~"calc(10px + env(safe-area-inset-bottom))" 4px;
 	box-sizing: border-box;
+	// the exploration pane is a flex column whose sections are ordered, and an
+	// unordered child sorts to the front - the footer opened the tab
+	order: 99;
+}
+
+// The map panel is docked onto #unit-main (see updateMapDockPlacement), which
+// means the tab switch that used to hide it no longer contains it. Hide it
+// here instead, on every tab that is not the exploration tab.
+body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
+	display: none !important;
 }
 
 // landscape keeps the ordinary document scroll: the bands are static there
@@ -1876,9 +1941,20 @@ body.layout-small #grid-switch-content > #footer {
 		overflow: visible;
 	}
 
+	body.layout-small {
+		--l13-shell: 0;
+	}
+
+	body.layout-small > .sticky-footer-wrapper,
+	body.layout-small #grid-main,
+	body.layout-small #unit-main {
+		height: auto !important;
+		min-height: 0;
+	}
+
 	body.layout-small #grid-switch-content {
-		position: static;
 		overflow: visible;
+		flex: 0 0 auto;
 	}
 }
 

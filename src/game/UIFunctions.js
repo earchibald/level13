@@ -1228,7 +1228,7 @@ define(['ash',
 				// own scroller (see APP SHELL in mobile.less), so scrolling the
 				// window would do nothing at all
 				let $pane = $("#grid-switch-content");
-				if ($pane.length > 0 && $pane.css("position") == "fixed") {
+				if ($pane.length > 0 && $pane.css("overflow-y") == "auto") {
 					let offset = element.offset().top - $pane.offset().top;
 					if (offset < 0) $pane.animate({ scrollTop: $pane.scrollTop() + offset }, 250);
 					return;

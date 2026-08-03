@@ -6667,7 +6667,6 @@ body.layout-small.tab-switch-out #out-container-compass #out-action-move-camp-de
   line-height: 1.1;
 }
 body.layout-small.tab-switch-out #grid-switch-content {
-  bottom: var(--l13-out-map-height, 200px);
   padding-bottom: 8px;
 }
 body.layout-small.tab-switch-out #btn-log-toggle {
@@ -7154,19 +7153,46 @@ body.layout-small {
   height: 100%;
   overflow: hidden;
 }
+body.layout-small {
+  --l13-shell: 1;
+}
+body.layout-small > .sticky-footer-wrapper,
+body.layout-small #grid-main {
+  height: 100% !important;
+  min-height: 0;
+  margin-bottom: 0;
+  display: block;
+}
+body.layout-small #unit-main {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  float: none;
+  padding-bottom: 0 !important;
+}
+body.layout-small #unit-main > #grid-switch-content,
+body.layout-small #unit-main > #mobile-chrome,
+body.layout-small #unit-main > #out-container-compass {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+body.layout-small #mobile-chrome {
+  position: static;
+  flex: 0 0 auto;
+}
 body.layout-small #grid-switch-content {
-  position: fixed;
-  top: var(--l13-chrome-height, 0px);
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: static;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   box-sizing: border-box;
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+}
+body.layout-small #unit-main > #out-container-compass {
+  position: static;
+  flex: 0 0 auto;
 }
 body.layout-small #grid-switch-content > #footer {
   width: 100%;
@@ -7174,6 +7200,10 @@ body.layout-small #grid-switch-content > #footer {
   margin: 12px 0 0 0;
   padding: 10px 4px calc(10px + env(safe-area-inset-bottom)) 4px;
   box-sizing: border-box;
+  order: 99;
+}
+body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
+  display: none !important;
 }
 @media screen and (max-height: 480px) {
   html:has(> body.layout-small),
@@ -7181,9 +7211,18 @@ body.layout-small #grid-switch-content > #footer {
     height: auto;
     overflow: visible;
   }
+  body.layout-small {
+    --l13-shell: 0;
+  }
+  body.layout-small > .sticky-footer-wrapper,
+  body.layout-small #grid-main,
+  body.layout-small #unit-main {
+    height: auto !important;
+    min-height: 0;
+  }
   body.layout-small #grid-switch-content {
-    position: static;
     overflow: visible;
+    flex: 0 0 auto;
   }
 }
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
