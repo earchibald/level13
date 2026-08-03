@@ -63,6 +63,18 @@ define(['ash', 'text/Text', 'game/GameGlobals', 'game/GlobalSignals', 'game/cons
             loadTextsFile: function (source) {
                 return new Promise((resolve, reject) => {
                     var url = source.source;
+                    // The one asset requirejs does not cache-bust for us. Without
+                    // this a release lands new code beside a stale strings file and
+                    // any newly added key renders as its raw key on screen. Reuse
+                    // the loader's own urlArgs so it moves with every version bump
+                    // rather than becoming another thing to remember.
+                    var urlArgs = null;
+                    try {
+                        urlArgs = requirejs.s.contexts._.config.urlArgs;
+                    } catch (e) {
+                        urlArgs = null;
+                    }
+                    if (urlArgs) url += (url.indexOf("?") >= 0 ? "&" : "?") + urlArgs;
                     log.i("Loading texts: " + url);
                     if (GameConstants.isDebugVersion) $.ajaxSetup({ cache: false });
                     $.getJSON(url, function (json) {

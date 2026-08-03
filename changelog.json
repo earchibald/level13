@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m33",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The bucket and trap now really do fit on one row, and a new text label can no longer show up as its raw key after an update"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m32",
             "requiredVersion": "0.6.1",
             "phase": "beta",

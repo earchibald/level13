@@ -7282,9 +7282,15 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
 }
 #out-sector-bar .collector-chip button.action {
   width: auto;
-  min-width: 3.5em;
+  min-width: 3em;
   padding: 8px 10px;
   margin: 0;
+}
+#out-sector-bar .collector-chip .container-btn-action {
+  margin: 0;
+}
+#out-sector-bar .collector-chip {
+  gap: 6px;
 }
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],
