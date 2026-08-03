@@ -241,10 +241,30 @@ define([
 		},
 
 		// #out-actions lost its unconditional buttons to the sector bar, so the
-		// heading has to follow the box's contents. The children are
-		// .callout-container wrappers, not the buttons themselves.
+		// heading has to follow the box's contents.
+		//
+		// Read data-visible, not :visible. The direct children of #out-actions are
+		// .callout-container wrappers two levels above each button, and
+		// toggleParentCalloutContainer only looks at a button's immediate parent -
+		// so a wrapper's display is written a tick later by UIOutElementsSystem,
+		// off elementToggledSignal (see the setTimeout in UIFunctions.toggleInternal).
+		// A :visible read here would see the previous state of the very toggles
+		// that ran a few lines above. data-visible is written synchronously.
 		updateOutActionsHeader: function () {
-			GameGlobals.uiFunctions.toggle("#header-out-actions", $("#out-actions").children(":visible").length > 0);
+			let $movement = $("#container-out-actions-movement-related");
+			let numVisible = $("#out-actions")
+				.find("button.action")
+				.not("#container-out-actions-movement-related button")
+				.not("[data-visible='false']")
+				.length;
+
+			// the movement-related span is slide-toggled rather than toggled, so it
+			// carries no data-visible of its own
+			if (numVisible === 0 && $movement.children().length > 0 && $movement.css("display") !== "none") {
+				numVisible++;
+			}
+
+			GameGlobals.uiFunctions.toggle("#header-out-actions", numVisible > 0);
 		},
 
 		// setTab force-shows #out-action-sca (a .tabbutton for this tab) without
