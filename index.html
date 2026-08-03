@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m21" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m21" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m21" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m22" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m22" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m22" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -1054,6 +1054,38 @@
 
 	<!-- RequireJS -->
 	<script data-main="src/config" src="lib/requirejs/require.min.js"></script>
+
+	<!-- Service worker: offline play, and a home screen app that actually
+	     updates. Registered relative to the page so it works on a project
+	     path (earchibald.github.io/level13-mobile/). -->
+	<script>
+		(function () {
+			if (!("serviceWorker" in navigator)) return;
+
+			// only reload for a worker that replaces an earlier one; on a first
+			// install controllerchange fires too and would reload needlessly
+			var hadController = !!navigator.serviceWorker.controller;
+			var reloading = false;
+
+			if (hadController) {
+				navigator.serviceWorker.addEventListener("controllerchange", function () {
+					if (reloading) return;
+					reloading = true;
+					window.location.reload();
+				});
+			}
+
+			window.addEventListener("load", function () {
+				navigator.serviceWorker.register("sw.js").then(function (registration) {
+					// an installed home screen app can sit for days without a
+					// navigation, so ask for the check explicitly
+					registration.update();
+				}).catch(function (e) {
+					console.warn("[sw] registration failed", e);
+				});
+			});
+		})();
+	</script>
 
 </body>
 </html>

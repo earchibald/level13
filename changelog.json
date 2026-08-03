@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m21",
+            "version": "0.6.3.m22",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The game is a proper installable web app now: a service worker keeps it playable offline, and - the reason for it - the home screen app picks up new releases instead of holding an old copy of the page for days"
                 },
                 {
                     "type": "UI",
