@@ -903,10 +903,12 @@ define(['ash',
 
 		updateResourceIndicatorCallout: function (id, name, changeSources) {
 			let content = "";
+			let total = 0;
 			var source;
 			for (let i in changeSources) {
 				source = changeSources[i];
 				if (source.amount != 0) {
+					total += source.amount;
 					content += this.getResourceAccumulationSourceText(source) + "<br/>";
 				}
 			}
@@ -916,10 +918,22 @@ define(['ash',
 			if (content.length <= 0) {
 				content = displayName + " (no change)";
 			} else {
-				content = displayName + "<br/>" + content;
+				// the sources are credits and debits; whether the store grows or
+				// drains is their sum, and that was the one number the card never
+				// showed. On a phone it is also the only place the rate appears,
+				// because the chips themselves have no room for it.
+				content = displayName + "<br/>" + content + "<hr/>" + this.getResourceNetChangeText(total);
 			}
 
 			this.updateCalloutContent(id,  content);
+		},
+
+		getResourceNetChangeText: function (total) {
+			let divisor = Math.abs(total) < 0.0001 ? 100000 : 10000;
+			let rounded = Math.round(total * divisor) / divisor;
+			let sign = rounded > 0 ? "+" : "";
+			let text = "net: " + sign + rounded + "/s";
+			return rounded < 0 ? "<span class='warning'>" + text + "</span>" : text;
 		},
 		
 		getResourceAccumulationSourceText: function (source) {

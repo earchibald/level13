@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m14",
+            "version": "0.6.3.m15",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,14 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Resource tooltips now end with the net rate - the sum of the credits and debits above it - in red when the store is draining. It was the one number the card never showed, on any layout"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix the scrolling page painting over the stats bar while a stats tooltip was open"
                 },
                 {
                     "type": "UI",

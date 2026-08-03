@@ -1169,9 +1169,12 @@ body.layout-small #footer {
 	display: none;
 }
 
-// while a tap callout is open, the content layer paints above the fixed
-// header so callouts near the top of the page are never covered by it
-body.callout-open #grid-switch-content {
+// While a tap callout is open, the content layer paints above the fixed header
+// so callouts near the top of the page are never covered by it. But when the
+// open callout belongs to the header itself, raising the content puts the
+// whole scrolling page over the stats bar - visibly so once the page is
+// scrolled. In that case the header has to keep the top.
+body.callout-open:not(:has(#mobile-header .callout-container.callout-visible)) #grid-switch-content {
 	z-index: 6;
 }
 

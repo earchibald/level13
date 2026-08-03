@@ -6718,7 +6718,7 @@ body.layout-small #footer {
 #btn-log-toggle {
   display: none;
 }
-body.callout-open #grid-switch-content {
+body.callout-open:not(:has(#mobile-header .callout-container.callout-visible)) #grid-switch-content {
   z-index: 6;
 }
 body.vision-step-0 #btn-log-toggle {
