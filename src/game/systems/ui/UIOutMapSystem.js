@@ -570,8 +570,18 @@ define([
 			let gap = this.SECTOR_TOOLTIP_CURSOR_GAP;
 			let margin = this.SECTOR_TOOLTIP_EDGE_MARGIN;
 
-			let viewportW = $(window).width();
-			let viewportH = $(window).height();
+			// the visual viewport is what the player can actually see: on a phone
+			// window.innerHeight includes the strip behind the browser toolbar
+			let viewportW = window.visualViewport ? window.visualViewport.width : $(window).width();
+			let viewportH = window.visualViewport ? window.visualViewport.height : $(window).height();
+
+			// the pinned header, tab bar and minimap are chrome, not free space
+			let topEdge = margin + GameGlobals.uiFunctions.getPinnedTopHeight();
+			let bottomEdge = viewportH - margin - GameGlobals.uiFunctions.getPinnedBottomHeight();
+
+			// a pane taller than the band between them scrolls rather than
+			// hanging off the screen
+			$tooltip.css("max-height", Math.max(80, Math.round(bottomEdge - topEdge)) + "px");
 
 			let width = $tooltip.outerWidth();
 			let height = $tooltip.outerHeight();
@@ -584,9 +594,9 @@ define([
 			if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
 
 			let top = cursor.y + gap;
-			if (top + height > viewportH - margin) top = cursor.y - gap - height;
-			if (top < margin) top = margin;
-			if (top + height > viewportH - margin) top = Math.max(margin, viewportH - margin - height);
+			if (top + height > bottomEdge) top = cursor.y - gap - height;
+			if (top < topEdge) top = topEdge;
+			if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
 
 			$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
 		},

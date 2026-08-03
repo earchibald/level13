@@ -232,6 +232,27 @@ define(['ash',
 					}
 				});
 
+				// crafting opens a dialog instead of a callout card (see
+				// showCraftPopup). Capture phase, so it runs before the action
+				// handler and before the callout handlers below.
+				document.addEventListener("click", function (e) {
+					if (!$("body").hasClass("layout-small")) return;
+					if (!e.target.closest) return;
+					let container = e.target.closest(".container-btn-action");
+					if (!container) return;
+					let button = container.querySelector("button.action");
+					if (!button) return;
+					let $button = $(button);
+					if (!uiFunctions.isCraftButton($button)) return;
+					// the popup's own Craft button is an action button too, and it
+					// must be allowed through
+					if (container.closest("#common-popup")) return;
+					e.preventDefault();
+					e.stopPropagation();
+					uiFunctions.closeAllCallouts();
+					uiFunctions.showCraftPopup($button);
+				}, true);
+
 				// tap on a disabled action button shows its callout (costs + disabled
 				// reason). Native disabled buttons swallow clicks, so the handler sits
 				// on the wrapper and CSS gives the disabled button pointer-events:none.
@@ -252,6 +273,9 @@ define(['ash',
 				let longPressDelay = 500;
 				$(document).on("pointerdown", ".container-btn-action > button", function (e) {
 					if (e.pointerType === "mouse") return;
+					// craft buttons answer a tap with a dialog; a long-press card
+					// would be the very thing that was falling off the screen
+					if ($("body").hasClass("layout-small") && uiFunctions.isCraftButton($(this))) return;
 					let btn = this;
 					let $btn = $(btn);
 					// a stale flag from an aborted long-press must not swallow this tap
@@ -371,6 +395,47 @@ define(['ash',
 				});
 			},
 
+			// CRAFTING ON A PHONE
+			// The cost card hung off a button in a long scrolling list and kept
+			// running past the bottom of the screen. On small layout a tap opens
+			// a dialog instead: the same costs and reasons, in a box that is
+			// centred and scrollable, with an explicit Craft.
+
+			isCraftButton: function ($btn) {
+				let action = $btn.attr("action");
+				return !!action && action.indexOf("craft_") === 0;
+			},
+
+			showCraftPopup: function ($btn) {
+				let action = $btn.attr("action");
+				let title = $btn.find(".btn-label").text() || $btn.text() || "Craft";
+				let isDisabled = $btn.hasClass("btn-disabled");
+				let msg = this.getCraftPopupMessage($btn);
+
+				if (isDisabled) {
+					// nothing to confirm, so the only way out is back
+					this.popupManager.showPopup(title, msg, null, "Cancel", null, null, null, { isDismissable: true });
+					return;
+				}
+
+				// the popup builds a real action button, so the game's own rules
+				// decide what crafting does and costs
+				this.popupManager.showPopup(title, msg, "Craft", "Cancel", null, null, null, {
+					isDismissable: true,
+					action: action,
+				});
+			},
+
+			// reuse the callout's own markup so the costs keep the colours and
+			// wording the rest of the game uses for what you cannot afford
+			getCraftPopupMessage: function ($btn) {
+				let $content = $btn.parent().siblings("div.btn-callout").children(".btn-callout-content");
+				if ($content.length == 0) return "";
+				let $clone = $content.clone();
+				$clone.find("[id]").removeAttr("id");
+				return $("<div class='craft-dialog'></div>").append($clone).prop("outerHTML");
+			},
+
 			// the phone toolbars hide and show as the page scrolls, which changes
 			// how much room an open card has
 			reclampOpenCallout: function () {
@@ -431,9 +496,11 @@ define(['ash',
 				if (up < 0) $callout.css("margin-top", Math.round(up) + "px");
 			},
 
+			// chrome pinned to the bottom of the screen: the main-action bar, and
+			// the minimap on the exploration tab
 			getPinnedBottomHeight: function () {
 				let height = 0;
-				$(".action-mirror").each(function () {
+				$(".action-mirror, #out-container-compass").each(function () {
 					let $bar = $(this);
 					if ($bar.css("position") != "fixed") return;
 					if (!$bar.is(":visible")) return;

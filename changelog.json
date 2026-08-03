@@ -1,12 +1,20 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m10",
+            "version": "0.6.3.m12",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
             "released": "2026-08-02",
             "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: crafting no longer uses tooltip cards. Tapping an item opens a dialog with its effect and required resources - cancel only when you cannot afford it, cancel or craft when you can"
+                },
                 {
                     "type": "UI",
                     "summary": "Mobile: portrait only for now - the manifest asks for a portrait lock, and a phone turned sideways gets a notice instead of the broken landscape layout"

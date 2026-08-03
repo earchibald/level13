@@ -186,8 +186,12 @@ define([
 				this.headerResizeObserver = new ResizeObserver(function () { sys.updateLayout(); });
 				let headerElement = document.getElementById("mobile-header");
 				let tabsElement = document.getElementById("grid-switch");
+				// the minimap pins to the bottom on the exploration tab, so its
+				// height is a layout metric too (see mobile.less)
+				let mapElement = document.getElementById("out-container-compass");
 				if (headerElement) this.headerResizeObserver.observe(headerElement);
 				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
+				if (mapElement) this.headerResizeObserver.observe(mapElement);
 			}
 		},
 
@@ -1171,6 +1175,13 @@ define([
 			let padding = isSmallLayout && isHeaderFixed ? headerHeight + tabsHeight + 7 : 15;
 			$("#unit-main").css("padding-top", padding + "px");
 			$("#log-container").css("padding-top", (padding + 10) + "px");
+
+			// the minimap pins to the bottom of the exploration tab; the content
+			// above it and the log pill both have to clear it
+			let $map = $("#out-container-compass");
+			let isMapFixed = $map.length > 0 && $map.css("position") == "fixed";
+			let mapHeight = isMapFixed ? Math.ceil($map.outerHeight()) : 0;
+			document.documentElement.style.setProperty("--l13-out-map-height", mapHeight + "px");
 		},
 
 		updateTabVisibility: function () {

@@ -82,7 +82,9 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 			var $defaultButton = null;
 			$("#common-popup .buttonbox").empty();
 
-			if (!action) {
+			// a popup with neither an action nor an OK label is cancel-only; without
+			// this guard it grew a button captioned "null"
+			if (!action && okButtonLabel) {
 				$("#common-popup .buttonbox").append("<button id='info-ok' class='action'>" + okButtonLabel + "</button>");
 				$("#info-ok").attr("action", showInventoryManagement ? "accept_inventory" : null);
 				$("#info-ok").toggleClass("inventory-selection-ok", showInventoryManagement);
@@ -105,7 +107,9 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 
 			if (action) {
 				let baseActionID = GameGlobals.playerActionsHelper.getBaseActionID(action);
-				let actionName = Text.t("game.actions." + baseActionID + "_name");
+				// not every base action has a name string (crafting does not), so
+				// callers may name the button themselves
+				let actionName = okButtonLabel || Text.t("game.actions." + baseActionID + "_name");
 				$("#common-popup .buttonbox").append("<button id='info-action' class='action' action='" + action + "'>" + actionName + "</button>");
 				$("#info-action").click(ExceptionHandler.wrapClick(function (e) {
 					popUpManager.handleOkButton(true, okCallback);

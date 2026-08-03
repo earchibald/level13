@@ -76,6 +76,13 @@ body.sunlit {
 	transform: rotate(180deg);
 }
 
+// crafting answers a tap with a dialog, so its cards never open on a phone
+// (the popup's own Craft button keeps its card - it is centred, not pinned to
+// a row in a long list)
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="craft_"]) > div.btn-callout {
+	display: none !important;
+}
+
 // a card too tall for the space either side of its trigger is capped by
 // clampCalloutVertically and scrolls its own content rather than losing the
 // end of it. Button callouts are pointer-transparent by default, so the
@@ -898,8 +905,36 @@ body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
 	order: 1;
 }
 
+// The map is the thing you check between every move, and it sat at the far end
+// of the tab. Pin it to the bottom of the screen instead. UIOutHeaderSystem
+// measures it into --l13-out-map-height so the content and the log pill clear
+// it, and getPinnedBottomHeight keeps tooltips off it.
 body.layout-small.tab-switch-out #out-container-compass {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 8;
 	order: 2;
+	margin: 0;
+	padding: 4px 0 ~"calc(4px + env(safe-area-inset-bottom))" 0;
+	text-align: center;
+	background: var(--l13-mobile-bg);
+	border-top: 1px solid var(--l13-mobile-border);
+}
+
+// the position and distance readouts are one compact line under the map
+body.layout-small.tab-switch-out #out-container-compass .infobox {
+	margin: 2px 0 0 0;
+	padding: 0;
+}
+
+body.layout-small.tab-switch-out #grid-switch-content {
+	padding-bottom: ~"calc(var(--l13-out-map-height, 240px) + 8px)";
+}
+
+body.layout-small.tab-switch-out #btn-log-toggle {
+	bottom: ~"calc(var(--l13-out-map-height, 240px) + 12px)";
 }
 
 // content has to clear the bar; only the tabs that actually carry one
@@ -928,6 +963,17 @@ body.layout-small.tab-switch-projects #btn-log-toggle {
 	body.layout-small.tab-switch-embark #grid-switch-content,
 	body.layout-small.tab-switch-milestones #grid-switch-content,
 	body.layout-small.tab-switch-projects #grid-switch-content {
+		padding-bottom: 0;
+	}
+
+	// a pinned map would leave nothing to scroll in a 390px-tall viewport
+	body.layout-small.tab-switch-out #out-container-compass {
+		position: static;
+		border-top: none;
+		padding: 0;
+	}
+
+	body.layout-small.tab-switch-out #grid-switch-content {
 		padding-bottom: 0;
 	}
 }

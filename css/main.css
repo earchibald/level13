@@ -5987,6 +5987,9 @@ body.sunlit {
 .callout-flipped > div.callout-arrow-up {
   transform: rotate(180deg);
 }
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="craft_"]) > div.btn-callout {
+  display: none !important;
+}
 body.layout-small div.info-callout.callout-scrollable,
 body.layout-small div.btn-callout.callout-scrollable {
   overflow-y: auto;
@@ -6546,7 +6549,27 @@ body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
   order: 1;
 }
 body.layout-small.tab-switch-out #out-container-compass {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 8;
   order: 2;
+  margin: 0;
+  padding: 4px 0 calc(4px + env(safe-area-inset-bottom)) 0;
+  text-align: center;
+  background: var(--l13-mobile-bg);
+  border-top: 1px solid var(--l13-mobile-border);
+}
+body.layout-small.tab-switch-out #out-container-compass .infobox {
+  margin: 2px 0 0 0;
+  padding: 0;
+}
+body.layout-small.tab-switch-out #grid-switch-content {
+  padding-bottom: calc(var(--l13-out-map-height, 240px) + 8px);
+}
+body.layout-small.tab-switch-out #btn-log-toggle {
+  bottom: calc(var(--l13-out-map-height, 240px) + 12px);
 }
 body.layout-small.tab-switch-embark #grid-switch-content,
 body.layout-small.tab-switch-milestones #grid-switch-content,
@@ -6568,6 +6591,14 @@ body.layout-small.tab-switch-projects #btn-log-toggle {
   body.layout-small.tab-switch-embark #grid-switch-content,
   body.layout-small.tab-switch-milestones #grid-switch-content,
   body.layout-small.tab-switch-projects #grid-switch-content {
+    padding-bottom: 0;
+  }
+  body.layout-small.tab-switch-out #out-container-compass {
+    position: static;
+    border-top: none;
+    padding: 0;
+  }
+  body.layout-small.tab-switch-out #grid-switch-content {
     padding-bottom: 0;
   }
 }
