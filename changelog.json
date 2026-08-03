@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.13",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Scout is back on M; the map hotkey is now P"
+				}
+			]
+		},
+		{
 			"version": "0.6.3.12",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

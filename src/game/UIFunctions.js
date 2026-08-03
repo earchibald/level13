@@ -203,7 +203,7 @@ define(['ash',
 				this.registerHotkey("Move SE", "Numpad3", defaultModifier, tabs.out, false, false, "move_sector_se");
 
 				this.registerHotkey("Scavenge", "KeyN", defaultModifier, tabs.out, false, false, "scavenge");
-				this.registerHotkey("Scout", "KeyT", defaultModifier, tabs.out, false, false, "scout");
+				this.registerHotkey("Scout", "KeyM", defaultModifier, tabs.out, false, false, "scout");
 				this.registerHotkey("Collect water", "KeyG", defaultModifier, tabs.out, false, false, "use_out_collector_water");
 				this.registerHotkey("Collect food", "KeyF", defaultModifier, tabs.out, false, false, "use_out_collector_food");
 				this.registerHotkey("Collect 1 water", "KeyG", "shiftKey", tabs.out, false, false, "use_out_collector_water_one");
@@ -235,7 +235,7 @@ define(['ash',
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
 				// fast-jump hotkeys; these work from any tab
-				this.registerHotkey("Show map", "KeyM", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.map));
+				this.registerHotkey("Show map", "KeyP", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.map));
 				this.registerHotkey("Craft", "KeyK", defaultModifier, null, false, false, () => GlobalSignals.openCraftPopupSignal.dispatch());
 				this.registerHotkey("Manage inventory", "KeyI", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showInventoryContext());
 
