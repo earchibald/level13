@@ -9,6 +9,7 @@ define([
 	'game/GlobalSignals',
 	'game/constants/DialogueConstants',
 	'game/constants/ExplorationConstants',
+	'game/constants/ImprovementConstants',
 	'game/constants/PlayerStatConstants',
 	'game/constants/TextConstants',
 	'game/constants/LogConstants',
@@ -38,7 +39,7 @@ define([
 	'game/components/sector/EnemiesComponent'
 ], function (
 	Ash,
-	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, PlayerStatConstants, TextConstants,
+	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, ImprovementConstants, PlayerStatConstants, TextConstants,
 	LogConstants, UIConstants, PositionConstants, LocaleConstants, LevelConstants, MovementConstants, StoryConstants, TradeConstants,
 	TribeConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
 	PassagesComponent, SectorControlComponent, SectorFeaturesComponent, SectorLocalesComponent,
@@ -161,6 +162,7 @@ define([
 			});
 			GlobalSignals.add(this, GlobalSignals.playerLeftCampSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.collectorCollectedSignal, this.updateOutImprovementsStatus);
+			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
 			GlobalSignals.add(this, GlobalSignals.movementBlockerClearedSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
@@ -234,6 +236,23 @@ define([
 			this.updateNap(isScouted, hasCampHere);
 			this.updateWait(hasCampHere);
 			this.updateDespair();
+
+			this.updateOutActionsHeader();
+		},
+
+		// #out-actions lost its unconditional buttons to the sector bar, so the
+		// heading has to follow the box's contents. The children are
+		// .callout-container wrappers, not the buttons themselves.
+		updateOutActionsHeader: function () {
+			GameGlobals.uiFunctions.toggle("#header-out-actions", $("#out-actions").children(":visible").length > 0);
+		},
+
+		// setTab force-shows #out-action-sca (a .tabbutton for this tab) without
+		// telling anyone, so the bar's own state has to be recomputed after it
+		onTabChanged: function (tabID) {
+			if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.out) return;
+			if (!this.playerLocationNodes.head) return;
+			this.updateLevelPageActions();
 		},
 
 		updateLevelPageActions: function (isScouted, hasCamp, hasCampHere) {
@@ -265,9 +284,19 @@ define([
 
 			GameGlobals.uiFunctions.toggle("#out-action-get-up", !isAwake);
 			GameGlobals.uiFunctions.toggle("#out-action-enter", isAwake && hasCampHere);
-			GameGlobals.uiFunctions.toggle("#out-action-sca", isAwake);
-			GameGlobals.uiFunctions.toggle("#out-action-scout", isAwake && GameGlobals.gameState.unlockedFeatures.vision);
-			GameGlobals.uiFunctions.toggle("#out-action-use-spring", isAwake && isScouted && featuresComponent.hasSpring);
+			// isVisible("scout") is false once the sector is scouted (the action
+			// requires sector.scouted: false, and DISABLED_REASON_SCOUTED blocks
+			// visibility) but stays true when only light is missing, so an
+			// unscouted dark sector still explains itself. The unlockedFeatures
+			// gate stays: it is not the same test as the action's own vision
+			// requirement, and keeping it makes this a pure subtraction.
+			let showScavenge = isAwake;
+			let showScout = isAwake && GameGlobals.gameState.unlockedFeatures.vision && GameGlobals.playerActionsHelper.isVisible("scout");
+			let showSpring = isAwake && isScouted && featuresComponent.hasSpring;
+			GameGlobals.uiFunctions.toggle("#out-action-sca", showScavenge);
+			GameGlobals.uiFunctions.toggle("#out-action-scout", showScout);
+			GameGlobals.uiFunctions.toggle("#out-action-use-spring", showSpring);
+			$("#out-sector-bar").toggleClass("has-actions", showScavenge || showScout || showSpring);
 			GameGlobals.uiFunctions.toggle("#out-action-investigate", isAwake && this.showInvestigate());
 
 			// examine spots
@@ -302,6 +331,8 @@ define([
 			GameGlobals.uiFunctions.toggle("#container-tab-two-out-actions h3", GameGlobals.gameState.isFeatureUnlocked("move"));
 			GameGlobals.uiFunctions.toggle("#out-improvements", GameGlobals.gameState.unlockedFeatures.vision);
 			GameGlobals.uiFunctions.toggle("#out-improvements table", GameGlobals.gameState.unlockedFeatures.vision);
+
+			this.updateOutActionsHeader();
 		},
 
 		getVisibleLocales: function (isScouted) {
@@ -788,13 +819,88 @@ define([
 			return enemyDesc + (hasHazards ? hazardDesc : notCampableDesc);
 		},
 
+		// The two collector rows and their bar chips. Both updateOutImprovementsList
+		// and updateOutImprovementsStatus reach these elements, so the logic lives in
+		// one place and both call it. Returns the number of visible rows so the
+		// improvements header count stays right.
+		updateCollectors: function () {
+			if (!this.playerLocationNodes.head) return 0;
+
+			let improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
+			let numVisibleRows = 0;
+			let numChips = 0;
+
+			let defs = [
+				{
+					improvementName: improvementNames.collector_water,
+					resource: resourceNames.water,
+					buildAction: "build_out_collector_water",
+					rowID: "#out-improvements-collector-water",
+					buildID: "#out-action-build-bucket",
+					improveID: "#out-action-improve-bucket",
+					chipID: "#out-collector-chip-water",
+					fillID: "#out-collector-fill-water",
+				},
+				{
+					improvementName: improvementNames.collector_food,
+					resource: resourceNames.food,
+					buildAction: "build_out_collector_food",
+					rowID: "#out-improvements-collector-food",
+					buildID: "#out-action-build-trap",
+					improveID: "#out-action-improve-trap",
+					chipID: "#out-collector-chip-food",
+					fillID: "#out-collector-fill-food",
+				},
+			];
+
+			for (let i = 0; i < defs.length; i++) {
+				let def = defs[i];
+				let vo = improvements.getVO(def.improvementName);
+				let count = vo.count;
+				let isBuilt = count > 0;
+				let level = improvements.getLevel(def.improvementName);
+				let capacity = vo.storageCapacity[def.resource] * count;
+				let maxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(def.improvementName);
+
+				// level < maxLevel, not maxLevel > 1: at the cap the game keeps the
+				// arrow visible and disabled, which would leave every finished
+				// collector with a permanently dead row
+				let showBuild = !isBuilt && GameGlobals.playerActionsHelper.isVisible(def.buildAction);
+				let showImprove = isBuilt && level < maxLevel;
+				let showRow = showBuild || showImprove;
+
+				GameGlobals.uiFunctions.toggle(def.buildID, showBuild);
+				GameGlobals.uiFunctions.toggle(def.improveID, showImprove);
+				GameGlobals.uiFunctions.toggle(def.rowID, showRow);
+				if (showRow) numVisibleRows++;
+
+				let $label = $(def.rowID).find(".collector-row-label");
+				GameGlobals.uiFunctions.toggle($label, isBuilt);
+				if (isBuilt) {
+					// getImprovementDisplayName resolves the id from the name itself
+					$label.find("span").text(ImprovementConstants.getImprovementDisplayName(def.improvementName, level) + " · lvl " + level);
+				}
+
+				$(def.chipID).toggleClass("is-built", isBuilt);
+				if (isBuilt) numChips++;
+				$(def.fillID).text(capacity > 0 ? (Math.floor(vo.storedResources[def.resource] * 10) / 10) + " / " + capacity : "");
+			}
+
+			$("#out-sector-bar").toggleClass("has-collectors", numChips > 0);
+
+			return numVisibleRows;
+		},
+
 		updateOutImprovementsList: function (improvements) {
 			if (!this.playerLocationNodes.head) return;
 			if (GameGlobals.playerHelper.isInCamp()) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 			var uiFunctions = GameGlobals.uiFunctions;
-			var numVisible = 0;
+			var numVisible = this.updateCollectors();
 			$.each(this.elements.outImprovementsTR, function () {
+				// the collector rows are owned by updateCollectors
+				if ($(this).hasClass("collector-row")) return;
+
 				var actionName = $(this).attr("btn-action");
 
 				if (!actionName) {
@@ -808,7 +914,6 @@ define([
 						let actionVisible = GameGlobals.playerActionsHelper.isVisible(actionName);
 						let existingImprovements = improvements.getCount(improvementName);
 						$(this).find(".list-amount").text(existingImprovements);
-						GameGlobals.uiFunctions.toggle($(this).find(".action-use"), existingImprovements > 0);
 
 						let isVisible = actionVisible || existingImprovements > 0;
 						GameGlobals.uiFunctions.toggle($(this), isVisible);
@@ -822,23 +927,9 @@ define([
 		updateOutImprovementsStatus: function () {
 			if (!this.playerLocationNodes.head) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
-			var hasCamp = GameGlobals.levelHelper.getLevelEntityForSector(this.playerLocationNodes.head.entity).has(CampComponent);
-		
-			var collectorFood = improvements.getVO(improvementNames.collector_food);
-			var collectorWater = improvements.getVO(improvementNames.collector_water);
-			var collectorFoodCapacity = collectorFood.storageCapacity.food * collectorFood.count;
-			var collectorWaterCapacity = collectorWater.storageCapacity.water * collectorWater.count;
-			$("#out-improvements-collector-food .list-storage").text(
-				collectorFoodCapacity > 0 ? (Math.floor(collectorFood.storedResources.food * 10) / 10) + " / " + collectorFoodCapacity : "");
-			$("#out-improvements-collector-water .list-storage").text(
-				collectorWaterCapacity > 0 ? (Math.floor(collectorWater.storedResources.water * 10) / 10) + " / " + collectorWaterCapacity : "");
-				
-			let bucketMaxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(improvementNames.collector_water);
-			let trapMaxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(improvementNames.collector_food);
-				
-			GameGlobals.uiFunctions.toggle("#out-action-improve-bucket", collectorWaterCapacity > 0 && bucketMaxLevel > 1);
-			GameGlobals.uiFunctions.toggle("#out-action-improve-trap", collectorFoodCapacity > 0 && trapMaxLevel > 1);
-			
+
+			this.updateCollectors();
+
 			let hasBeacon = improvements.getCount(improvementNames.beacon);
 			GameGlobals.uiFunctions.toggle("#out-action-dismantle-beacon", hasBeacon);
 		},

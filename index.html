@@ -402,17 +402,35 @@
 						</div>
 						
 						<div class="unit unit-rest">
+							<div id="out-sector-bar">
+								<div id="out-sector-bar-actions" class="actionbox">
+									<button class="action action-location tabbutton" data-tab="switch-out" id="out-action-sca" action="scavenge">Scavenge</button>
+									<button class="action action-location" id="out-action-scout" action="scout">Scout</button>
+									<button class="action action-location" id="out-action-use-spring" action="use_spring">Refill water</button>
+								</div>
+								<div id="out-sector-bar-collectors">
+									<div id="out-collector-chip-water" class="collector-chip">
+										<img class="collector-chip-icon" src="img/res-water.png" alt="water" />
+										<span id="out-collector-fill-water" class="collector-chip-fill vision-text"></span>
+										<button class="action action-use action-location btn-narrow text-key" action="use_out_collector_water" id="out-action-use-bucket" data-text-key="ui.exploration.collect_all_resources_label"></button>
+										<button class="action action-use action-location btn-compact" action="use_out_collector_water_one" id="out-action-use-bucket_one">1</button>
+									</div>
+									<div id="out-collector-chip-food" class="collector-chip">
+										<img class="collector-chip-icon" src="img/res-food.png" alt="food" />
+										<span id="out-collector-fill-food" class="collector-chip-fill vision-text"></span>
+										<button class="action action-use action-location btn-narrow text-key" action="use_out_collector_food" id="out-action-use-trap" data-text-key="ui.exploration.collect_all_resources_label"></button>
+										<button class="action action-use action-location btn-compact" action="use_out_collector_food_one" id="out-action-use-trap_one">1</button>
+									</div>
+								</div>
+							</div>
 							<div class="subheader" id="header-out-actions">
 								<h3 class="text-key" data-text-key="ui.exploration.scavenge_actions_header"></h3>
 							</div>
 							<div id="out-actions" class="actionbox">
-								<button class="action action-location tabbutton" data-tab="switch-out" id="out-action-sca" action="scavenge">Scavenge</button>
-								<button class="action action-location" id="out-action-scout" action="scout">Scout</button>
 								<button class="action action-location" id="out-action-investigate" action="investigate">Investigate</button>
 								<button class="action action-location" id="out-action-examine" action="examine">Examine</button>
 								<button class="action action-location btn-x-wide" id="out-action-scavenge-heap" action="scavenge_heap">Scavenge heap</button>
 								<button class="action action-location" id="out-action-clear-workshop" action="clear_workshop">Scout workshop</button>
-								<button class="action action-location" id="out-action-use-spring" action="use_spring">Refill water</button>
 								<button class="action action-location" id="out-action-get-up" action="get_up"><span>Get up</span></button>
 								<button class="action action-location btn-icon" id="out-action-nap" action="nap"><span>Rest</span></button>
 								<button class="action action-location" id="out-action-wait" action="wait"><span>Wait</span></button>
@@ -433,18 +451,14 @@
 							</div>
 							<div id="out-improvements" class="actionbox">
 								<table>
-								<tr id="out-improvements-collector-water">
+								<tr id="out-improvements-collector-water" class="collector-row">
 									<td><button class="action action-build action-location text-key" action="build_out_collector_water" id="out-action-build-bucket" data-text-key="game.improvements.collector_water_name_default"></button></td>
+									<td class="collector-row-label vision-text"><span></span></td>
 									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-bucket" action="improve_out_collector_water">▲</button></td>
-									<td><button class="action action-use action-location btn-narrow text-key" action="use_out_collector_water" id="out-action-use-bucket" data-text-key="ui.exploration.collect_all_resources_label"></button></td>
-									<td><button class="action action-use action-location btn-compact" action="use_out_collector_water_one" id="out-action-use-bucket_one">1</button></td>
-									<td class="list-storage vision-text"></td>
-								</tr><tr id="out-improvements-collector-food">
+								</tr><tr id="out-improvements-collector-food" class="collector-row">
 									<td><button class="action action-build action-location text-key" action="build_out_collector_food" id="out-action-build-trap" data-text-key="game.improvements.collector_food_name_default"></button></td>
+									<td class="collector-row-label vision-text"><span></span></td>
 									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-trap" action="improve_out_collector_food">▲</button></td>
-									<td><button class="action action-use action-location btn-narrow text-key" action="use_out_collector_food" id="out-action-use-trap" data-text-key="ui.exploration.collect_all_resources_label"></button></td>
-									<td><button class="action action-use action-location btn-compact" action="use_out_collector_food_one" id="out-action-use-trap_one">1</button></td>
-									<td class="list-storage vision-text"></td>
 								</tr><tr id="out-improvements-beacon">
 									<td><button class="action action-build action-location" action="build_out_beacon" id="out-action-build-beacon">Beacon</button></td>
 									<td><button class='action action-dismantle btn-glyph-big' id="out-action-dismantle-beacon" action='dismantle_out_beacon'>×</button></td>
