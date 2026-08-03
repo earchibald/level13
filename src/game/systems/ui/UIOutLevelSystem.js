@@ -264,7 +264,10 @@ define([
 				numVisible++;
 			}
 
+			// the box keeps .actionbox's margin and padding when empty, so it goes
+			// with the heading rather than leaving a gap under it
 			GameGlobals.uiFunctions.toggle("#header-out-actions", numVisible > 0);
+			GameGlobals.uiFunctions.toggle("#out-actions", numVisible > 0);
 		},
 
 		// setTab force-shows #out-action-sca (a .tabbutton for this tab) without

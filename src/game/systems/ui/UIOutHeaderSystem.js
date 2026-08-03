@@ -192,7 +192,13 @@ define([
 				let mapElement = document.getElementById("out-container-compass");
 				// the action bar's own height changes with the sector - scout
 				// leaving, a collector chip appearing - without resizing anything
-				// else, so it is a layout metric in its own right
+				// else, so it is a layout metric in its own right.
+				//
+				// This also gives the shell a second layout pass whenever the bar
+				// resizes, which is a self-damping single bounce: updateLayout can
+				// change the bar's padding through out-map-hidden, but the next
+				// pass's toggleClass is then a no-op. Do not "optimise" the second
+				// pass away - see updateBottomChromeState.
 				let barElement = document.getElementById("out-sector-bar");
 				if (headerElement) this.headerResizeObserver.observe(headerElement);
 				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
@@ -1188,15 +1194,10 @@ define([
 			this.updateSectorBarPlacement(isShell);
 			this.updateMapDockPlacement(isShell);
 
-			// before scouting is unlocked the map panel is hidden and the action bar
-			// becomes the last element in the column, so it has to carry the bottom
-			// inset instead
-			$("#unit-main").toggleClass("out-map-hidden", isShell && !$("#out-container-compass").is(":visible"));
-
 			// nothing above needs a height: the column sorts that out. The floating
 			// log pill is the one thing still positioned against the bottom chrome,
 			// which is the action bar and the map panel together.
-			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
+			this.updateBottomChromeState(isShell);
 
 			// the panel was just rebuilt in this same pass, so a height read now
 			// can be one layout behind; read it again on the next frame
@@ -1231,11 +1232,21 @@ define([
 			return height;
 		},
 
+		// The class and the height are two views of one fact, so they are set
+		// together. updateLayout runs inside the featureUnlockedSignal dispatch,
+		// BEFORE UIOutLevelSystem reveals the map panel, so the first pass reads
+		// the map as still hidden and the next-frame pass is what gets it right.
+		// Both callers therefore run both halves.
+		updateBottomChromeState: function (isShell) {
+			$("#unit-main").toggleClass("out-map-hidden", isShell && !$("#out-container-compass").is(":visible"));
+			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
+		},
+
 		// the measuring half of updateLayout, without any of the DOM moves, so it
 		// is safe to run again from a frame callback
 		updateMeasurements: function () {
 			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
-			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
+			this.updateBottomChromeState(isShell);
 		},
 
 		// The level title sits between the chrome and the tab content in the

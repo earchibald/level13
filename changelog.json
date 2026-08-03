@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m32",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The bucket and trap now show a blue or red resource icon, and both fit on one row above the map"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m31",
             "requiredVersion": "0.6.1",
             "phase": "beta",

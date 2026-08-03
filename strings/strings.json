@@ -2191,6 +2191,7 @@
             "build_actions_header": "Build",
             "characters_header": "People",
             "collect_all_resources_label": "Collect all",
+            "collect_all_short_label": "all",
             "current_distance_to_camp_field": "Distance to camp: {num}",
             "current_distance_to_passage_field": "Distance to passage: {num}",
             "enter_level_15_message": "Only now you notice the lack of scents here, away from the Ground with its dirt and leaves. It feels barren.",
