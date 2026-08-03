@@ -1036,6 +1036,293 @@ git commit -m "Release 0.6.3.m31"
 
 ---
 
+### Task 6: Close the browser-pass and final-review findings
+
+**Files:**
+- Modify: `strings/strings.json` (`ui.exploration` block)
+- Modify: `index.html` (the two chip collect-all buttons)
+- Modify: `css/modules/mobile.less` (`SECTOR ACTION BAR` section)
+- Modify: `css/modules/base-classes.less:254`
+- Modify: `src/game/systems/ui/UIOutHeaderSystem.js`
+- Modify: `src/game/systems/ui/UIOutLevelSystem.js`
+- Modify: `css/main.css` (generated), `changelog.json`, `src/config.js`, `changelog.html`, `sw.js`
+
+**Interfaces:**
+- Consumes: everything Tasks 1-5 produced.
+- Produces: string key `ui.exploration.collect_all_short_label`; method `UIOutHeaderSystem.updateBottomChromeState(isShell)`.
+
+Six findings, then the release bump. Five come from the final whole-branch
+review and the controller's browser pass; one is the user's original brief.
+
+- [ ] **Step 1: Give the collector icons their colour**
+
+The user's brief asked for "a blue or red icon". `img/res-water.png` and
+`img/res-food.png` are monochrome by the game's art direction, so the chip
+currently shows a grey dot and grey chevrons. Mask the existing sprite and let
+the chip supply the colour — this keeps the game's own iconography and needs no
+new art.
+
+In `css/modules/mobile.less`, replace the `.collector-chip-icon` rule:
+
+```less
+.collector-chip-icon {
+	width: 16px;
+	height: 16px;
+	flex: 0 0 auto;
+	// the res-*.png sprites are monochrome, so a filter cannot tint them - mask
+	// the sprite instead and paint the colour behind it
+	-webkit-mask-image: var(--l13-chip-mask);
+	mask-image: var(--l13-chip-mask);
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+	background-color: var(--l13-chip-color);
+}
+
+// mid-tone so it reads on the dark, dusky and sunlit themes alike
+#out-collector-chip-water .collector-chip-icon {
+	--l13-chip-mask: url(../img/res-water.png);
+	--l13-chip-color: #5a9fd4;
+}
+
+#out-collector-chip-food .collector-chip-icon {
+	--l13-chip-mask: url(../img/res-food.png);
+	--l13-chip-color: #c65a4a;
+}
+```
+
+The `url()` is relative to `css/main.css`, so `../img/` resolves to the
+repository's `img/` directory. Do not make it absolute — this fork is served
+from a GitHub Pages project path.
+
+- [ ] **Step 2: Fit the two chips on one row**
+
+Measured on a 390px phone: each chip is 236px against 380px available, so they
+wrap and the bar costs 186px instead of 120px. The cause is not the label text
+— `button { width: 95pt }` is global and `button.btn-narrow { width: 80pt }`
+pins the collect button at ~105px regardless of its content. Both a scoped
+width override and a shorter label are needed.
+
+First add the string. In `strings/strings.json`, in the `ui.exploration`
+object, immediately after the `collect_all_resources_label` entry, add:
+
+```json
+    "collect_all_short_label": "all",
+```
+
+Match the surrounding indentation exactly. `strings/strings-fi.json` does not
+define the long key either and falls back, so it needs no change.
+
+Then in `index.html`, on **both** chip collect-all buttons —
+`#out-action-use-bucket` and `#out-action-use-trap` — change
+
+```
+data-text-key="ui.exploration.collect_all_resources_label"
+```
+
+to
+
+```
+data-text-key="ui.exploration.collect_all_short_label"
+```
+
+Change nothing else about those buttons: same ids, same `action` attributes,
+same classes. The full action name still appears in each button's callout.
+
+Then in `css/modules/mobile.less`, append to the `SECTOR ACTION BAR` section:
+
+```less
+// The chip is a compact widget, but `button { width: 95pt }` (80pt via
+// btn-narrow) is sized for a full-width action list and makes two chips
+// impossible to fit on one phone row. Size these to their content instead.
+#out-sector-bar .collector-chip button.action {
+	width: auto;
+	min-width: 3.5em;
+	padding: 8px 10px;
+	margin: 0;
+}
+```
+
+- [ ] **Step 3: Make `out-map-hidden` correct by design**
+
+`UIOutHeaderSystem` is added to the engine before `UIOutLevelSystem` and both
+run at the default priority, so on `featureUnlockedSignal` the header's
+`onFeatureUnlocked` → `updateLayout` runs **first** and reads
+`#out-container-compass` as still hidden — stamping `out-map-hidden` on at the
+one moment it should come off. Today what repairs it is an incidental
+ResizeObserver bounce. Make the next-frame pass own the class too.
+
+In `UIOutHeaderSystem.js`, add this method immediately after
+`getBottomChromeHeight`:
+
+```javascript
+		// The class and the height are two views of one fact, so they are set
+		// together. updateLayout runs inside the featureUnlockedSignal dispatch,
+		// BEFORE UIOutLevelSystem reveals the map panel, so the first pass reads
+		// the map as still hidden and the next-frame pass is what gets it right.
+		// Both callers therefore run both halves.
+		updateBottomChromeState: function (isShell) {
+			$("#unit-main").toggleClass("out-map-hidden", isShell && !$("#out-container-compass").is(":visible"));
+			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
+		},
+
+```
+
+In `updateLayout`, replace these lines:
+
+```javascript
+			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
+```
+
+and the separate `out-map-hidden` toggle line that follows the placement calls,
+with a single call:
+
+```javascript
+			this.updateBottomChromeState(isShell);
+```
+
+Keep the surrounding comment about the log pill. Then replace the body of
+`updateMeasurements` so it uses the same method:
+
+```javascript
+		updateMeasurements: function () {
+			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
+			this.updateBottomChromeState(isShell);
+		},
+```
+
+- [ ] **Step 4: Hide the emptied Search box, not just its heading**
+
+`#out-actions` carries `.actionbox`'s `margin: 6px 0; padding: 3px 0`, so an
+emptied section still holds 12-18px under a hidden heading. Toggle the box with
+its heading. In `UIOutLevelSystem.js`, replace the body of
+`updateOutActionsHeader`:
+
+```javascript
+		updateOutActionsHeader: function () {
+			let $movement = $("#container-out-actions-movement-related");
+			let numVisible = $("#out-actions")
+				.find("button.action")
+				.not("#container-out-actions-movement-related button")
+				.not("[data-visible='false']")
+				.length;
+
+			// the movement-related span is slide-toggled rather than toggled, so it
+			// carries no data-visible of its own
+			if (numVisible === 0 && $movement.children().length > 0 && $movement.css("display") !== "none") {
+				numVisible++;
+			}
+
+			// the box keeps .actionbox's margin and padding when empty, so it goes
+			// with the heading rather than leaving a gap under it
+			GameGlobals.uiFunctions.toggle("#header-out-actions", numVisible > 0);
+			GameGlobals.uiFunctions.toggle("#out-actions", numVisible > 0);
+		},
+```
+
+- [ ] **Step 5: Delete the dead `.list-storage` rule**
+
+The collector rows lost that cell in Task 1 and no `.list-storage` element
+survives anywhere. In `css/modules/base-classes.less`, change:
+
+```less
+td.list-amount, td.list-storage {
+```
+
+to:
+
+```less
+td.list-amount {
+```
+
+Leave the declarations inside the rule untouched — `.list-amount` is still used
+by the tribe, upgrades and embark tables.
+
+- [ ] **Step 6: Record why the ResizeObserver bounce matters**
+
+In `UIOutHeaderSystem.js`, extend the comment on the `barElement` observe call
+added in Task 4:
+
+```javascript
+				// the action bar's own height changes with the sector - scout
+				// leaving, a collector chip appearing - without resizing anything
+				// else, so it is a layout metric in its own right.
+				//
+				// This also gives the shell a second layout pass whenever the bar
+				// resizes, which is a self-damping single bounce: updateLayout can
+				// change the bar's padding through out-map-hidden, but the next
+				// pass's toggleClass is then a no-op. Do not "optimise" the second
+				// pass away - see updateBottomChromeState.
+				let barElement = document.getElementById("out-sector-bar");
+```
+
+- [ ] **Step 7: Verify**
+
+```bash
+node --check src/game/systems/ui/UIOutHeaderSystem.js
+node --check src/game/systems/ui/UIOutLevelSystem.js
+python3 -c "import json; d=json.load(open('strings/strings.json')); print(d['ui']['exploration']['collect_all_short_label'])"
+grep -c "collect_all_short_label" index.html
+grep -c "list-storage" css/modules/base-classes.less
+grep -c "updateBottomChromeState" src/game/systems/ui/UIOutHeaderSystem.js
+npx -p less lessc css/main.less css/main.css
+grep -c "l13-chip-mask" css/main.css
+```
+
+Expected: both `node --check` exit 0 silently; the JSON print is `all`; the
+`index.html` count is `2`; the `base-classes.less` count is `0`;
+`updateBottomChromeState` appears `3` times (definition plus two call sites);
+`lessc` exits 0 (its two `vision.less` deprecation warnings are pre-existing);
+the `l13-chip-mask` count is greater than 0.
+
+- [ ] **Step 8: Bump to 0.6.3.m32**
+
+Add a new first entry to the `versions` array in `changelog.json`:
+
+```json
+   {
+    "version": "0.6.3.m32",
+    "requiredVersion": "0.6.1",
+    "phase": "beta",
+    "final": true,
+    "released": "2026-08-03",
+    "changes": [
+     {
+      "type": "UI",
+      "summary": "The bucket and trap now show a blue or red resource icon, and both fit on one row above the map"
+     }
+    ]
+   },
+```
+
+Then:
+
+```bash
+sed -i '' 's/0\.6\.3\.m31/0.6.3.m32/g' src/config.js index.html changelog.html sw.js
+grep -c "0\.6\.3\.m31" src/config.js index.html changelog.html sw.js
+grep -c "0\.6\.3\.m32" src/config.js index.html changelog.html sw.js
+```
+
+Expected: the first grep reports `0` for all four files; the second reports
+`src/config.js:1`, `index.html:3`, `changelog.html:3`, `sw.js:1`.
+`changelog.json` keeps its historical `m31` entry.
+
+The `sed` runs over `index.html`, which Step 2 also edits — run Step 2 first so
+both changes land, and confirm `grep -c "collect_all_short_label" index.html`
+still reports `2` afterwards.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add strings/strings.json index.html css/modules/mobile.less css/modules/base-classes.less css/main.css src/game/systems/ui/UIOutHeaderSystem.js src/game/systems/ui/UIOutLevelSystem.js changelog.json src/config.js changelog.html sw.js
+git commit -m "Colour the collector icons, fit both chips on one row, and close the review findings"
+```
+
+---
+
 ## Verification (controller, browser)
 
 Not a subagent task. Run after Task 5, against the harness described in the
