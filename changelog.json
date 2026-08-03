@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.12",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Craft dialog: up arrow reaches the show obsolete toggle (space toggles); crafting without materials flashes the name and lacking costs"
+				}
+			]
+		},
+		{
 			"version": "0.6.3.11",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",

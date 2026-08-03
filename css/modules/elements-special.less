@@ -896,6 +896,24 @@ div.grid-content {
 	color: @color-text-meta;
 }
 
+// the show obsolete toggle is part of the keyboard navigation (cursor -1)
+#craft-popup-obsolete-container {
+	padding: 2px 6px;
+	border: 1px solid transparent;
+}
+
+#craft-popup-obsolete-container.selected {
+	border-color: @color-border-strong;
+	background: @color-bg-box-1;
+}
+
+// brief highlight when trying to craft without sufficient materials
+.craft-popup-row.craft-popup-flash .craft-popup-item-name,
+.craft-popup-row.craft-popup-flash span.action-cost-blocker {
+	color: @color-global-warning;
+	font-weight: bold;
+}
+
 // MOBILE OVERLAY
 
 #mobile-overlay {

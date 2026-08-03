@@ -86,7 +86,7 @@ define([
 			if (!GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.bag)) return;
 
 			let sys = this;
-			this.craftPopupCursor = this.craftPopupCursor || 0;
+			if (typeof this.craftPopupCursor != "number") this.craftPopupCursor = 0;
 			this.craftPopupCollapsedTypes = this.craftPopupCollapsedTypes || {};
 
 			GameGlobals.uiFunctions.showSpecialPopup("craft-popup", {
@@ -160,18 +160,28 @@ define([
 
 			GameGlobals.uiFunctions.toggle("#craft-popup-obsolete-container", countObsolete > 0);
 
-			this.setCraftPopupCursor(this.craftPopupCursor || 0);
+			this.setCraftPopupCursor(typeof this.craftPopupCursor == "number" ? this.craftPopupCursor : 0);
 		},
 
+		// cursor -1 means the show obsolete toggle above the list
 		setCraftPopupCursor: function (index) {
-			if (!this.craftPopupRows || this.craftPopupRows.length == 0) return;
-			if (index < 0) index = 0;
-			if (index >= this.craftPopupRows.length) index = this.craftPopupRows.length - 1;
+			let hasToggle = $("#craft-popup-obsolete-container").is(":visible");
+			let numRows = this.craftPopupRows ? this.craftPopupRows.length : 0;
+			if (numRows == 0 && !hasToggle) return;
+
+			let min = hasToggle ? -1 : 0;
+			if (index < min) index = min;
+			if (index >= numRows) index = numRows - 1;
+			if (index < min) index = min;
+
 			this.craftPopupCursor = index;
 			$("#craft-popup-list .craft-popup-row").removeClass("selected");
-			let $row = $("#craft-popup-list .craft-popup-row[data-index='" + index + "']");
-			$row.addClass("selected");
-			if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
+			$("#craft-popup-obsolete-container").toggleClass("selected", index == -1);
+			if (index >= 0) {
+				let $row = $("#craft-popup-list .craft-popup-row[data-index='" + index + "']");
+				$row.addClass("selected");
+				if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
+			}
 		},
 
 		onCraftPopupKeyDown: function (e) {
@@ -182,6 +192,12 @@ define([
 				case "ArrowLeft": e.preventDefault(); this.setCraftPopupSectionCollapsed(true); break;
 				case "ArrowRight": e.preventDefault(); this.setCraftPopupSectionCollapsed(false); break;
 				case "Enter": case "NumpadEnter": e.preventDefault(); this.activateCraftPopupRow(); break;
+				case "Space":
+					if (this.craftPopupCursor == -1) {
+						e.preventDefault();
+						$("#craft-popup-show-obsolete").click();
+					}
+					break;
 			}
 		},
 
@@ -202,13 +218,30 @@ define([
 		},
 
 		activateCraftPopupRow: function () {
+			if (this.craftPopupCursor == -1) {
+				$("#craft-popup-show-obsolete").click();
+				return;
+			}
 			let row = this.craftPopupRows ? this.craftPopupRows[this.craftPopupCursor] : null;
 			if (!row) return;
 			if (row.rowType == "header") {
 				this.setCraftPopupSectionCollapsed(this.craftPopupCollapsedTypes[row.itemType] != true);
 				return;
 			}
+			let actionName = "craft_" + row.itemDefinition.id;
+			if (!GameGlobals.playerActionsHelper.checkAvailability(actionName)) {
+				this.flashCraftPopupUnavailable(this.craftPopupCursor);
+				return;
+			}
 			this.openCraftConfirmation(row.itemDefinition);
+		},
+
+		// highlight the name and the lacking costs of an uncraftable recipe for a moment
+		flashCraftPopupUnavailable: function (rowIndex) {
+			let $row = $("#craft-popup-list .craft-popup-row[data-index='" + rowIndex + "']");
+			if ($row.length == 0) return;
+			$row.addClass("craft-popup-flash");
+			setTimeout(function () { $row.removeClass("craft-popup-flash"); }, 1000);
 		},
 
 		openCraftConfirmation: function (itemDefinition) {

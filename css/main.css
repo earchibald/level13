@@ -2950,6 +2950,19 @@ body.dark .craft-popup-item-costs {
 body.dark .craft-popup-item-unavailable .craft-popup-item-name {
   color: rgba(255, 255, 255, 0.5);
 }
+body.dark #craft-popup-obsolete-container {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+}
+body.dark #craft-popup-obsolete-container.selected {
+  border-color: #555;
+  background: #282a28;
+}
+body.dark .craft-popup-row.craft-popup-flash .craft-popup-item-name,
+body.dark .craft-popup-row.craft-popup-flash span.action-cost-blocker {
+  color: #e64646;
+  font-weight: bold;
+}
 body.dark #mobile-overlay {
   position: fixed;
   top: 0;
@@ -5736,6 +5749,19 @@ body.sunlit .craft-popup-item-costs {
 }
 body.sunlit .craft-popup-item-unavailable .craft-popup-item-name {
   color: rgba(0, 0, 0, 0.5);
+}
+body.sunlit #craft-popup-obsolete-container {
+  padding: 2px 6px;
+  border: 1px solid transparent;
+}
+body.sunlit #craft-popup-obsolete-container.selected {
+  border-color: #999;
+  background: #fff;
+}
+body.sunlit .craft-popup-row.craft-popup-flash .craft-popup-item-name,
+body.sunlit .craft-popup-row.craft-popup-flash span.action-cost-blocker {
+  color: #e64646;
+  font-weight: bold;
 }
 body.sunlit #mobile-overlay {
   position: fixed;
