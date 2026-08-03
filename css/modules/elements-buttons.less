@@ -273,7 +273,12 @@ button.btn-disabled .hotkey-hint {
     display: none !important;
 }
 
-// back to camp keeps its badge when disabled; the hotkey then explains the requirements
-#out-action-move-camp.btn-disabled .hotkey-hint {
+// location action buttons keep their badge when disabled: the badge advertises the
+// key itself (B shows requirements; ENTER is simply gated until the action is possible)
+#out-action-move-camp.btn-disabled .hotkey-hint,
+#out-action-enter.btn-disabled .hotkey-hint,
+#out-action-move-up.btn-disabled .hotkey-hint,
+#out-action-move-down.btn-disabled .hotkey-hint,
+#in-action-leave.btn-disabled .hotkey-hint {
 	display: block !important;
 }

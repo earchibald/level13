@@ -331,6 +331,18 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 		},
 
 		rebuildOverlay: function (map, overlayId, options, visibleSectors, dimensions, sectorSelectedCallback) {
+			// the overlay is rebuilt often (every inventory change reschedules the minimap);
+			// skip the DOM churn when nothing that affects the cells has changed
+			let signatureParts = [ overlayId, options.mapPosition.level, options.mapPosition.sectorX, options.mapPosition.sectorY, options.mapMode,
+				dimensions.minVisibleX, dimensions.maxVisibleX, dimensions.minVisibleY, dimensions.maxVisibleY, this.getSectorSize(options.centered) ];
+			for (let key in visibleSectors) {
+				signatureParts.push(key + ":" + this.getSectorStatus(visibleSectors[key]));
+			}
+			let signature = signatureParts.join("|");
+			if (!this.overlaySignatures) this.overlaySignatures = {};
+			if (this.overlaySignatures[overlayId] == signature) return;
+			this.overlaySignatures[overlayId] = signature;
+
 			var $overlay = $("#" + overlayId);
 			$overlay.empty();
 			$overlay.css("width", dimensions.canvasWidth + "px");
@@ -402,6 +414,17 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 		rebuildMapHintOverlay: function (mapPosition, mapHints, dimensions) {
 			let $overlay = $("#minimap-background-overlay");
 			if ($overlay.length == 0) return;
+
+			// same churn guard as rebuildOverlay
+			let signatureParts = [ mapPosition.level, mapPosition.sectorX, mapPosition.sectorY ];
+			for (let i = 0; i < mapHints.length; i++) {
+				let pos = mapHints[i].position;
+				signatureParts.push(mapHints[i].id + ":" + pos.level + "." + pos.sectorX + "." + pos.sectorY);
+			}
+			let signature = signatureParts.join("|");
+			if (this.mapHintOverlaySignature == signature) return;
+			this.mapHintOverlaySignature = signature;
+
 			$overlay.empty();
 
 			let cellSize = 14;

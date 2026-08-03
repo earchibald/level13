@@ -1761,9 +1761,16 @@ define(['ash',
 			},
 
 			updateTabHotkeyNumbers: function () {
-				$("#switch-tabs li .tab-hotkey-number").text("");
-				if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
+				let hotkeysEnabled = GameGlobals.gameState.settings.hotkeysEnabled;
 				let visibleTabElements = $("#switch-tabs li").filter("[data-visible=true]");
+
+				// runs on every tab visibility update (frequent); skip the DOM writes when unchanged
+				let signature = hotkeysEnabled + "|" + visibleTabElements.toArray().map(e => e.id).join(",");
+				if (this.tabHotkeyNumbersSignature == signature) return;
+				this.tabHotkeyNumbersSignature = signature;
+
+				$("#switch-tabs li .tab-hotkey-number").text("");
+				if (!hotkeysEnabled) return;
 				for (let i = 0; i < visibleTabElements.length && i < 9; i++) {
 					$(visibleTabElements[i]).find(".tab-hotkey-number").text(i + 1);
 				}

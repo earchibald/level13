@@ -1045,7 +1045,11 @@ body.dark .container-btn-action:hover .hotkey-hint {
 body.dark button.btn-disabled .hotkey-hint {
   display: none !important;
 }
-body.dark #out-action-move-camp.btn-disabled .hotkey-hint {
+body.dark #out-action-move-camp.btn-disabled .hotkey-hint,
+body.dark #out-action-enter.btn-disabled .hotkey-hint,
+body.dark #out-action-move-up.btn-disabled .hotkey-hint,
+body.dark #out-action-move-down.btn-disabled .hotkey-hint,
+body.dark #in-action-leave.btn-disabled .hotkey-hint {
   display: block !important;
 }
 body.dark div.container-btn-action:hover + div.btn-callout,
@@ -3845,7 +3849,11 @@ body.sunlit .container-btn-action:hover .hotkey-hint {
 body.sunlit button.btn-disabled .hotkey-hint {
   display: none !important;
 }
-body.sunlit #out-action-move-camp.btn-disabled .hotkey-hint {
+body.sunlit #out-action-move-camp.btn-disabled .hotkey-hint,
+body.sunlit #out-action-enter.btn-disabled .hotkey-hint,
+body.sunlit #out-action-move-up.btn-disabled .hotkey-hint,
+body.sunlit #out-action-move-down.btn-disabled .hotkey-hint,
+body.sunlit #in-action-leave.btn-disabled .hotkey-hint {
   display: block !important;
 }
 body.sunlit div.container-btn-action:hover + div.btn-callout,

@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.14",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Location buttons keep their hotkey badge while disabled. Reduce UI churn: map overlays and tab numbers only rebuild when their content changes."
+				}
+			]
+		},
+		{
 			"version": "0.6.3.13",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",
