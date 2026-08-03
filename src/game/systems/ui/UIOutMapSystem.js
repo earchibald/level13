@@ -201,6 +201,8 @@ define([
 		},
 
 		selectLevel: function (level) {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			$("#select-header-level").val(level);
 			this.selectedLevel = level;
 			this.selectedSector = null;
@@ -216,8 +218,10 @@ define([
 		},
 		
 		selectMapMode: function (mapMode) {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			$("#select-header-mapmode").val(mapMode);
-			
+
 			this.selectedMapMode = mapMode;
 			$("#mainmap-sector-details-res-sca").closest("tr").toggleClass("current", this.selectedMapMode == MapUtils.MAP_MODE_SCAVENGING);
 			$("#mainmap-sector-details-res-col").closest("tr").toggleClass("current", this.selectedMapMode == MapUtils.MAP_MODE_SCAVENGING);

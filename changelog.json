@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.16",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Map tooltip hides when the map mode or level selection changes"
+				}
+			]
+		},
+		{
 			"version": "0.6.3.15",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",
