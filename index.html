@@ -18,13 +18,21 @@
 	<meta itemprop="name" property="og:title" content="Level 13" />
 	<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 	<meta name="theme-color" content="#202220">
+	<!-- home-screen web app: iOS 16.3 and older ignore the manifest and need
+	     these; black-translucent lets the game paint under the status bar, so
+	     the safe-area insets in the css do the spacing -->
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="Level 13">
 	<link rel="shortcut icon" href="favicon.ico" />
-	<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m5" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m5" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m5" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m6" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m6" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m6" />
+	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
 </head>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Level 13">
+	<rect width="512" height="512" fill="#202220"/>
+	<g fill="#e2e2dc">
+		<rect x="136" y="92" width="240" height="30" rx="7"/>
+		<rect x="136" y="390" width="240" height="30" rx="7"/>
+	</g>
+	<!-- glass: upper funnel drawn as an outline, lower funnel filled to read
+	     as fallen sand even at 32px -->
+	<path d="M162 122 L350 122 L256 249 Z" fill="none" stroke="#e2e2dc" stroke-width="18" stroke-linejoin="round"/>
+	<path d="M256 263 L350 390 L162 390 Z" fill="#e2e2dc" stroke="#e2e2dc" stroke-width="18" stroke-linejoin="round"/>
+	<rect x="246" y="243" width="20" height="30" fill="#e2e2dc"/>
+</svg>

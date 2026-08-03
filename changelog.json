@@ -1,12 +1,20 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m5",
+            "version": "0.6.3.m6",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
             "released": "2026-08-02",
             "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the game column no longer sits 15px right of centre, so panels stop bleeding off the right edge. Tapping a debuff, perk or resource chip opens its tooltip in iOS Safari. The log button no longer stretches down the screen while pressed."
+                },
+                {
+                    "type": "UI",
+                    "summary": "Home screen web app: new crisp icon set and manifest, and the game runs full screen with no browser chrome when launched from the iOS home screen"
+                },
                 {
                     "type": "UI",
                     "summary": "B asks to go back to camp (Enter confirms, Esc cancels); when camp is unreachable it shows the requirements. Fix hotkey badges missing from localized buttons (Enter camp, Go, passages, collect all, movement)."

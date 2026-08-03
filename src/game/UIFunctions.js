@@ -64,6 +64,7 @@ define(['ash',
 			
 			init: function () {
 				$("body").toggleClass("touch", UIConstants.isTouchScreen());
+				this.updateStandaloneMode();
 				this.registerHotkeys();
 				this.generateElements();
 				this.hideElements();
@@ -324,6 +325,28 @@ define(['ash',
 
 			isTouchUI: function () {
 				return UIConstants.isTouchScreen();
+			},
+
+			// installed to the home screen there is no browser chrome, so the game
+			// owns the whole screen: the css uses this to spend the reclaimed space
+			// and to pad for the status bar and home indicator itself
+			isStandalone: function () {
+				if (window.navigator.standalone === true) return true; // iOS
+				if (!window.matchMedia) return false;
+				return window.matchMedia("(display-mode: standalone)").matches
+					|| window.matchMedia("(display-mode: fullscreen)").matches
+					|| window.matchMedia("(display-mode: minimal-ui)").matches;
+			},
+
+			updateStandaloneMode: function () {
+				let uiFunctions = this;
+				$("body").toggleClass("standalone", this.isStandalone());
+				if (!window.matchMedia) return;
+				let query = window.matchMedia("(display-mode: standalone)");
+				if (!query.addEventListener) return;
+				query.addEventListener("change", function () {
+					$("body").toggleClass("standalone", uiFunctions.isStandalone());
+				});
 			},
 
 			openCallout: function ($container, $target) {
@@ -634,8 +657,21 @@ define(['ash',
 			},
 
 			generateInfoCallouts: function (scope) {
+				let isTouch = UIConstants.isTouchScreen();
+
 				$.each($(scope + " .info-callout-target"), function () {
 					let $target = $(this);
+
+					// iOS Safari only synthesises a click on elements it considers
+					// clickable. The tap handler is delegated from document, which
+					// does not qualify a plain div or li, so tooltips on the chips
+					// never opened. An empty listener bound to the element itself
+					// does qualify it; the delegated handler then runs as usual.
+					if (isTouch && !$target.data("tap-enabled")) {
+						$target.data("tap-enabled", true);
+						this.addEventListener("click", function () {});
+					}
+
 					let generated = $target.data("callout-generated") || $target.parent().hasClass("callout-container");
 					if (generated) return;
 					
