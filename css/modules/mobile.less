@@ -1967,6 +1967,11 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 }
 
 .collector-chip-icon {
+	// An empty span, NOT an img. background-color paints behind an img's own
+	// pixels, so masking an <img> of an opaque sprite still renders the sprite's
+	// original grey - the colour never shows. A span has no content of its own,
+	// so the mask cuts the sprite's shape out of the background colour.
+	display: inline-block;
 	width: 16px;
 	height: 16px;
 	flex: 0 0 auto;

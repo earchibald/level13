@@ -7234,6 +7234,7 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
   gap: 4px;
 }
 .collector-chip-icon {
+  display: inline-block;
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
