@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m24",
+            "version": "0.6.3.m25",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: harden the collector cards and the exploration tab against the same inline-display problem, so the bucket and trap cannot silently fall back to the row that stranded their fill level"
                 },
                 {
                     "type": "UI",

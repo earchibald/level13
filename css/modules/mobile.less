@@ -916,7 +916,9 @@ body.layout-small.tab-switch-out #container-tab-two-out-actions {
 
 body.layout-small.tab-switch-out #container-tab-two-out {
 	order: 2;
-	display: flex;
+	// a .tabcontainer, so setTab shows it through jQuery on every tab change
+	// and an inline `display` would beat this
+	display: flex !important;
 	flex-direction: column;
 }
 
@@ -1463,7 +1465,11 @@ body.layout-small.log-drawer-open #log {
 	// (the ancestor id keeps this above `#out-improvements tr { display: flex }`)
 	#out-improvements tr#out-improvements-collector-water,
 	#out-improvements tr#out-improvements-collector-food {
-		display: grid;
+		// !important for the same reason as the map panel: these rows are shown
+		// and hidden through jQuery, which writes an inline `display` that would
+		// otherwise beat this and drop the row back to the wrapping flex row -
+		// which is exactly the layout that stranded the fill level
+		display: grid !important;
 		// fixed action columns so "1" and the upgrade arrow line up between
 		// the bucket and the trap whatever their fill levels read
 		grid-template-columns: 1fr 3.2em 3.6em;

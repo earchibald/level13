@@ -6553,7 +6553,7 @@ body.layout-small.tab-switch-out #container-tab-two-out-actions {
 }
 body.layout-small.tab-switch-out #container-tab-two-out {
   order: 2;
-  display: flex;
+  display: flex !important;
   flex-direction: column;
 }
 body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
@@ -6914,7 +6914,7 @@ body.layout-small.log-drawer-open #log {
   }
   #out-improvements tr#out-improvements-collector-water,
   #out-improvements tr#out-improvements-collector-food {
-    display: grid;
+    display: grid !important;
     grid-template-columns: 1fr 3.2em 3.6em;
     grid-template-areas: "build  storage storage" "useall useone  improve";
     align-items: center;
