@@ -179,9 +179,21 @@ define([
 			
 			this.updateLayoutMode();
 			this.updateLayout();
+
+			// the fixed mobile header grows and shrinks as rows show and hide;
+			// the content padding that clears it must follow every change
+			let headerElement = document.getElementById("mobile-header");
+			if (headerElement && window.ResizeObserver) {
+				this.headerResizeObserver = new ResizeObserver(function () { sys.updateLayout(); });
+				this.headerResizeObserver.observe(headerElement);
+			}
 		},
 
 		removeFromEngine: function (engine) {
+			if (this.headerResizeObserver) {
+				this.headerResizeObserver.disconnect();
+				this.headerResizeObserver = null;
+			}
 			GlobalSignals.removeAll(this);
 			this.engine = null;
 			this.playerStatsNodes = null;
@@ -654,6 +666,8 @@ define([
 		
 		updateExplorers: function () {
 			let inCamp = GameGlobals.playerHelper.isInCamp();
+			// the mobile header list would otherwise keep stale party chips in camp
+			GameGlobals.uiFunctions.toggle("#list-header-explorers-mobile", !inCamp);
 			if (inCamp) return;
 			
 			let explorersComponent = this.playerStatsNodes.head.explorers;

@@ -262,8 +262,10 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 			let isSmallLayout = winw <= UIConstants.SMALL_LAYOUT_THRESHOLD;
 			let padding = isSmallLayout ? 0 : 20;
 
-			let popuph = Math.min($popup.height(), winh);
-			let popupw = Math.min($popup.width(), winw);
+			// small layout popups are border-box with padding; content-box
+			// height()/width() would under-measure by ~44px and off-center them
+			let popuph = Math.min(isSmallLayout ? $popup.outerHeight() : $popup.height(), winh);
+			let popupw = Math.min(isSmallLayout ? $popup.outerWidth() : $popup.width(), winw);
 			$popup.css("top", Math.max(0, (winh - popuph) / 2 - padding));
 			$popup.css("left", (winw - popupw) / 2);
 		},

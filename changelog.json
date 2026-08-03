@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.6.3.11",
+            "version": "0.6.3.m1",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -14,6 +14,10 @@
                 {
                     "type": "UI",
                     "summary": "Mobile port: the game works on phones with touch callouts, map pan and pinch zoom, a scrollable tab bar, a log drawer, and touch-sized controls"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile compactness overhaul: dense two-row header, mobile type scale, camp view scales to screen width, callouts clamp to the viewport, log stays in its drawer, tighter tables and popups, bigger touch targets"
                 }
             ]
         },

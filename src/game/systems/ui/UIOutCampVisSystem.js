@@ -91,21 +91,53 @@ define([
 		
 		refreshGrid: function () {
 			var parentWidth = this.elements.container.parent().width();
-			// small layout: keep a minimum canvas width and let the strip scroll
-			// (see mobile css) so buildings at far coordinates stay reachable
+			// small layout: size the strip to what the buildings need and scale
+			// it down to the screen width; only very wide camps keep a scroll strip
 			var isSmallLayout = $("body").hasClass("layout-small");
-			var minWidth = isSmallLayout ? 700 : 100;
+			var minWidth = isSmallLayout ? Math.max(320, this.getBuildingsExtentWidth()) : 100;
 			this.containerWidth = Math.max(minWidth, parentWidth);
 			this.containerHeight = this.containerDefaultHeight;
 			this.elements.container.css("width", this.containerWidth + "px");
 			this.elements.container.css("height", this.containerHeight + "px");
 			this.elements.canvas.attr("width", this.containerWidth);
 			this.elements.canvas.attr("height", this.containerHeight);
-			// start centered on the camp when the strip is wider than the screen
-			if (this.containerWidth > parentWidth) {
-				var parentEl = this.elements.container.parent()[0];
-				if (parentEl) parentEl.scrollLeft = Math.round((this.containerWidth - parentWidth) / 2);
+			var scale = 1;
+			if (isSmallLayout && parentWidth > 0 && this.containerWidth > parentWidth) {
+				scale = Math.max(parentWidth / this.containerWidth, 0.6);
 			}
+			this.elements.container.css("zoom", scale == 1 ? "" : scale);
+			// start centered on the camp when the strip is still wider than the screen
+			var scaledWidth = Math.round(this.containerWidth * scale);
+			if (scaledWidth > parentWidth + 1) {
+				var parentEl = this.elements.container.parent()[0];
+				if (parentEl) parentEl.scrollLeft = Math.round((scaledWidth - parentWidth) / 2);
+			}
+		},
+
+		// widest slot any current building occupies, in px around the center,
+		// so the strip is only as wide as the camp actually needs
+		getBuildingsExtentWidth: function () {
+			if (!this.playerLocationNodes.head) return 320;
+			var level = this.playerLocationNodes.head.position.level;
+			var campOrdinal = GameGlobals.gameState.getCampOrdinal(level);
+			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
+			var all = improvements.getAll(improvementTypes.camp);
+			var sundome = improvements.getVO(improvementNames.sundome);
+			if (sundome) all.push(sundome);
+			var maxOffset = 0;
+			for (let i = 0; i < all.length; i++) {
+				var building = all[i];
+				var size = this.getBuildingSize(building);
+				for (var n = 0; n < building.count; n++) {
+					for (let j = 0; j < building.getVisCount(); j++) {
+						var coords = this.getBuildingCoords(campOrdinal, improvements, building, n, j);
+						if (!coords) continue;
+						var offset = Math.abs(coords.x) * GameGlobals.campVisHelper.gridX + size.x / 2;
+						if (offset > maxOffset) maxOffset = offset;
+					}
+				}
+			}
+			return Math.ceil(maxOffset * 2 + 60);
 		},
 		
 		refreshFloor: function () {

@@ -58,6 +58,51 @@ body.touch .container-btn-action > button.btn-disabled {
 	pointer-events: none;
 }
 
+// no callout card may be wider than the screen; !important beats the
+// nowrap variants' max-width: none !important (specificity + order)
+@media screen and (max-width: 850px) {
+	body[class] div.info-callout,
+	body[class] div.btn-callout {
+		max-width: ~"calc(100vw - 16px)" !important;
+	}
+}
+
+// the .layout-small variants of these rules in the themed modules never
+// match (they compile under body.dark/.sunlit with .layout-small as a
+// descendant, but the class sits on body itself); working versions live here
+body.layout-small .info-callout-target-small + div.info-callout {
+	white-space: normal;
+	min-width: ~"min(16em, calc(100vw - 16px))";
+	max-width: ~"min(320px, calc(100vw - 16px))" !important;
+	box-sizing: border-box;
+}
+
+body.layout-small .info-callout-side + div.info-callout,
+body.layout-small .info-callout-target-side + div.info-callout {
+	white-space: normal;
+	max-width: ~"calc(100vw - 16px)";
+}
+
+body.layout-small td.item-name {
+	min-width: 6em;
+}
+
+// desktop-narrow windows compress glyph buttons; touch keeps its 36px floor
+body.layout-small:not(.touch) button.btn-glyph-big {
+	min-width: 2em;
+}
+
+body.layout-small .blueprint-piece-box {
+	width: 2em;
+	height: 2em;
+}
+
+body.layout-small .blueprint-piece-box img {
+	margin: 0.2em;
+	width: 0.8em;
+	height: 0.8em;
+}
+
 // ---------------------------------------------------------------------------
 // TOUCH HYGIENE
 
@@ -104,9 +149,31 @@ body.touch button.btn-glyph-big {
 	width: auto;
 }
 
+// stepper +/- keep the 36px visual; an invisible halo restores the 44px
+// hit area (buttons are position:relative from the base rule)
+body.touch .stepper button.btn-glyph::after {
+	content: "";
+	position: absolute;
+	top: -4px;
+	bottom: -4px;
+	left: -4px;
+	right: -4px;
+}
+
 body.touch button.btn-mini,
 body.touch button.btn-compact {
 	min-height: 36px;
+}
+
+// vertical-only hit extension; these often sit inline next to other controls
+body.touch button.btn-mini::after,
+body.touch button.btn-compact::after {
+	content: "";
+	position: absolute;
+	top: -4px;
+	bottom: -4px;
+	left: 0;
+	right: 0;
 }
 
 body.touch button.btn-meta {
@@ -114,19 +181,30 @@ body.touch button.btn-meta {
 	padding: 4px 8px;
 }
 
+// chromeless text buttons: grow the hit strip vertically only, so adjacent
+// footer links never overlap
+body.touch button.btn-meta::after {
+	content: "";
+	position: absolute;
+	top: -6px;
+	bottom: -6px;
+	left: 0;
+	right: 0;
+}
+
 body.touch .checkbox,
 body.touch input[type=checkbox] {
-	width: 1.4em;
-	height: 1.4em;
+	width: 1.75em;
+	height: 1.75em;
 }
 
 body.touch .checkbox-label {
-	padding: 8px 4px;
+	padding: 12px 6px;
 	cursor: pointer;
 }
 
 body.touch input[type=range] {
-	height: 32px;
+	height: 44px;
 }
 
 body.touch input[type=range]::-webkit-slider-thumb {
@@ -142,7 +220,7 @@ body.touch input[type=range]::-moz-range-thumb {
 
 body.touch ul.tabs li {
 	height: auto;
-	min-height: 2.6em;
+	min-height: 2.75em; // 44px at the 16px root size
 }
 
 body.touch select {
@@ -159,12 +237,42 @@ body.touch .horizontal-select-option {
 	box-sizing: border-box;
 	display: inline-flex;
 	align-items: center;
+	position: relative;
 }
 
-// free-standing item and resource chips are tap targets for their callouts
-body.touch .item,
-body.touch .res {
+// vertical-only hit extension (options sit inline with small gaps)
+body.touch .horizontal-select-option::after {
+	content: "";
+	position: absolute;
+	top: -4px;
+	bottom: -4px;
+	left: 0;
+	right: 0;
+}
+
+// free-standing item chips are tap targets for their callouts
+body.touch .item {
 	padding: 8px;
+}
+
+// .res has padding: 0 !important (elements-common); grow the hit area
+// invisibly instead of fighting the important flag. -6px horizontal stays
+// inside the 12px inter-chip gap; -11px vertical covers the count label.
+body.touch .res::after {
+	content: "";
+	position: absolute;
+	inset: -11px -6px;
+}
+
+// the most-tapped grid in the game: fill the dead 4-6px gaps between
+// compass buttons so near-miss taps still move
+body.touch #table-out-actions-movement button.action-move::after {
+	content: "";
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	left: -3px;
+	right: -3px;
 }
 
 body.touch .collapsible-header {
@@ -201,8 +309,9 @@ body.touch .collapsible-header {
 		max-width: 90%;
 	}
 
-	// keep confirm/close reachable inside tall scrolling popups
-	div.popup .buttonbox {
+	// keep confirm/close reachable inside tall scrolling popups; only the
+	// final row pins — mid-content button rows (fight popup) scroll normally
+	div.popup > .buttonbox:last-child {
 		position: sticky;
 		bottom: 0;
 		background: inherit;
@@ -214,9 +323,40 @@ body.touch .collapsible-header {
 		max-height: 40dvh;
 	}
 
-	body[class] .scrollable-container {
+	// ID strength: #game-stats-container's own 70vh rule beats any class
+	// selector; 190px covers title + sticky buttons + popup chrome so the
+	// popup itself never double-scrolls
+	body[class] #game-stats-container {
 		max-height: 65vh;
-		max-height: 65dvh;
+		max-height: ~"calc(100dvh - 190px)";
+	}
+}
+
+// phone widths: popups go full-bleed via gridism's .fill-on-mobiles
+// (width/padding-left/right 0 all !important); keep a readable inset
+@media screen and (max-width: 568px) {
+	body[class] div.popup {
+		max-width: ~"calc(100% - 12px)";
+		padding: 14px 10px !important;
+	}
+
+	body[class] div.popup > h3:first-child {
+		margin-top: 0;
+	}
+
+	body[class] div.popup > h3 {
+		margin-bottom: 0.35em;
+	}
+
+	body[class] #common-popup-desc {
+		margin: 0.4em 0;
+	}
+
+	// action callouts otherwise clamp to their (now content-width) button
+	// and render as skinny 80-133px cards
+	body[class] div.btn-callout {
+		width: ~"max(100%, 200px)";
+		max-width: ~"min(280px, calc(100vw - 16px))";
 	}
 }
 
@@ -238,7 +378,9 @@ body.touch .collapsible-header {
 	width: 130px;
 }
 
-@media screen and (max-width: 568px) {
+// 680px: below this the four fixed-width divisions (600px total) no longer
+// fit the popup interior and flex-shrink squeezes them unpredictably
+@media screen and (max-width: 680px) {
 	#incoming-caravan-inventorybox {
 		flex-wrap: wrap;
 		justify-content: center;
@@ -310,6 +452,10 @@ body.touch .collapsible-header {
 
 	ul#switch-tabs {
 		scroll-snap-type: x proximity;
+		// edge fades hint that more tabs sit off-screen (mask, so it works
+		// in both themes)
+		-webkit-mask-image: ~"linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)";
+		mask-image: ~"linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)";
 	}
 
 	ul#switch-tabs li {
@@ -327,19 +473,52 @@ body.touch .collapsible-header {
 }
 
 // ---------------------------------------------------------------------------
-// MOBILE HEADER: compact; strips scroll horizontally instead of stacking tall
+// MOBILE HEADER: compact; sections flow inline and share rows instead of
+// each taking its own centered row. The ResizeObserver in UIOutHeaderSystem
+// keeps the content padding correct at any resulting height.
 
 body.layout-small #mobile-header {
-	padding: ~"calc(4px + env(safe-area-inset-top))" 0 4px 0;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	column-gap: 8px;
+	padding: ~"calc(2px + env(safe-area-inset-top))" 4px 2px 4px;
+	box-sizing: border-box;
+	max-width: 100%;
 }
 
 body.layout-small .mobile-header-section {
 	padding: 1px 3px;
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+// wrapper sections become inline groups that keep their own chips together
+body.layout-small #mobile-header-tribe,
+body.layout-small #mobile-header-self {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	column-gap: 8px;
+}
+
+// the busy bar still gets a full row when it shows; the empty slot must
+// not reserve a row's height meanwhile
+body.layout-small #mobile-header-notification-container {
+	width: 100%;
+	min-height: 0;
+	padding-top: 0;
+	padding-bottom: 0;
+}
+
+body.layout-small #mobile-header-notification-container .notification-player {
+	margin-top: 2px;
 }
 
 // the header strips wrap (upstream behavior); a scroll strip would clip
-// the tap callouts that open from the chips inside them. The JS height
-// measure keeps the content padding correct at any header height.
+// the tap callouts that open from the chips inside them
 #statsbar-resources-mobile,
 #mobile-header-bag,
 #mobile-header-camp {
@@ -352,6 +531,11 @@ body.layout-small .mobile-header-section {
 	flex-wrap: wrap;
 }
 
+// in camp the fight/movement equipment stats are not actionable; save the row
+body.layout-small.location-inside #container-equipment-stats-mobile {
+	display: none;
+}
+
 #container-equipment-stats-mobile .stat-indicator-secondary {
 	margin: 0 4px;
 }
@@ -361,9 +545,11 @@ body.layout-small .mobile-header-section {
 	padding: 0;
 }
 
+// flavor text; sits beside the tribe stats instead of taking its own row
 #statsbar-deity-mobile {
 	text-align: center;
-	display: block;
+	display: inline-block;
+	margin-left: 8px;
 }
 
 // in short (landscape) viewports the fixed header would eat most of the
@@ -371,6 +557,108 @@ body.layout-small .mobile-header-section {
 @media screen and (max-height: 480px) {
 	body.layout-small #mobile-header {
 		position: static;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LAYOUT DENSITY AT SMALL WIDTHS
+
+// mobile type scale: h1 22 / h2 18.4 / h3 16.8 / body 16 (unchanged).
+// Headings are Arial Narrow uppercase and keep hierarchy at these sizes.
+// The fixed 21.6px body line-height overlaps wrapped 32px headings, so
+// headings also get their own unitless line-height.
+@media screen and (max-width: 850px) {
+	body[class] h1 {
+		font-size: 1.375em;
+		margin: 0.3em 0;
+	}
+
+	body[class] h2 {
+		font-size: 1.15em;
+		margin: 0.4em 0;
+	}
+
+	body[class] h3 {
+		font-size: 1.05em;
+		margin: 0.75em 0 0.4em 0;
+	}
+
+	body[class] h1,
+	body[class] h2,
+	body[class] h3 {
+		line-height: 1.2;
+	}
+}
+
+// the location row sits directly under the fixed header; keep it slim
+body.layout-small #grid-location-header {
+	padding-top: 2px;
+}
+
+// camp tab: the location h1 directly above already shows camp name + level
+body.layout-small.tab-camp #tab-header h2 {
+	display: none;
+}
+
+// tab content frame: tighter gutters at small layout
+body.layout-small div.grid-content {
+	padding: 8px 10px 10px 10px;
+	margin-bottom: 8px !important;
+}
+
+@media screen and (max-width: 568px) {
+	// gridism keeps desktop 15/30px unit padding after stacking; tighten
+	div.grid.tabcontainer > .unit {
+		padding: 8px 10px !important;
+	}
+
+	// paragraph rhythm: bare-element specificity ON PURPOSE so p.nomargin
+	// and .p-dense p keep winning
+	p {
+		margin: 0.6em 0;
+	}
+
+	// the movement table and the enter/move-up/down actionbox fit side by
+	// side; stacking them wastes ~100px on the most-used tab
+	body[class] #out-container-compass-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: center;
+		column-gap: 10px;
+	}
+
+	body[class] #out-container-compass-actions h3 {
+		width: 100%;
+		margin: 0.4em 0 0.2em 0;
+	}
+
+	body[class] #table-out-actions-movement {
+		margin-top: 0;
+	}
+
+	// 48px keeps the table + action column under the content width so they
+	// share a row; the hit halo keeps the effective target above 44px
+	body[class] #table-out-actions-movement button.action-move {
+		width: 48px;
+		min-width: 48px;
+	}
+
+	body[class] #out-actions-movement {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin: 0;
+	}
+}
+
+// 569-700px: the fixed 224px compass column + 67% unit-rest overflow the
+// row and wrap around a large empty block; extend phone stacking here
+@media screen and (min-width: 569px) and (max-width: 700px) {
+	body[class] #container-tab-two-out .unit,
+	body[class] #container-tab-two-out-actions .unit {
+		width: 100% !important;
+		float: none;
 	}
 }
 
@@ -459,12 +747,28 @@ body.layout-small #btn-log-toggle {
 	border: 1px solid var(--l13-mobile-border);
 }
 
+// invisible halo: the pill floats alone, so the free space around it can
+// be tappable
+body.layout-small #btn-log-toggle::after {
+	content: "";
+	position: absolute;
+	inset: -8px;
+	border-radius: 28px;
+}
+
 body.layout-small #log {
 	padding-right: 0;
 	overflow-y: auto;
 }
 
+// closed drawer: the log leaves the page flow entirely instead of adding
+// half a screen of scroll below every tab; the floating toggle opens it
+body.layout-small #log-container {
+	display: none;
+}
+
 body.layout-small.log-drawer-open #log-container {
+	display: block;
 	position: fixed;
 	left: 0;
 	right: 0;
@@ -494,17 +798,34 @@ body.layout-small.log-drawer-open #log {
 // TABLES AND ACTION ROWS AT PHONE WIDTHS
 
 @media screen and (max-width: 568px) {
-	// action buttons size to content instead of fixed desktop widths
+	// action buttons size to content instead of fixed desktop widths;
+	// tighter padding keeps three-button rows on one line
 	button.action {
 		width: auto;
 		min-width: 70px;
 		max-width: 100%;
+		padding: 8px 10px;
 	}
 
 	button.btn-wide,
 	button.btn-x-wide {
 		width: auto;
 		max-width: 100%;
+	}
+
+	// card-row action buttons: 40px visual, 44px hit via the halo; row
+	// pitch 40 + 2x2px margins = 44, halos meet without overlap
+	body.touch table .container-btn-action > button.action:not(.action-move) {
+		min-height: 40px;
+	}
+
+	body.touch table .container-btn-action > button.action:not(.action-move)::after {
+		content: "";
+		position: absolute;
+		top: -2px;
+		bottom: -2px;
+		left: 0;
+		right: 0;
 	}
 
 	// multi-widget table rows become wrapping card rows
@@ -522,6 +843,8 @@ body.layout-small.log-drawer-open #log {
 	#in-improvements-level-built tbody,
 	#in-improvements-colony-built table,
 	#in-improvements-colony-built tbody,
+	#trade-caravans-incoming-container table,
+	#trade-caravans-incoming-container tbody,
 	#trade-caravans-outgoing-container table,
 	#trade-caravans-outgoing-container tbody {
 		display: block;
@@ -535,11 +858,17 @@ body.layout-small.log-drawer-open #log {
 	#in-improvements-colony tr,
 	#in-improvements-level-built tr,
 	#in-improvements-colony-built tr,
+	#trade-caravans-incoming-container tr,
 	#trade-caravans-outgoing-container tr {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		width: 100%;
+		// visible row rhythm: consecutive rows of 40-44px buttons would
+		// otherwise abut with zero separation
+		padding: 3px 0;
+		row-gap: 3px;
+		column-gap: 2px;
 	}
 
 	#out-improvements td,
@@ -549,8 +878,44 @@ body.layout-small.log-drawer-open #log {
 	#in-improvements-colony td,
 	#in-improvements-level-built td,
 	#in-improvements-colony-built td,
+	#trade-caravans-incoming-container td,
 	#trade-caravans-outgoing-container td {
 		display: block;
+	}
+
+	// incoming trader rows: content-width buttons (they have no .action
+	// class, so the global 95pt width would apply)
+	#trade-caravans-incoming-container button {
+		width: auto;
+		min-width: 70px;
+	}
+
+	// the buildings table header row cannot align with flexed card rows;
+	// label the badges in place instead
+	#in-improvements tr.header-mini {
+		display: none;
+	}
+
+	#in-improvements span.improvement-count::before {
+		content: "\00d7";
+		opacity: 0.6;
+		font-size: 0.85em;
+	}
+
+	#in-improvements span.improvement-level::before {
+		content: "lvl ";
+		opacity: 0.6;
+		font-size: 0.85em;
+	}
+
+	// project rows: the generated inline width:138px pins the flexed
+	// action cell; let it size to content and keep right alignment
+	#in-improvements-level td.td-button,
+	#in-improvements-colony td.td-button,
+	#in-improvements-level-built td.td-button,
+	#in-improvements-colony-built td.td-button {
+		width: auto !important;
+		margin-left: auto;
 	}
 
 	// outgoing caravan planner: stack the five widgets full-width
@@ -561,6 +926,17 @@ body.layout-small.log-drawer-open #log {
 
 	.trade-caravans-outgoing-plan input[type=range] {
 		width: 80%;
+	}
+
+	// Sell / Get read as two labeled lines; the inline pipe divider is
+	// meaningless once the row wraps
+	.trade-caravans-outgoing-plan .trade-plan-separator {
+		display: none;
+	}
+
+	.trade-caravans-outgoing-plan .trade-caravans-outgoing-buy {
+		display: block;
+		margin-top: 4px;
 	}
 }
 
@@ -573,9 +949,9 @@ body.layout-small.log-drawer-open #log {
 		-webkit-overflow-scrolling: touch;
 	}
 
-	// camp visualization keeps a minimum canvas width (see
-	// UIOutCampVisSystem.refreshGrid) and scrolls, so far-out buildings
-	// stay reachable
+	// camp visualization scales down to fit the screen width (see
+	// UIOutCampVisSystem.refreshGrid); only very wide late-game camps
+	// keep a scaled scroll strip, so far-out buildings stay reachable
 	body[class] #tab-vis-in {
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
@@ -622,6 +998,14 @@ body.layout-small #camp-overview span.hide-in-small-layout {
 	height: 40px;
 	padding: 0;
 	font-size: 1.2em;
+}
+
+// the buttons sit over a pannable canvas; the 3px halos meet exactly in
+// the 6px gap without overlapping
+body.touch #mainmap-zoom-controls button::after {
+	content: "";
+	position: absolute;
+	inset: -3px;
 }
 
 // map header controls: stacked flex row instead of floats at phone widths

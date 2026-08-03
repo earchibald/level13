@@ -716,9 +716,6 @@ body.dark td.list-main {
 body.dark td.item-name {
   min-width: 8em;
 }
-body.dark .layout-small td.item-name {
-  min-width: 6em;
-}
 body.dark td.text-overflow {
   font-size: 0.75rem;
   width: 6em;
@@ -911,9 +908,6 @@ body.dark button.btn-glyph-big {
   min-width: 2.5em;
   padding-left: 0;
   padding-right: 0;
-}
-body.dark .layout-small button.btn-glyph-big {
-  min-width: 2em;
 }
 body.dark button.btn-meta {
   width: auto;
@@ -1126,10 +1120,6 @@ body.dark .info-callout-target-small + div.info-callout {
   width: auto !important;
   max-width: none !important;
   white-space: nowrap;
-}
-body.dark .layout-small .info-callout-target-small + div.info-callout {
-  white-space: normal;
-  min-width: 10em;
 }
 body.dark .info-callout-target-side + div.info-callout {
   max-width: none;
@@ -1683,10 +1673,6 @@ body.dark .inventorydivision .inventorybox-footer {
   bottom: 3px;
   left: 0;
   margin: 0;
-  width: 100%;
-}
-body.dark .regular-layout #common-popup .inventorybox ul {
-  min-width: 380px;
   width: 100%;
 }
 body.dark .inventorybox ul,
@@ -2717,10 +2703,6 @@ body.dark .blueprint-piece-box {
   border-style: solid;
   vertical-align: middle;
 }
-body.dark .layout-small .blueprint-piece-box {
-  width: 2em;
-  height: 2em;
-}
 body.dark .blueprint-piece-box-found {
   background: #444;
   border-color: #555;
@@ -2733,11 +2715,6 @@ body.dark .blueprint-piece-box img {
   margin: 0.4em;
   width: 1.2em;
   height: 1.2em;
-}
-body.dark .layout-small .blueprint-piece-box img {
-  margin: 0.2em;
-  width: 0.8em;
-  height: 0.8em;
 }
 body.dark .event-starting {
   animation: event-end 1.3s step-end infinite;
@@ -3470,9 +3447,6 @@ body.sunlit td.list-main {
 body.sunlit td.item-name {
   min-width: 8em;
 }
-body.sunlit .layout-small td.item-name {
-  min-width: 6em;
-}
 body.sunlit td.text-overflow {
   font-size: 0.75rem;
   width: 6em;
@@ -3665,9 +3639,6 @@ body.sunlit button.btn-glyph-big {
   min-width: 2.5em;
   padding-left: 0;
   padding-right: 0;
-}
-body.sunlit .layout-small button.btn-glyph-big {
-  min-width: 2em;
 }
 body.sunlit button.btn-meta {
   width: auto;
@@ -3880,10 +3851,6 @@ body.sunlit .info-callout-target-small + div.info-callout {
   width: auto !important;
   max-width: none !important;
   white-space: nowrap;
-}
-body.sunlit .layout-small .info-callout-target-small + div.info-callout {
-  white-space: normal;
-  min-width: 10em;
 }
 body.sunlit .info-callout-target-side + div.info-callout {
   max-width: none;
@@ -4437,10 +4404,6 @@ body.sunlit .inventorydivision .inventorybox-footer {
   bottom: 3px;
   left: 0;
   margin: 0;
-  width: 100%;
-}
-body.sunlit .regular-layout #common-popup .inventorybox ul {
-  min-width: 380px;
   width: 100%;
 }
 body.sunlit .inventorybox ul,
@@ -5471,10 +5434,6 @@ body.sunlit .blueprint-piece-box {
   border-style: solid;
   vertical-align: middle;
 }
-body.sunlit .layout-small .blueprint-piece-box {
-  width: 2em;
-  height: 2em;
-}
 body.sunlit .blueprint-piece-box-found {
   background: #ddd;
   border-color: #999;
@@ -5487,11 +5446,6 @@ body.sunlit .blueprint-piece-box img {
   margin: 0.4em;
   width: 1.2em;
   height: 1.2em;
-}
-body.sunlit .layout-small .blueprint-piece-box img {
-  margin: 0.2em;
-  width: 0.8em;
-  height: 0.8em;
 }
 body.sunlit .event-starting {
   animation: event-end 1.3s step-end infinite;
@@ -6020,6 +5974,38 @@ body.touch .callout-container:not(.callout-visible) > div.info-callout {
 body.touch .container-btn-action > button.btn-disabled {
   pointer-events: none;
 }
+@media screen and (max-width: 850px) {
+  body[class] div.info-callout,
+  body[class] div.btn-callout {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+body.layout-small .info-callout-target-small + div.info-callout {
+  white-space: normal;
+  min-width: min(16em, calc(100vw - 16px));
+  max-width: min(320px, calc(100vw - 16px)) !important;
+  box-sizing: border-box;
+}
+body.layout-small .info-callout-side + div.info-callout,
+body.layout-small .info-callout-target-side + div.info-callout {
+  white-space: normal;
+  max-width: calc(100vw - 16px);
+}
+body.layout-small td.item-name {
+  min-width: 6em;
+}
+body.layout-small:not(.touch) button.btn-glyph-big {
+  min-width: 2em;
+}
+body.layout-small .blueprint-piece-box {
+  width: 2em;
+  height: 2em;
+}
+body.layout-small .blueprint-piece-box img {
+  margin: 0.2em;
+  width: 0.8em;
+  height: 0.8em;
+}
 body.touch {
   -webkit-tap-highlight-color: transparent;
 }
@@ -6054,25 +6040,50 @@ body.touch button.btn-glyph-big {
   min-width: 36px;
   width: auto;
 }
+body.touch .stepper button.btn-glyph::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: -4px;
+  right: -4px;
+}
 body.touch button.btn-mini,
 body.touch button.btn-compact {
   min-height: 36px;
+}
+body.touch button.btn-mini::after,
+body.touch button.btn-compact::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 0;
+  right: 0;
 }
 body.touch button.btn-meta {
   min-height: 32px;
   padding: 4px 8px;
 }
+body.touch button.btn-meta::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+}
 body.touch .checkbox,
 body.touch input[type=checkbox] {
-  width: 1.4em;
-  height: 1.4em;
+  width: 1.75em;
+  height: 1.75em;
 }
 body.touch .checkbox-label {
-  padding: 8px 4px;
+  padding: 12px 6px;
   cursor: pointer;
 }
 body.touch input[type=range] {
-  height: 32px;
+  height: 44px;
 }
 body.touch input[type=range]::-webkit-slider-thumb {
   height: 24px;
@@ -6085,7 +6096,7 @@ body.touch input[type=range]::-moz-range-thumb {
 }
 body.touch ul.tabs li {
   height: auto;
-  min-height: 2.6em;
+  min-height: 2.75em;
 }
 body.touch select {
   min-height: 36px;
@@ -6099,10 +6110,31 @@ body.touch .horizontal-select-option {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  position: relative;
 }
-body.touch .item,
-body.touch .res {
+body.touch .horizontal-select-option::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+}
+body.touch .item {
   padding: 8px;
+}
+body.touch .res::after {
+  content: "";
+  position: absolute;
+  inset: -11px -6px;
+}
+body.touch #table-out-actions-movement button.action-move::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: -3px;
+  right: -3px;
 }
 body.touch .collapsible-header {
   padding-top: 10px;
@@ -6125,7 +6157,7 @@ body.touch .collapsible-header {
   body[class] div.popup {
     max-width: 90%;
   }
-  div.popup .buttonbox {
+  div.popup > .buttonbox:last-child {
     position: sticky;
     bottom: 0;
     background: inherit;
@@ -6135,9 +6167,28 @@ body.touch .collapsible-header {
     max-height: 40vh;
     max-height: 40dvh;
   }
-  body[class] .scrollable-container {
+  body[class] #game-stats-container {
     max-height: 65vh;
-    max-height: 65dvh;
+    max-height: calc(100dvh - 190px);
+  }
+}
+@media screen and (max-width: 568px) {
+  body[class] div.popup {
+    max-width: calc(100% - 12px);
+    padding: 14px 10px !important;
+  }
+  body[class] div.popup > h3:first-child {
+    margin-top: 0;
+  }
+  body[class] div.popup > h3 {
+    margin-bottom: 0.35em;
+  }
+  body[class] #common-popup-desc {
+    margin: 0.4em 0;
+  }
+  body[class] div.btn-callout {
+    width: max(100%, 200px);
+    max-width: min(280px, calc(100vw - 16px));
   }
 }
 #incoming-caravan-inventorybox {
@@ -6151,7 +6202,7 @@ body.touch .collapsible-header {
 #inventorylist-incoming-caravan-trader-offer {
   width: 130px;
 }
-@media screen and (max-width: 568px) {
+@media screen and (max-width: 680px) {
   #incoming-caravan-inventorybox {
     flex-wrap: wrap;
     justify-content: center;
@@ -6201,6 +6252,8 @@ body.touch .collapsible-header {
   }
   ul#switch-tabs {
     scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
   }
   ul#switch-tabs li {
     flex: 0 0 auto;
@@ -6215,10 +6268,36 @@ body.touch .collapsible-header {
   }
 }
 body.layout-small #mobile-header {
-  padding: calc(4px + env(safe-area-inset-top)) 0 4px 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 8px;
+  padding: calc(2px + env(safe-area-inset-top)) 4px 2px 4px;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 body.layout-small .mobile-header-section {
   padding: 1px 3px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+body.layout-small #mobile-header-tribe,
+body.layout-small #mobile-header-self {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  column-gap: 8px;
+}
+body.layout-small #mobile-header-notification-container {
+  width: 100%;
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+body.layout-small #mobile-header-notification-container .notification-player {
+  margin-top: 2px;
 }
 #statsbar-resources-mobile,
 #mobile-header-bag,
@@ -6230,6 +6309,9 @@ body.layout-small .mobile-header-section {
   justify-content: center;
   flex-wrap: wrap;
 }
+body.layout-small.location-inside #container-equipment-stats-mobile {
+  display: none;
+}
 #container-equipment-stats-mobile .stat-indicator-secondary {
   margin: 0 4px;
 }
@@ -6239,11 +6321,80 @@ body.layout-small .mobile-header-section {
 }
 #statsbar-deity-mobile {
   text-align: center;
-  display: block;
+  display: inline-block;
+  margin-left: 8px;
 }
 @media screen and (max-height: 480px) {
   body.layout-small #mobile-header {
     position: static;
+  }
+}
+@media screen and (max-width: 850px) {
+  body[class] h1 {
+    font-size: 1.375em;
+    margin: 0.3em 0;
+  }
+  body[class] h2 {
+    font-size: 1.15em;
+    margin: 0.4em 0;
+  }
+  body[class] h3 {
+    font-size: 1.05em;
+    margin: 0.75em 0 0.4em 0;
+  }
+  body[class] h1,
+  body[class] h2,
+  body[class] h3 {
+    line-height: 1.2;
+  }
+}
+body.layout-small #grid-location-header {
+  padding-top: 2px;
+}
+body.layout-small.tab-camp #tab-header h2 {
+  display: none;
+}
+body.layout-small div.grid-content {
+  padding: 8px 10px 10px 10px;
+  margin-bottom: 8px !important;
+}
+@media screen and (max-width: 568px) {
+  div.grid.tabcontainer > .unit {
+    padding: 8px 10px !important;
+  }
+  p {
+    margin: 0.6em 0;
+  }
+  body[class] #out-container-compass-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    column-gap: 10px;
+  }
+  body[class] #out-container-compass-actions h3 {
+    width: 100%;
+    margin: 0.4em 0 0.2em 0;
+  }
+  body[class] #table-out-actions-movement {
+    margin-top: 0;
+  }
+  body[class] #table-out-actions-movement button.action-move {
+    width: 48px;
+    min-width: 48px;
+  }
+  body[class] #out-actions-movement {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+  }
+}
+@media screen and (min-width: 569px) and (max-width: 700px) {
+  body[class] #container-tab-two-out .unit,
+  body[class] #container-tab-two-out-actions .unit {
+    width: 100% !important;
+    float: none;
   }
 }
 body.layout-small #footer {
@@ -6304,11 +6455,21 @@ body.layout-small #btn-log-toggle {
   background: var(--l13-mobile-bg);
   border: 1px solid var(--l13-mobile-border);
 }
+body.layout-small #btn-log-toggle::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 28px;
+}
 body.layout-small #log {
   padding-right: 0;
   overflow-y: auto;
 }
+body.layout-small #log-container {
+  display: none;
+}
 body.layout-small.log-drawer-open #log-container {
+  display: block;
   position: fixed;
   left: 0;
   right: 0;
@@ -6337,11 +6498,23 @@ body.layout-small.log-drawer-open #log {
     width: auto;
     min-width: 70px;
     max-width: 100%;
+    padding: 8px 10px;
   }
   button.btn-wide,
   button.btn-x-wide {
     width: auto;
     max-width: 100%;
+  }
+  body.touch table .container-btn-action > button.action:not(.action-move) {
+    min-height: 40px;
+  }
+  body.touch table .container-btn-action > button.action:not(.action-move)::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    left: 0;
+    right: 0;
   }
   #out-improvements table,
   #out-improvements tbody,
@@ -6357,6 +6530,8 @@ body.layout-small.log-drawer-open #log {
   #in-improvements-level-built tbody,
   #in-improvements-colony-built table,
   #in-improvements-colony-built tbody,
+  #trade-caravans-incoming-container table,
+  #trade-caravans-incoming-container tbody,
   #trade-caravans-outgoing-container table,
   #trade-caravans-outgoing-container tbody {
     display: block;
@@ -6369,11 +6544,15 @@ body.layout-small.log-drawer-open #log {
   #in-improvements-colony tr,
   #in-improvements-level-built tr,
   #in-improvements-colony-built tr,
+  #trade-caravans-incoming-container tr,
   #trade-caravans-outgoing-container tr {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     width: 100%;
+    padding: 3px 0;
+    row-gap: 3px;
+    column-gap: 2px;
   }
   #out-improvements td,
   #in-improvements td,
@@ -6382,8 +6561,33 @@ body.layout-small.log-drawer-open #log {
   #in-improvements-colony td,
   #in-improvements-level-built td,
   #in-improvements-colony-built td,
+  #trade-caravans-incoming-container td,
   #trade-caravans-outgoing-container td {
     display: block;
+  }
+  #trade-caravans-incoming-container button {
+    width: auto;
+    min-width: 70px;
+  }
+  #in-improvements tr.header-mini {
+    display: none;
+  }
+  #in-improvements span.improvement-count::before {
+    content: "\00d7";
+    opacity: 0.6;
+    font-size: 0.85em;
+  }
+  #in-improvements span.improvement-level::before {
+    content: "lvl ";
+    opacity: 0.6;
+    font-size: 0.85em;
+  }
+  #in-improvements-level td.td-button,
+  #in-improvements-colony td.td-button,
+  #in-improvements-level-built td.td-button,
+  #in-improvements-colony-built td.td-button {
+    width: auto !important;
+    margin-left: auto;
   }
   .trade-caravans-outgoing-plan td {
     width: 100%;
@@ -6391,6 +6595,13 @@ body.layout-small.log-drawer-open #log {
   }
   .trade-caravans-outgoing-plan input[type=range] {
     width: 80%;
+  }
+  .trade-caravans-outgoing-plan .trade-plan-separator {
+    display: none;
+  }
+  .trade-caravans-outgoing-plan .trade-caravans-outgoing-buy {
+    display: block;
+    margin-top: 4px;
   }
 }
 @media screen and (max-width: 850px) {
@@ -6436,6 +6647,11 @@ body.layout-small #camp-overview span.hide-in-small-layout {
   height: 40px;
   padding: 0;
   font-size: 1.2em;
+}
+body.touch #mainmap-zoom-controls button::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
 }
 @media screen and (max-width: 568px) {
   #tab-header {

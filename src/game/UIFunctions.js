@@ -333,13 +333,32 @@ define(['ash',
 				$("body").addClass("callout-open");
 				// fire the same hooks hover fires so callout content and buttons refresh
 				if ($target) $target.trigger("mouseenter");
+				this.clampCalloutToViewport($container);
 				GlobalSignals.elementToggledSignal.dispatch();
+			},
+
+			// callout cards anchor to their trigger element; near the screen edge
+			// the card would overflow the viewport, so shift it back inside
+			clampCalloutToViewport: function ($container) {
+				let $callout = $container.children("div.info-callout, div.btn-callout").first();
+				if ($callout.length == 0) return;
+				$callout.css("margin-left", "");
+				let margin = 8;
+				let viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+				let rect = $callout[0].getBoundingClientRect();
+				if (rect.width == 0) return;
+				let shift = 0;
+				if (rect.right > viewportWidth - margin) shift = (viewportWidth - margin) - rect.right;
+				// the left edge wins if the card is wider than the viewport
+				if (rect.left + shift < margin) shift = margin - rect.left;
+				if (shift != 0) $callout.css("margin-left", Math.round(shift) + "px");
 			},
 
 			closeAllCallouts: function () {
 				// fire the hover-out hooks so systems clear highlight state
 				$(".callout-container.callout-visible").each(function () {
 					$(this).children(".info-callout-target").trigger("mouseleave");
+					$(this).children("div.info-callout, div.btn-callout").css("margin-left", "");
 				});
 				$(".callout-container.callout-visible").removeClass("callout-visible");
 				$("body").removeClass("callout-open");
@@ -1112,6 +1131,9 @@ define(['ash',
 				$("#switch-tabs li").removeClass("selected");
 				$("#switch-tabs li#" + tabID).addClass("selected");
 				$("#tab-header h2").text(tabID);
+				// the camp tab repeats the location header's title; mobile css
+				// hides the duplicate on this class
+				$("body").toggleClass("tab-camp", tabID === this.elementIDs.tabs.in);
 				this.scrollTabIntoView();
 
 				GameGlobals.gameState.uiStatus.currentTab = tabID;

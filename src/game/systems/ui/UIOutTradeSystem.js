@@ -157,7 +157,7 @@ define([
 				sendTR += " <span class='trade-sell-value-invalid'></span>";
 				sendTR += " <span class='trade-sell-value'>0</span>";
 				sendTR += "<span class='trade-caravans-outgoing-buy'>";
-				sendTR += "&nbsp;&nbsp;|&nbsp;&nbsp;"
+				sendTR += "<span class='trade-plan-separator'>&nbsp;&nbsp;|&nbsp;&nbsp;</span>"
 				
 				sendTR += "Get: <select class='trade-caravans-outgoing-select-buy' data-trader-id='" + traderId + "'>";
 				for (let k = 0; k < partner.sellsResources.length; k++) {

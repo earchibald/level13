@@ -27,6 +27,6 @@ require.config({
 		}
 	},
 	
-	urlArgs: "v=0.6.3-mobile3",
+	urlArgs: "v=0.6.3.m1",
 
 });
