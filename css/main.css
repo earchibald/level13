@@ -6570,18 +6570,26 @@ body.layout-small.tab-switch-out #out-container-compass {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  box-sizing: border-box;
 }
 body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
-  flex: 0 0 auto;
+  flex: 0 0 168px;
+  width: 168px;
+  min-width: 168px;
+  max-width: 168px;
+  box-sizing: border-box;
 }
 body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
+  box-sizing: border-box;
 }
-body.layout-small.tab-switch-out #out-map-column > #minimap-background-container {
+body.layout-small.tab-switch-out #out-map-column > #minimap-background-container,
+body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
   zoom: 0.72;
 }
-body.layout-small.tab-switch-out #out-map-column > .infobox {
+body.layout-small.tab-switch-out #out-map-column > .infobox,
+body.layout-small.tab-switch-out #out-container-compass > .infobox {
   margin: 2px 0 0 0;
   padding: 0;
 }

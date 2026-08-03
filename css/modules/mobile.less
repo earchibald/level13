@@ -939,15 +939,26 @@ body.layout-small.tab-switch-out #out-container-compass {
 	align-items: center;
 	justify-content: center;
 	gap: 6px;
+	box-sizing: border-box;
 }
 
+// Both columns are sized outright rather than from their content. `auto` had
+// to be resolved from a map that is scaled with `zoom`, and an engine is free
+// to measure that either before or after the scale - which is the one thing
+// that could still push the controls out of the row. 168px is the 226px map
+// at 0.72 plus a little slack.
 body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
-	flex: 0 0 auto;
+	flex: 0 0 168px;
+	width: 168px;
+	min-width: 168px;
+	max-width: 168px;
+	box-sizing: border-box;
 }
 
 body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
-	flex: 1 1 auto;
+	flex: 1 1 0;
 	min-width: 0;
+	box-sizing: border-box;
 }
 
 // The minimap is a fixed 226px block - the canvas has a hard 198px minimum, so
@@ -955,11 +966,15 @@ body.layout-small.tab-switch-out #out-container-compass > #out-container-compass
 // the compass beside it, at every phone width, and the panel stops eating a
 // third of the screen. `zoom` and not `transform` because zoom scales layout
 // and hit testing together, so the map's own tap targets stay true.
-body.layout-small.tab-switch-out #out-map-column > #minimap-background-container {
+// scoped to both possible parents, so a stale script that has not built the
+// map column yet still gets a scaled map rather than a full-width one
+body.layout-small.tab-switch-out #out-map-column > #minimap-background-container,
+body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
 	zoom: 0.72;
 }
 
-body.layout-small.tab-switch-out #out-map-column > .infobox {
+body.layout-small.tab-switch-out #out-map-column > .infobox,
+body.layout-small.tab-switch-out #out-container-compass > .infobox {
 	margin: 2px 0 0 0;
 	padding: 0;
 }
