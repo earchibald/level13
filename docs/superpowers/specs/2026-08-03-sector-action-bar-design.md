@@ -114,18 +114,31 @@ inside it — the same pattern `#out-container-compass` already uses.
 | Element | Shown when |
 |---|---|
 | `#out-action-sca` | `isAwake` (unchanged) |
-| `#out-action-scout` | `isAwake && playerActionsHelper.isVisible("scout")` |
+| `#out-action-scout` | `isAwake && unlockedFeatures.vision && playerActionsHelper.isVisible("scout")` |
 | `#out-action-use-spring` | `isAwake && isScouted && featuresComponent.hasSpring` (unchanged) |
 | `#out-collector-chip-water` | `collector_water` count > 0 |
 | `#out-collector-chip-food` | `collector_food` count > 0 |
 | `#out-action-build-bucket` | `isVisible("build_out_collector_water") && count === 0` |
 | `#out-action-improve-bucket` | `count > 0 && maxLevel > 1` (unchanged) |
+| `#out-action-improve-bucket` | `count > 0 && level < maxLevel` |
 | `#out-improvements-collector-water` | build button shown OR improve button shown |
+| `#header-out-actions` | any child of `#out-actions` is visible |
 | `#out-sector-bar-actions` | any of scavenge / scout / spring shown |
 | `#out-sector-bar-collectors` | either chip shown |
 | `#out-sector-bar` | either row shown |
 
 Trap and food mirror bucket and water throughout.
+`#out-action-improve-bucket` gains a level test; the other unchanged rows are
+marked as such.
+
+### The emptied Search section
+
+`#out-actions` loses its three unconditional buttons, and every button left in
+it is conditional. `#header-out-actions` is toggled by nothing today — there
+are no references to it in `src/` or `css/` — so an ordinary scouted sector
+would show the "Search" heading over an empty box. The header now toggles on
+whether any child of `#out-actions` is visible, the way
+`#header-out-improvements` already does.
 
 ### Why `isVisible("scout")` and not `!isScouted`
 
@@ -142,9 +155,16 @@ the game's own data:
 The third case is the only place the game explains that scouting is what is
 missing, so it stays.
 
-The gate on `GameGlobals.gameState.unlockedFeatures.vision` in the current
-toggle is dropped. `isVisible` covers it through the action's own
-`vision: [30, -1]` requirement.
+**The existing `unlockedFeatures.vision` gate stays too.** `isVisible` does
+cover a vision floor through the action's own `vision: [30, -1]` requirement,
+but the two gates are not the same test. `VISION_BASE` is 25 and
+`VISION_BASE_SUNLIT` is 50 (`PlayerStatConstants.js`), while the feature flag
+unlocks separately in `VisionSystem`. Dropping the flag would change two
+states: a disabled Scout would appear before the player has any light, and a
+sunlit sector would start showing a Scout that the flag currently hides. The
+second is arguably a bug fix, but neither belongs in this change. Keeping both
+gates makes the new condition a pure subtraction — the button is never shown
+anywhere it is not shown today.
 
 ### Why the build button needs an explicit count check
 
@@ -186,6 +206,27 @@ verbatim. `UIFunctions.createButtons` runs once over `body`
 states and cooldowns unscoped, so buttons in a new container are picked up with
 no registration change.
 
+Two constraints on this markup.
+
+**The bar must contain no `h3`.** `UIOutLevelSystem` toggles
+`#container-tab-two-out-actions h3` — every `h3` in the container — on the
+`move` feature flag. An `h3` in the bar would be governed by that flag on
+desktop, and by nothing at all on a phone once the bar is re-parented to
+`#unit-main`. The bar carries no heading.
+
+**The buttons move in the markup, never at runtime.** `ActionButton.create`
+wraps each `button.action` in a `.callout-container` alongside a `.btn-callout`
+and a `.cooldown-reqs` div, and `UIOutElementsSystem` writes its inline
+`display` onto that wrapper, not onto the button. A runtime `append` of the
+button alone would strand its wrapper and silently break the disabled-reason
+callout and the cooldown overlay. Only `#out-sector-bar` itself moves between
+layouts.
+
+That wrapping also means the flex children of `#out-sector-bar-actions` and of
+each chip are `.callout-container` divs, not `button` elements. Gap,
+wrapping and alignment work the same, but no rule may select the bar's
+buttons as direct children.
+
 ### Changed: the two collector rows
 
 Each row loses three cells — the two `.action-use` buttons and `.list-storage`
@@ -206,21 +247,28 @@ Row states:
 
 ```
   not built                        [ Bucket ]
-  built, an upgrade path exists    Bucket · lvl 1   [▲]
-  built, no upgrade path           (row hidden)
+  built, an upgrade is possible    Bucket · lvl 1   [▲]
+  built, already at the cap        (row hidden)
 ```
 
-"No upgrade path" means `getCurrentMaxImprovementLevel` returns 1, which is the
-existing condition on `#out-action-improve-bucket`. It depends on tech level,
-not on the collector's own level: a collector already at the current cap keeps
-its `▲` shown and disabled, with its reason on tap. That is today's behaviour
-and it does not change.
+The `▲` condition changes from `maxLevel > 1` to `level < maxLevel`. Today the
+button stays visible and disabled once a collector reaches the cap, because
+`DISABLED_REASON_MAX_IMPROVEMENT_LEVEL` is a visible reason. Keeping that would
+leave every finished collector with a permanently dead row — the exact clutter
+this change exists to remove. Below the cap the button still shows disabled
+with its real reason (missing resources, missing upgrade), so nothing
+actionable is hidden.
+
+The cap is `improvementLevelsPerTechLevel × techLevel`, which for both
+collectors is 1 × (1 or 2). So the row is hidden before the relevant upgrade
+exists, shown while an upgrade is possible, and hidden again once it is taken.
 
 The label text is
-`ImprovementConstants.getImprovementDisplayName(improvementID, level)` — which
-already varies with level — followed by `" · lvl " + level`. The row is only
-ever visible with a built collector when an upgrade path exists, so the level
-is always meaningful there and is always shown.
+`ImprovementConstants.getImprovementDisplayName(improvementName, level)`
+followed by `" · lvl " + level`. Note that the collector defs carry no
+`displayNames`, so the helper returns the same `_name_default` key at every
+level — the `· lvl N` suffix is the **only** level information in the row, not
+a redundant decoration. Do not remove it as duplication.
 
 ## JavaScript
 
@@ -271,6 +319,26 @@ $("#out-sector-bar").toggleClass("has-actions", showScavenge || showScout || sho
 
 Classes, not `GameGlobals.uiFunctions.toggle`. See *Guards* below.
 
+**New `tabChangedSignal` listener.** `UIFunctions.setTab` force-shows every
+`.tabbutton` whose `data-tab` matches the new tab, and `#out-action-sca`
+carries `class="tabbutton" data-tab="switch-out"`. Nothing in this system
+listens for a tab change, so after switching back to the exploration tab
+Scavenge can be visible while `has-actions` still says otherwise — visibly so
+in the one case where the bar is open for another reason, a sleeping player in
+a sector with a built collector. Add a guarded listener that recomputes:
+
+```js
+onTabChanged: function (tabID) {
+    if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.out) return;
+    if (!this.playerLocationNodes.head) return;
+    this.updateLevelPageActions();
+},
+```
+
+The `tabID` guard matters: `updateLevelPageActions` dereferences
+`playerLocationNodes.head` without a null check, and tab changes happen in
+camp.
+
 ### `src/game/systems/ui/UIOutHeaderSystem.js`
 
 **New `updateSectorBarPlacement(shouldDock)`.** Mirrors
@@ -305,6 +373,14 @@ document.documentElement.style.setProperty("--l13-out-bottom-height", bottomHeig
 
 The existing next-frame remeasure covers the bar too: it is rebuilt in the same
 pass that measures it, so a same-pass height read can be one layout behind.
+
+**The `ResizeObserver` must watch the bar.** `addToEngine` observes
+`#mobile-header`, `#grid-switch` and `#out-container-compass`. The bar changes
+height on its own — Scout leaves when a sector is scouted, a chip appears when
+a collector is built, both rows empty while the player is down — without
+resizing any observed element. Without a fourth `observe` call the measured
+bottom height goes stale until the next move or tab change, and the log pill
+sits over the bar.
 
 **Safe area.** When scouting is not yet unlocked the map panel is hidden
 (`UIOutLevelSystem.updateUnlockedFeatures`) and the bar becomes the last
@@ -449,6 +525,12 @@ Check on a phone-width viewport, exploration tab:
 12. Resize a desktop window across the small-layout threshold repeatedly — the
     bar returns to its markup position and the map panel returns to its own,
     with no duplication and no wrong ordering.
+13. A hazard sector — scavenge, scout, refill and all four collect actions are
+    all affected by hazards, while build and improve are exempt. The whole bar
+    therefore goes disabled at once while the buttons left in the scrolling
+    section stay live. Confirm that reads as deliberate rather than broken.
+14. A scouted sector with nothing else to do — the "Search" heading is gone
+    along with its empty box, not left hanging over nothing.
 
 `window.scrollTo(0, 400)` must still leave `window.scrollY` at 0 on
 `body.layout-small`: the document stays locked.
@@ -479,5 +561,7 @@ out of scope.
 ## Appendix
 
 A spoiler-flagged appendix covering later-game mechanics that touch these
-actions lives beside this file. It is not required reading to implement the
-design.
+actions is written to `2026-08-03-sector-action-bar-spoilers.md` beside this
+file. It is deliberately **not** committed — it is listed in
+`.git/info/exclude` so it cannot reach a diff. Delete it freely; nothing in the
+implementation depends on reading it.

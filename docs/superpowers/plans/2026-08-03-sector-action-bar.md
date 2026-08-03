@@ -31,7 +31,22 @@
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
-- Produces: element ids `#out-sector-bar`, `#out-sector-bar-actions`, `#out-sector-bar-collectors`, `#out-collector-chip-water`, `#out-collector-chip-food`, `#out-collector-fill-water`, `#out-collector-fill-food`; CSS classes `has-actions` and `has-collectors` on `#out-sector-bar`, `is-built` on each chip, `collector-row` on the two collector `<tr>`s; new method `UIOutLevelSystem.updateCollectors()` returning the count of visible collector rows.
+- Produces: element ids `#out-sector-bar`, `#out-sector-bar-actions`, `#out-sector-bar-collectors`, `#out-collector-chip-water`, `#out-collector-chip-food`, `#out-collector-fill-water`, `#out-collector-fill-food`; CSS classes `has-actions` and `has-collectors` on `#out-sector-bar`, `is-built` on each chip, `collector-row` on the two collector `<tr>`s; new methods `UIOutLevelSystem.updateCollectors()` (returns the count of visible collector rows), `UIOutLevelSystem.updateOutActionsHeader()` and `UIOutLevelSystem.onTabChanged(tabID)`.
+
+**The bar must contain no `h3`.** `updateLevelPageActions` toggles
+`#container-tab-two-out-actions h3` — every `h3` in the container — on the
+`move` feature flag. An `h3` in the bar would be governed by that flag on
+desktop and by nothing at all on a phone, where Task 3 re-parents the bar out
+of that container.
+
+**Move the buttons in the markup, never at runtime.** `ActionButton.create`
+wraps each `button.action` in a `.callout-container` alongside a `.btn-callout`
+and a `.cooldown-reqs` div, and `UIOutElementsSystem` writes its inline
+`display` onto that wrapper rather than the button. Appending a button on its
+own at runtime would strand its wrapper and break the disabled-reason callout
+and the cooldown overlay. This is also why the flex children of the bar's rows
+and of each chip are `.callout-container` divs, not `button` elements — no CSS
+rule may select the bar's buttons as direct children.
 
 - [ ] **Step 1: Add the bar markup to `index.html`**
 
@@ -157,8 +172,11 @@ Insert this method immediately before `updateOutImprovementsList` (currently lin
 				let capacity = vo.storageCapacity[def.resource] * count;
 				let maxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(def.improvementName);
 
+				// level < maxLevel, not maxLevel > 1: at the cap the game keeps the
+				// arrow visible and disabled, which would leave every finished
+				// collector with a permanently dead row
 				let showBuild = !isBuilt && GameGlobals.playerActionsHelper.isVisible(def.buildAction);
-				let showImprove = isBuilt && maxLevel > 1;
+				let showImprove = isBuilt && level < maxLevel;
 				let showRow = showBuild || showImprove;
 
 				GameGlobals.uiFunctions.toggle(def.buildID, showBuild);
@@ -258,15 +276,78 @@ with:
 			// isVisible("scout") is false once the sector is scouted (the action
 			// requires sector.scouted: false, and DISABLED_REASON_SCOUTED blocks
 			// visibility) but stays true when only light is missing, so an
-			// unscouted dark sector still explains itself.
+			// unscouted dark sector still explains itself. The unlockedFeatures
+			// gate stays: it is not the same test as the action's own vision
+			// requirement, and keeping it makes this a pure subtraction.
 			let showScavenge = isAwake;
-			let showScout = isAwake && GameGlobals.playerActionsHelper.isVisible("scout");
+			let showScout = isAwake && GameGlobals.gameState.unlockedFeatures.vision && GameGlobals.playerActionsHelper.isVisible("scout");
 			let showSpring = isAwake && isScouted && featuresComponent.hasSpring;
 			GameGlobals.uiFunctions.toggle("#out-action-sca", showScavenge);
 			GameGlobals.uiFunctions.toggle("#out-action-scout", showScout);
 			GameGlobals.uiFunctions.toggle("#out-action-use-spring", showSpring);
 			$("#out-sector-bar").toggleClass("has-actions", showScavenge || showScout || showSpring);
 ```
+
+Then, at the very **end** of `updateLevelPageActions` (after the existing
+`toggle("#out-improvements table", ...)` line), add:
+
+```javascript
+			this.updateOutActionsHeader();
+```
+
+- [ ] **Step 8b: Toggle the emptied Search heading**
+
+`#out-actions` has lost its three unconditional buttons and every child left in
+it is conditional, so the heading can end up over an empty box. Nothing toggles
+`#header-out-actions` today. Add this method immediately after
+`updateLevelPageActionsSlow`:
+
+```javascript
+		// #out-actions lost its unconditional buttons to the sector bar, so the
+		// heading has to follow the box's contents. The children are
+		// .callout-container wrappers, not the buttons themselves.
+		updateOutActionsHeader: function () {
+			GameGlobals.uiFunctions.toggle("#header-out-actions", $("#out-actions").children(":visible").length > 0);
+		},
+
+```
+
+Rest, Wait and Despair are toggled from `updateLevelPageActionsSlow`, not from
+`updateLevelPageActions`, so the header must be recomputed there too. Add the
+same call as the last line of `updateLevelPageActionsSlow`:
+
+```javascript
+			this.updateOutActionsHeader();
+```
+
+- [ ] **Step 8c: Recompute on tab change**
+
+`UIFunctions.setTab` force-shows every `.tabbutton` matching the new tab, and
+`#out-action-sca` is one. Nothing in this system listens for a tab change, so
+Scavenge can reappear while `has-actions` still says otherwise. Add this
+listener at the end of `initListeners` (beside the existing
+`GlobalSignals.add(this, GlobalSignals.collectorCollectedSignal, ...)` line):
+
+```javascript
+			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
+```
+
+and this method immediately before `updateLevelPageActions`:
+
+```javascript
+		// setTab force-shows #out-action-sca (a .tabbutton for this tab) without
+		// telling anyone, so the bar's own state has to be recomputed after it
+		onTabChanged: function (tabID) {
+			if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.out) return;
+			if (!this.playerLocationNodes.head) return;
+			this.updateLevelPageActions();
+		},
+
+```
+
+The `tabID` guard is load-bearing: `updateLevelPageActions` dereferences
+`this.playerLocationNodes.head` with no null check, and tab changes happen in
+camp.
 
 - [ ] **Step 9: Import `ImprovementConstants`**
 
@@ -329,9 +410,26 @@ Run:
 ```bash
 grep -n "list-storage" src/game/systems/ui/UIOutLevelSystem.js
 grep -n 'find(".action-use")' src/game/systems/ui/UIOutLevelSystem.js
+grep -c "updateOutActionsHeader" src/game/systems/ui/UIOutLevelSystem.js
+grep -c "onTabChanged" src/game/systems/ui/UIOutLevelSystem.js
+grep -c "<h3" index.html
 ```
 
-Expected: no matches for either.
+Expected: no matches for the first two greps; `updateOutActionsHeader` appears
+3 times (definition plus two call sites); `onTabChanged` appears 2 times
+(listener plus definition). Then confirm the bar has no heading:
+
+```bash
+python3 - <<'PY'
+import re
+s = open('index.html').read()
+i = s.index('id="out-sector-bar"')
+j = s.index('id="header-out-actions"')
+print('h3 inside bar:', s[i:j].count('<h3'))
+PY
+```
+
+Expected: `h3 inside bar: 0`.
 
 - [ ] **Step 12: Commit**
 
@@ -700,14 +798,45 @@ Replace the body of `updateMeasurements`:
 		},
 ```
 
+- [ ] **Step 3b: Observe the bar for resizes**
+
+The bar changes height on its own — Scout leaves when a sector is scouted, a
+chip appears when a collector is built, both rows empty while the player is
+down — without resizing anything the observer already watches. Without this
+the measured bottom height goes stale and the log pill sits over the bar.
+
+In `addToEngine`, find:
+
+```javascript
+				let mapElement = document.getElementById("out-container-compass");
+				if (headerElement) this.headerResizeObserver.observe(headerElement);
+				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
+				if (mapElement) this.headerResizeObserver.observe(mapElement);
+```
+
+Replace with:
+
+```javascript
+				let mapElement = document.getElementById("out-container-compass");
+				// the action bar's own height changes with the sector - scout
+				// leaving, a collector chip appearing - without resizing anything
+				// else, so it is a layout metric in its own right
+				let barElement = document.getElementById("out-sector-bar");
+				if (headerElement) this.headerResizeObserver.observe(headerElement);
+				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
+				if (mapElement) this.headerResizeObserver.observe(mapElement);
+				if (barElement) this.headerResizeObserver.observe(barElement);
+```
+
 - [ ] **Step 4: Verify the JS parses and the old name is gone**
 
 ```bash
 node --check src/game/systems/ui/UIOutHeaderSystem.js
 grep -rn "l13-out-map-height" src/
+grep -c "headerResizeObserver.observe" src/game/systems/ui/UIOutHeaderSystem.js
 ```
 
-Expected: `node --check` exits 0; the grep returns nothing.
+Expected: `node --check` exits 0; the first grep returns nothing; the count is `4`.
 
 - [ ] **Step 5: Point the log pill at the new property**
 
@@ -870,3 +999,11 @@ dispatching a synthetic click.
 12. Cross the small-layout threshold repeatedly by resizing — the bar returns to
     its markup position, the map panel to its own, with no duplication and the
     bar always before the panel when docked.
+13. A hazard sector — scavenge, scout, refill and all four collect actions are
+    affected by hazards while build and improve are exempt, so the whole bar
+    goes disabled at once while the buttons left in the scrolling section stay
+    live. Confirm that reads as deliberate rather than broken.
+14. A scouted sector with nothing else to do — the "Search" heading is gone
+    along with its empty box.
+15. Build a collector, then take its upgrade — the row disappears once the
+    collector is at the cap, rather than leaving a permanently disabled arrow.
