@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m27",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Mobile: fix a bucket or trap appearing to be buildable in sectors that do not offer it, and the map panel appearing before scouting is unlocked"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m26",
             "requiredVersion": "0.6.1",
             "phase": "beta",

@@ -7117,3 +7117,15 @@ body.touch #mainmap-zoom-controls button::after {
     animation-iteration-count: 1 !important;
   }
 }
+body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
+body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],
+body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display: none"],
+body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display:none"],
+body.layout-small #out-container-compass[style*="display: none"],
+body.layout-small #out-container-compass[style*="display:none"],
+body.layout-small #container-tab-two-out[style*="display: none"],
+body.layout-small #container-tab-two-out[style*="display:none"],
+body.layout-small #unit-main[style*="display: none"],
+body.layout-small #unit-main[style*="display:none"] {
+  display: none !important;
+}

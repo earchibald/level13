@@ -1754,3 +1754,31 @@ body.touch #mainmap-zoom-controls button::after {
 		animation-iteration-count: 1 !important;
 	}
 }
+
+// ---------------------------------------------------------------------------
+// HIDE STILL MEANS HIDE
+//
+// Several rules above force `display` with !important, because jQuery writes an
+// inline `display` when it restores an element and an inline style beats a
+// stylesheet rule. But an important author declaration also beats jQuery's
+// inline `display: none`, so those elements could never be hidden again. The
+// game hides the bucket row in sectors where a bucket cannot be built, and
+// hides the map panel until scouting is unlocked - both showed anyway, the
+// bucket complete with a stale "busy moving" reason on a button for an action
+// that was not offered here.
+//
+// So match the inline hide itself. The attribute selector raises specificity
+// over each forced rule, so this wins wherever that rule sits, in a media
+// query or not. Keep this list in step with the forced `display` rules above.
+body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
+body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],
+body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display: none"],
+body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display:none"],
+body.layout-small #out-container-compass[style*="display: none"],
+body.layout-small #out-container-compass[style*="display:none"],
+body.layout-small #container-tab-two-out[style*="display: none"],
+body.layout-small #container-tab-two-out[style*="display:none"],
+body.layout-small #unit-main[style*="display: none"],
+body.layout-small #unit-main[style*="display:none"] {
+	display: none !important;
+}
