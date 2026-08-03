@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m9" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m9" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m9" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m10" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m10" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m10" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -39,6 +39,13 @@
 
 <body class="wrap wider dark" style="height:100%">
 	
+	<!-- the manifest asks for a portrait lock, but iOS ignores it, so a phone
+	     turned sideways gets this instead of the broken landscape layout -->
+	<div id="rotate-notice">
+		<h2>Turn your phone upright</h2>
+		<p>Level 13 is portrait only for now.</p>
+	</div>
+
 	<div class="sticky-footer-wrapper game-opacity-controller">
 		<div class="grid hidden-by-popups" id="grid-main">
 			<div class="unit four-fifths" id="unit-main" style="display: none">

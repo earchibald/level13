@@ -5951,6 +5951,29 @@ body.sunlit {
   --l13-mobile-bg: #ffffff;
   --l13-mobile-border: #aaaaaa;
 }
+#rotate-notice {
+  display: none;
+}
+@media (orientation: landscape) and (max-height: 480px) and (pointer: coarse) {
+  #rotate-notice {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0 2em;
+    text-align: center;
+    background: var(--l13-mobile-bg);
+  }
+  #rotate-notice h2 {
+    margin: 0 0 0.4em 0;
+  }
+  #rotate-notice p {
+    margin: 0;
+  }
+}
 .callout-container.callout-visible > div.btn-callout,
 .callout-container.callout-visible > div.info-callout {
   display: block;
@@ -5963,6 +5986,15 @@ body.sunlit {
 }
 .callout-flipped > div.callout-arrow-up {
   transform: rotate(180deg);
+}
+body.layout-small div.info-callout.callout-scrollable,
+body.layout-small div.btn-callout.callout-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+body.layout-small div.btn-callout.callout-scrollable {
+  pointer-events: auto;
 }
 .callout-container.callout-visible > .info-callout-target-side + div.info-callout {
   display: flex;

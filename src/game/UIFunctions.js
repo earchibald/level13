@@ -211,6 +211,7 @@ define(['ash',
 				if (window.visualViewport) {
 					window.visualViewport.addEventListener("resize", function () {
 						uiFunctions.popupManager.repositionPopups();
+						uiFunctions.reclampOpenCallout();
 					});
 				}
 
@@ -358,6 +359,24 @@ define(['ash',
 				if ($target) $target.trigger("mouseenter");
 				this.clampCalloutToViewport($container, $target);
 				GlobalSignals.elementToggledSignal.dispatch();
+
+				// the systems listening above fill in costs and requirement lines,
+				// so the card can still grow after this frame. Measuring once
+				// clamped a card that was not its final height yet.
+				let uiFunctions = this;
+				this.openCalloutElements = { $container: $container, $target: $target };
+				requestAnimationFrame(function () {
+					if (!$container.hasClass("callout-visible")) return;
+					uiFunctions.clampCalloutToViewport($container, $target);
+				});
+			},
+
+			// the phone toolbars hide and show as the page scrolls, which changes
+			// how much room an open card has
+			reclampOpenCallout: function () {
+				let open = this.openCalloutElements;
+				if (!open || !open.$container || !open.$container.hasClass("callout-visible")) return;
+				this.clampCalloutToViewport(open.$container, open.$target);
 			},
 
 			// callout cards anchor to their trigger element; near the screen edge
@@ -365,7 +384,8 @@ define(['ash',
 			clampCalloutToViewport: function ($container, $target) {
 				let $callout = $container.children("div.info-callout, div.btn-callout").first();
 				if ($callout.length == 0) return;
-				$callout.css({ "margin-left": "", "margin-top": "" }).removeClass("callout-flipped");
+				$callout.css({ "margin-left": "", "margin-top": "", "max-height": "" })
+					.removeClass("callout-flipped callout-scrollable");
 				let margin = 8;
 				let viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
 				let rect = $callout[0].getBoundingClientRect();
@@ -386,6 +406,12 @@ define(['ash',
 				let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 				let bottomLimit = viewportHeight - this.getPinnedBottomHeight() - margin;
 				let topLimit = this.getPinnedTopHeight() + margin;
+
+				// a card taller than the whole band cannot be placed anywhere
+				// without losing its end, so cap it and let it scroll instead
+				$callout.css("max-height", Math.max(80, Math.round(bottomLimit - topLimit)) + "px");
+				let element = $callout[0];
+				$callout.toggleClass("callout-scrollable", element.scrollHeight > element.clientHeight + 1);
 
 				let rect = $callout[0].getBoundingClientRect();
 				if (rect.height == 0) return;
@@ -431,8 +457,8 @@ define(['ash',
 				$(".callout-container.callout-visible").each(function () {
 					$(this).children(".info-callout-target").trigger("mouseleave");
 					$(this).children("div.info-callout, div.btn-callout")
-						.css({ "margin-left": "", "margin-top": "" })
-						.removeClass("callout-flipped");
+						.css({ "margin-left": "", "margin-top": "", "max-height": "" })
+						.removeClass("callout-flipped callout-scrollable");
 				});
 				$(".callout-container.callout-visible").removeClass("callout-visible");
 				$("body").removeClass("callout-open");

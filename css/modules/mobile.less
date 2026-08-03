@@ -19,6 +19,40 @@ body.sunlit {
 }
 
 // ---------------------------------------------------------------------------
+// PORTRAIT ONLY
+// The manifest asks for a portrait lock. Android honours it; iOS Safari does
+// not, and neither does screen.orientation.lock(), so a sideways phone gets
+// this notice rather than the landscape layout. `pointer: coarse` keeps it off
+// desktop, where a short window is just a small window.
+
+#rotate-notice {
+	display: none;
+}
+
+@media (orientation: landscape) and (max-height: 480px) and (pointer: coarse) {
+	#rotate-notice {
+		display: flex;
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		padding: 0 2em;
+		text-align: center;
+		background: var(--l13-mobile-bg);
+	}
+
+	#rotate-notice h2 {
+		margin: 0 0 0.4em 0;
+	}
+
+	#rotate-notice p {
+		margin: 0;
+	}
+}
+
+// ---------------------------------------------------------------------------
 // TAP-OPENABLE CALLOUTS
 // JS toggles .callout-visible on .callout-container (tap, long-press, or tap
 // on a disabled button). Mirrors the :hover/:focus rules in elements-common.
@@ -40,6 +74,21 @@ body.sunlit {
 
 .callout-flipped > div.callout-arrow-up {
 	transform: rotate(180deg);
+}
+
+// a card too tall for the space either side of its trigger is capped by
+// clampCalloutVertically and scrolls its own content rather than losing the
+// end of it. Button callouts are pointer-transparent by default, so the
+// capped ones have to take pointer events back to be scrollable.
+body.layout-small div.info-callout.callout-scrollable,
+body.layout-small div.btn-callout.callout-scrollable {
+	overflow-y: auto;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+}
+
+body.layout-small div.btn-callout.callout-scrollable {
+	pointer-events: auto;
 }
 
 .callout-container.callout-visible > .info-callout-target-side + div.info-callout {
