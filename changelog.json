@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m28",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned map panel is about a third shorter - the compass, the map and \"back to camp\" sit side by side instead of stacked - and the perk icons share a row with the bag, so there is far more of the screen left to read the game in"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m27",
             "requiredVersion": "0.6.1",
             "phase": "beta",

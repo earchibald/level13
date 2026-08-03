@@ -776,6 +776,15 @@ body.layout-small #mobile-header > div > .notification-player {
 	box-sizing: border-box;
 }
 
+// Outside, the perk and status icons had a full-width strip to themselves and
+// the bag cell below them left its neighbour cell empty - two rows of pinned
+// chrome for one row of content. Let the strip take that empty cell instead:
+// it is the last thing before the bag in the markup, so auto-placement puts
+// the two side by side. Every row saved here is a row the player can read in.
+body.layout-small.location-outside #mobile-header-status > .itemlist {
+	grid-column: auto;
+}
+
 // chips inside a strip size to their own content
 body.layout-small #statsbar-resources-mobile > .callout-container,
 body.layout-small #mobile-header .container-equipment-stats > * {
@@ -988,13 +997,13 @@ body.layout-small.tab-switch-out #out-container-compass {
 // Both columns are sized outright rather than from their content. `auto` had
 // to be resolved from a map that is scaled with `zoom`, and an engine is free
 // to measure that either before or after the scale - which is the one thing
-// that could still push the controls out of the row. 168px is the 226px map
-// at 0.72 plus a little slack.
+// that could still push the controls out of the row. 132px is the 226px map
+// at 0.56 plus a little slack.
 body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
-	flex: 0 0 168px;
-	width: 168px;
-	min-width: 168px;
-	max-width: 168px;
+	flex: 0 0 132px;
+	width: 132px;
+	min-width: 132px;
+	max-width: 132px;
 	box-sizing: border-box;
 }
 
@@ -1013,18 +1022,26 @@ body.layout-small.tab-switch-out #out-container-compass > #out-container-compass
 // map column yet still gets a scaled map rather than a full-width one
 body.layout-small.tab-switch-out #out-map-column > #minimap-background-container,
 body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
-	zoom: 0.72;
+	zoom: 0.56;
 }
 
 body.layout-small.tab-switch-out #out-map-column > .infobox,
 body.layout-small.tab-switch-out #out-container-compass > .infobox {
 	margin: 2px 0 0 0;
 	padding: 0;
+	// position and distance are a two-line readout under the map; at reading
+	// size they cost as much height as another row of the compass
+	font-size: 0.72rem;
+	line-height: 1.25;
 }
 
 body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions {
 	padding: 0;
 	margin: 0;
+	// !important because the game shows and hides this with jQuery, which
+	// writes an inline display that would beat the row below; the guard at the
+	// end of the file keeps the hide working
+	display: flex !important;
 }
 
 // the panel is the compass now; the heading over it is a wasted row
@@ -1032,12 +1049,8 @@ body.layout-small.tab-switch-out #out-container-compass #out-container-compass-a
 	display: none;
 }
 
-// 40px keeps the 3x3 grid inside the ~150px column left beside a 226px map.
+// 40px keeps the 3x3 grid inside the ~150px column left beside the map.
 // The invisible hit halo on each compass button keeps the target above 44px.
-body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement {
-	margin: 0 auto;
-}
-
 body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
 	width: 40px;
 	min-width: 40px;
@@ -1049,14 +1062,48 @@ body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movem
 	padding: 0;
 }
 
+// The panel and the stats bar are both fixed, and between them they were
+// leaving about 200px of screen to read the game in. The compass buttons
+// cannot shrink - 44px is the touch target - so the height has to come from
+// the stacking instead: "back to camp" and the level moves sit BESIDE the
+// compass rather than under it. The column is about 235px wide and the
+// compass needs 132 of it, which is enough for a stacked button beside it.
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+}
+
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement {
+	margin: 0;
+	flex: 0 0 auto;
+	border-spacing: 0;
+}
+
 body.layout-small.tab-switch-out #out-container-compass #out-actions-movement {
-	margin-top: 4px;
-	gap: 3px;
+	margin-top: 0;
+	gap: 2px;
+	flex: 1 1 0;
+	min-width: 0;
 }
 
 body.layout-small.tab-switch-out #out-container-compass #out-actions-movement button {
 	width: 100%;
 	max-width: 150px;
+	// the label wraps in the narrower column, so let the line close up
+	line-height: 1.15;
+	padding: 6px 4px;
+}
+
+// "(4 blocks)" under the camp button: worth keeping, not worth a line of
+// leading above and below it
+body.layout-small.tab-switch-out #out-container-compass #out-action-move-camp-details {
+	margin: 1px 0 0 0;
+	font-size: 0.72rem;
+	line-height: 1.1;
 }
 
 
@@ -1776,6 +1823,10 @@ body.layout-small #out-improvements tr#out-improvements-collector-food[style*="d
 body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display:none"],
 body.layout-small #out-container-compass[style*="display: none"],
 body.layout-small #out-container-compass[style*="display:none"],
+// the forced rule for this one is written through its parent, so the guard has
+// to carry the same ancestors to outrank it
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions[style*="display: none"],
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions[style*="display:none"],
 body.layout-small #container-tab-two-out[style*="display: none"],
 body.layout-small #container-tab-two-out[style*="display:none"],
 body.layout-small #unit-main[style*="display: none"],
