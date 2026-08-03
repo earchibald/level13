@@ -2190,7 +2190,6 @@
             "blueprint_found_message_middle": "Found another piece of a blueprint.",
             "build_actions_header": "Build",
             "characters_header": "People",
-            "collect_all_resources_label": "Collect all",
             "collect_all_short_label": "all",
             "current_distance_to_camp_field": "Distance to camp: {num}",
             "current_distance_to_passage_field": "Distance to passage: {num}",

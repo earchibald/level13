@@ -46,6 +46,31 @@ define([
 	MovementOptionsComponent, PositionComponent, CampComponent, SectorImprovementsComponent,
 	WorkshopComponent, SectorStatusComponent, EnemiesComponent
 ) {
+	// The bucket and the trap. Each has a row in the improvements table and a
+	// chip in the sector bar, and the two are driven from the same numbers.
+	var COLLECTOR_DEFS = [
+		{
+			improvementName: improvementNames.collector_water,
+			resource: resourceNames.water,
+			buildAction: "build_out_collector_water",
+			rowID: "#out-improvements-collector-water",
+			buildID: "#out-action-build-bucket",
+			improveID: "#out-action-improve-bucket",
+			chipID: "#out-collector-chip-water",
+			fillID: "#out-collector-fill-water",
+		},
+		{
+			improvementName: improvementNames.collector_food,
+			resource: resourceNames.food,
+			buildAction: "build_out_collector_food",
+			rowID: "#out-improvements-collector-food",
+			buildID: "#out-action-build-trap",
+			improveID: "#out-action-improve-trap",
+			chipID: "#out-collector-chip-food",
+			fillID: "#out-collector-fill-food",
+		},
+	];
+
 	var UIOutLevelSystem = Ash.System.extend({
 
 		engine: null,
@@ -244,12 +269,10 @@ define([
 		// heading has to follow the box's contents.
 		//
 		// Read data-visible, not :visible. The direct children of #out-actions are
-		// .callout-container wrappers two levels above each button, and
-		// toggleParentCalloutContainer only looks at a button's immediate parent -
-		// so a wrapper's display is written a tick later by UIOutElementsSystem,
-		// off elementToggledSignal (see the setTimeout in UIFunctions.toggleInternal).
-		// A :visible read here would see the previous state of the very toggles
-		// that ran a few lines above. data-visible is written synchronously.
+		// .callout-container wrappers two levels above each button. Every wrapper's
+		// display is written a tick later by UIOutElementsSystem, off
+		// elementToggledSignal. A :visible read here would see the previous state
+		// of the toggles that ran a few lines above. data-visible is synchronous.
 		updateOutActionsHeader: function () {
 			let $movement = $("#container-out-actions-movement-related");
 			let numVisible = $("#out-actions")
@@ -258,9 +281,14 @@ define([
 				.not("[data-visible='false']")
 				.length;
 
-			// the movement-related span is slide-toggled rather than toggled, so it
-			// carries no data-visible of its own
-			if (numVisible === 0 && $movement.children().length > 0 && $movement.css("display") !== "none") {
+			// The movement span is slide-toggled, so it carries no data-visible of
+			// its own until the animation ends. Reading its `display` here works
+			// only because the slide out runs at duration 0 and jQuery finishes a
+			// 0-duration animation synchronously. Give that duration a value and
+			// the read goes stale, and the empty box it guards stays on screen.
+			// So read the condition that drives the slide instead.
+			let isScouted = this.playerLocationNodes.head.entity.get(SectorStatusComponent).scouted;
+			if (numVisible === 0 && $movement.children().length > 0 && isScouted) {
 				numVisible++;
 			}
 
@@ -842,47 +870,24 @@ define([
 			return enemyDesc + (hasHazards ? hazardDesc : notCampableDesc);
 		},
 
-		// The two collector rows and their bar chips. Both updateOutImprovementsList
-		// and updateOutImprovementsStatus reach these elements, so the logic lives in
-		// one place and both call it. Returns the number of visible rows so the
-		// improvements header count stays right.
-		updateCollectors: function () {
+		// What is on screen for the two collectors: the rows, the build and improve
+		// buttons, and whether each bar chip exists at all.
+		//
+		// Split from updateCollectorFills on purpose. This half decides visibility,
+		// so it must run with the code that recounts #header-out-improvements, or
+		// the heading and the rows drift apart. Returns the visible row count.
+		updateCollectorRows: function () {
 			if (!this.playerLocationNodes.head) return 0;
 
 			let improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 			let numVisibleRows = 0;
 			let numChips = 0;
 
-			let defs = [
-				{
-					improvementName: improvementNames.collector_water,
-					resource: resourceNames.water,
-					buildAction: "build_out_collector_water",
-					rowID: "#out-improvements-collector-water",
-					buildID: "#out-action-build-bucket",
-					improveID: "#out-action-improve-bucket",
-					chipID: "#out-collector-chip-water",
-					fillID: "#out-collector-fill-water",
-				},
-				{
-					improvementName: improvementNames.collector_food,
-					resource: resourceNames.food,
-					buildAction: "build_out_collector_food",
-					rowID: "#out-improvements-collector-food",
-					buildID: "#out-action-build-trap",
-					improveID: "#out-action-improve-trap",
-					chipID: "#out-collector-chip-food",
-					fillID: "#out-collector-fill-food",
-				},
-			];
-
-			for (let i = 0; i < defs.length; i++) {
-				let def = defs[i];
+			for (let i = 0; i < COLLECTOR_DEFS.length; i++) {
+				let def = COLLECTOR_DEFS[i];
 				let vo = improvements.getVO(def.improvementName);
-				let count = vo.count;
-				let isBuilt = count > 0;
+				let isBuilt = vo.count > 0;
 				let level = improvements.getLevel(def.improvementName);
-				let capacity = vo.storageCapacity[def.resource] * count;
 				let maxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(def.improvementName);
 
 				// level < maxLevel, not maxLevel > 1: at the cap the game keeps the
@@ -897,16 +902,18 @@ define([
 				GameGlobals.uiFunctions.toggle(def.rowID, showRow);
 				if (showRow) numVisibleRows++;
 
+				// the label names the collector beside its improve arrow, so it is
+				// only worth resolving while the row is on screen
+				let showLabel = showRow && isBuilt;
 				let $label = $(def.rowID).find(".collector-row-label");
-				GameGlobals.uiFunctions.toggle($label, isBuilt);
-				if (isBuilt) {
+				GameGlobals.uiFunctions.toggle($label, showLabel);
+				if (showLabel) {
 					// getImprovementDisplayName resolves the id from the name itself
 					$label.find("span").text(ImprovementConstants.getImprovementDisplayName(def.improvementName, level) + " · lvl " + level);
 				}
 
 				$(def.chipID).toggleClass("is-built", isBuilt);
 				if (isBuilt) numChips++;
-				$(def.fillID).text(capacity > 0 ? (Math.floor(vo.storedResources[def.resource] * 10) / 10) + " / " + capacity : "");
 			}
 
 			$("#out-sector-bar").toggleClass("has-collectors", numChips > 0);
@@ -914,12 +921,31 @@ define([
 			return numVisibleRows;
 		},
 
+		// The stored/capacity numbers on the chips. These change on every collect
+		// and every slow tick but never change what is visible, so they run on
+		// their own and cost no requirement checks.
+		updateCollectorFills: function () {
+			if (!this.playerLocationNodes.head) return;
+			if (GameGlobals.playerHelper.isInCamp()) return;
+
+			let improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
+
+			for (let i = 0; i < COLLECTOR_DEFS.length; i++) {
+				let def = COLLECTOR_DEFS[i];
+				let vo = improvements.getVO(def.improvementName);
+				let capacity = vo.storageCapacity[def.resource] * vo.count;
+				let stored = Math.floor(vo.storedResources[def.resource] * 10) / 10;
+				$(def.fillID).text(capacity > 0 ? stored + " / " + capacity : "");
+			}
+		},
+
 		updateOutImprovementsList: function (improvements) {
 			if (!this.playerLocationNodes.head) return;
 			if (GameGlobals.playerHelper.isInCamp()) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 			var uiFunctions = GameGlobals.uiFunctions;
-			var numVisible = this.updateCollectors();
+			var numVisible = this.updateCollectorRows();
+			this.updateCollectorFills();
 			$.each(this.elements.outImprovementsTR, function () {
 				// the collector rows are owned by updateCollectors
 				if ($(this).hasClass("collector-row")) return;
@@ -947,11 +973,13 @@ define([
 			GameGlobals.uiFunctions.toggle("#header-out-improvements", numVisible > 0);
 		},
 
+		// live values only - anything that changes what is visible belongs in
+		// updateOutImprovementsList, which owns the #header-out-improvements count
 		updateOutImprovementsStatus: function () {
 			if (!this.playerLocationNodes.head) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 
-			this.updateCollectors();
+			this.updateCollectorFills();
 
 			let hasBeacon = improvements.getCount(improvementNames.beacon);
 			GameGlobals.uiFunctions.toggle("#out-action-dismantle-beacon", hasBeacon);

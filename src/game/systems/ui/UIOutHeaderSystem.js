@@ -190,15 +190,14 @@ define([
 				// the minimap pins to the bottom on the exploration tab, so its
 				// height is a layout metric too (see mobile.less)
 				let mapElement = document.getElementById("out-container-compass");
-				// the action bar's own height changes with the sector - scout
-				// leaving, a collector chip appearing - without resizing anything
-				// else, so it is a layout metric in its own right.
+				// The bar's height changes with the sector: scout leaves, a collector
+				// chip appears. Nothing else resizes, so it is a layout metric of
+				// its own.
 				//
-				// This also gives the shell a second layout pass whenever the bar
-				// resizes, which is a self-damping single bounce: updateLayout can
-				// change the bar's padding through out-map-hidden, but the next
-				// pass's toggleClass is then a no-op. Do not "optimise" the second
-				// pass away - see updateBottomChromeState.
+				// This also runs a second layout pass whenever the bar resizes.
+				// The bounce damps itself. updateLayout can change the bar's padding
+				// through out-map-hidden, but the next pass's toggleClass is a no-op.
+				// Do not "optimise" the second pass away - see updateBottomChromeState.
 				let barElement = document.getElementById("out-sector-bar");
 				if (headerElement) this.headerResizeObserver.observe(headerElement);
 				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
@@ -1154,10 +1153,14 @@ define([
 			}
 		},
 
-		// unlocking scouting shows the map panel, which changes the shell column's
-		// shape and the height the log pill has to clear - and nothing else reruns
-		// the layout at that moment
-		onFeatureUnlocked: function () {
+		// Unlocking scout shows the map panel and unlocking vision shows the scout
+		// button, so both change the shell column's shape and the height the log
+		// pill has to clear. Nothing else reruns the layout at that moment.
+		//
+		// Every other unlock leaves the column alone, and updateLayout is five
+		// placement passes, a measure and a queued re-measure.
+		onFeatureUnlocked: function (featureID) {
+			if (featureID !== "scout" && featureID !== "vision") return;
 			this.updateLayout();
 		},
 
@@ -1288,7 +1291,12 @@ define([
 			if (shouldDock === isDocked) return;
 
 			if (shouldDock) {
-				if (!this.sectorBarHome) this.sectorBarHome = $bar.parent()[0];
+				// a marker where it came from, so the desktop layout gets it back in
+				// its own place in the order rather than at the front
+				if (!this.sectorBarMarker) {
+					this.sectorBarMarker = document.createComment("out-sector-bar");
+					$bar.after(this.sectorBarMarker);
+				}
 				let $map = $("#out-container-compass");
 				// the map may already be docked from an earlier pass, in which case
 				// appending would put the bar after it
@@ -1297,8 +1305,8 @@ define([
 				} else {
 					$unit.append($bar);
 				}
-			} else if (this.sectorBarHome) {
-				$(this.sectorBarHome).prepend($bar);
+			} else if (this.sectorBarMarker) {
+				$(this.sectorBarMarker).before($bar);
 			}
 		},
 

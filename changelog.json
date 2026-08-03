@@ -1,6 +1,31 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m35",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Tooltips near the bottom of the page no longer open behind the action bar and the map"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Build heading no longer goes out of step with the bucket and trap rows"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Search heading no longer lingers over an empty box when leaving a scouted sector"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Offline play survives a version change instead of loading with no text"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m34",
             "requiredVersion": "0.6.1",
             "phase": "beta",

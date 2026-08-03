@@ -571,9 +571,17 @@ define(['ash',
 			},
 
 			// chrome pinned to the bottom of the screen: the main-action bar, and
-			// the minimap on the exploration tab
+			// the minimap on the exploration tab.
+			//
+			// The position test below finds only overlays. In the shell layout the
+			// bottom chrome is instead a static flex band at the end of #unit-main,
+			// so the test misses it and a callout low in the pane gets clipped by
+			// the pane's own overflow. UIOutHeaderSystem already measures that band
+			// for the log pill, so read its value rather than measuring it twice.
 			getPinnedBottomHeight: function () {
-				let height = 0;
+				let shellBand = parseFloat(getComputedStyle(document.documentElement)
+					.getPropertyValue("--l13-out-bottom-height"));
+				let height = isNaN(shellBand) ? 0 : shellBand;
 				$(".action-mirror, #out-container-compass").each(function () {
 					let $bar = $(this);
 					if ($bar.css("position") != "fixed") return;

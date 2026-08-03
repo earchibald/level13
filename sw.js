@@ -12,7 +12,7 @@
  * src/config.js urlArgs, and the ?v= query on the css links in index.html.
  */
 
-var CACHE_VERSION = "0.6.3.m34";
+var CACHE_VERSION = "0.6.3.m35";
 var STATIC_CACHE = "l13-static-" + CACHE_VERSION;
 var SHELL_CACHE = "l13-shell-" + CACHE_VERSION;
 var OFFLINE_URL = "offline.html";
@@ -114,8 +114,15 @@ function networkFirst(request) {
 	}).catch(function () {
 		return caches.match(request).then(function (cached) {
 			if (cached) return cached;
-			if (request.mode === "navigate") return caches.match(OFFLINE_URL);
-			return Response.error();
+			// strings.json carries the same ?v= stamp as the sources, and the cache
+			// keys on the whole url. So offline, one release after the copy on the
+			// device, the exact match misses and the game loads with no text at all.
+			// Ignore the stamp on this path only: stale strings beat none.
+			return caches.match(request, { ignoreSearch: true }).then(function (stale) {
+				if (stale) return stale;
+				if (request.mode === "navigate") return caches.match(OFFLINE_URL);
+				return Response.error();
+			});
 		});
 	});
 }

@@ -959,10 +959,11 @@ body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
 }
 
 // The map is the thing you check between every move, and it sat at the far end
-// of the tab. Pin it to the bottom of the screen instead. UIOutHeaderSystem
-// measures it, with the action bar, into --l13-out-bottom-height so the log
-// pill clears
-// it, and getPinnedBottomHeight keeps tooltips off it.
+// of the tab. Pin it to the bottom of the screen instead.
+//
+// UIOutHeaderSystem measures it, with the action bar, into
+// --l13-out-bottom-height. The log pill clears that height, and
+// getPinnedBottomHeight reads it to keep tooltips off both bands.
 body.layout-small.tab-switch-out #out-container-compass {
 	position: fixed;
 	left: 0;
@@ -1875,7 +1876,9 @@ body.layout-small #grid-switch-content {
 body.layout-small #unit-main > #out-container-compass {
 	position: static;
 	flex: 0 0 auto;
-	// it is the last thing in the column, so it needs no order of its own
+	// it keeps the `order: 2` set on the fixed rule above, which is what puts it
+	// last in this column - every other child of #unit-main is 0. Do not "clean
+	// that up" as dead once the panel is static here.
 }
 
 // The footer carries save and restart, and it sat after the scrolling page.
