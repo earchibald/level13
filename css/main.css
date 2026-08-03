@@ -5956,6 +5956,14 @@ body.sunlit {
   display: block;
   z-index: 7;
 }
+.callout-container.callout-visible > div.info-callout.callout-flipped,
+.callout-container.callout-visible > div.btn-callout.callout-flipped {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.callout-flipped > div.callout-arrow-up {
+  transform: rotate(180deg);
+}
 .callout-container.callout-visible > .info-callout-target-side + div.info-callout {
   display: flex;
   justify-content: center;
@@ -6373,6 +6381,13 @@ body.layout-small #mobile-header .stat-indicator > .label,
 body.layout-small #mobile-header .stats-value-container {
   display: block;
 }
+body.layout-small #mobile-header .stat-indicator,
+body.layout-small #mobile-header .res {
+  white-space: nowrap;
+}
+body.layout-small #mobile-header .stat-indicator > .label {
+  white-space: normal;
+}
 body.layout-small #mobile-header .stat-indicator > .label {
   font-size: 0.8rem;
   opacity: 0.75;
@@ -6428,10 +6443,14 @@ body.layout-small #mobile-header-explorers:has(> ul[data-visible="false"]) {
 body.layout-small #mobile-header .item {
   padding: 3px;
 }
-body.touch #mobile-header .item::after {
+body.touch #mobile-header .item .info-callout-target {
+  display: block;
+  position: relative;
+}
+body.touch #mobile-header .item .info-callout-target::after {
   content: "";
   position: absolute;
-  inset: -8px -4px;
+  inset: -8px -6px;
 }
 body.layout-small #mobile-header .notification-player {
   margin-top: 2px;

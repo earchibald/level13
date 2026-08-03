@@ -356,16 +356,16 @@ define(['ash',
 				$("body").addClass("callout-open");
 				// fire the same hooks hover fires so callout content and buttons refresh
 				if ($target) $target.trigger("mouseenter");
-				this.clampCalloutToViewport($container);
+				this.clampCalloutToViewport($container, $target);
 				GlobalSignals.elementToggledSignal.dispatch();
 			},
 
 			// callout cards anchor to their trigger element; near the screen edge
 			// the card would overflow the viewport, so shift it back inside
-			clampCalloutToViewport: function ($container) {
+			clampCalloutToViewport: function ($container, $target) {
 				let $callout = $container.children("div.info-callout, div.btn-callout").first();
 				if ($callout.length == 0) return;
-				$callout.css("margin-left", "");
+				$callout.css({ "margin-left": "", "margin-top": "" }).removeClass("callout-flipped");
 				let margin = 8;
 				let viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
 				let rect = $callout[0].getBoundingClientRect();
@@ -375,13 +375,64 @@ define(['ash',
 				// the left edge wins if the card is wider than the viewport
 				if (rect.left + shift < margin) shift = margin - rect.left;
 				if (shift != 0) $callout.css("margin-left", Math.round(shift) + "px");
+
+				this.clampCalloutVertically($callout, $target, margin);
+			},
+
+			// cards open below their trigger, so one near the bottom of a long
+			// list runs under the pinned action bar and off the screen. Flip it
+			// above the trigger when there is room, otherwise slide it up.
+			clampCalloutVertically: function ($callout, $target, margin) {
+				let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+				let bottomLimit = viewportHeight - this.getPinnedBottomHeight() - margin;
+				let topLimit = this.getPinnedTopHeight() + margin;
+
+				let rect = $callout[0].getBoundingClientRect();
+				if (rect.height == 0) return;
+				if (rect.bottom <= bottomLimit) return;
+
+				if ($target && $target.length > 0) {
+					let targetRect = $target[0].getBoundingClientRect();
+					let flippedTop = targetRect.top - rect.height - 6;
+					if (flippedTop >= topLimit) {
+						$callout.css("margin-top", Math.round(flippedTop - rect.top) + "px").addClass("callout-flipped");
+						return;
+					}
+				}
+
+				// no room either side: sit as low as fits without hiding the top
+				let up = Math.max(bottomLimit - rect.bottom, topLimit - rect.top);
+				if (up < 0) $callout.css("margin-top", Math.round(up) + "px");
+			},
+
+			getPinnedBottomHeight: function () {
+				let height = 0;
+				$(".action-mirror").each(function () {
+					let $bar = $(this);
+					if ($bar.css("position") != "fixed") return;
+					if (!$bar.is(":visible")) return;
+					height = Math.max(height, $bar.outerHeight());
+				});
+				return height;
+			},
+
+			getPinnedTopHeight: function () {
+				let height = 0;
+				$("#mobile-header, #grid-switch").each(function () {
+					let $el = $(this);
+					if ($el.css("position") != "fixed") return;
+					height = Math.max(height, $el[0].getBoundingClientRect().bottom);
+				});
+				return Math.max(0, height);
 			},
 
 			closeAllCallouts: function () {
 				// fire the hover-out hooks so systems clear highlight state
 				$(".callout-container.callout-visible").each(function () {
 					$(this).children(".info-callout-target").trigger("mouseleave");
-					$(this).children("div.info-callout, div.btn-callout").css("margin-left", "");
+					$(this).children("div.info-callout, div.btn-callout")
+						.css({ "margin-left": "", "margin-top": "" })
+						.removeClass("callout-flipped");
 				});
 				$(".callout-container.callout-visible").removeClass("callout-visible");
 				$("body").removeClass("callout-open");

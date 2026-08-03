@@ -29,6 +29,19 @@ body.sunlit {
 	z-index: 7; // above the fixed headers (z-index 5)
 }
 
+// a card that would run under the pinned action bar opens above its trigger
+// instead (see clampCalloutVertically); column-reverse moves the arrow to the
+// bottom and the rotation points it down, keeping the themed colour
+.callout-container.callout-visible > div.info-callout.callout-flipped,
+.callout-container.callout-visible > div.btn-callout.callout-flipped {
+	display: flex;
+	flex-direction: column-reverse;
+}
+
+.callout-flipped > div.callout-arrow-up {
+	transform: rotate(180deg);
+}
+
 .callout-container.callout-visible > .info-callout-target-side + div.info-callout {
 	display: flex;
 	justify-content: center;
@@ -643,6 +656,20 @@ body.layout-small #mobile-header .stats-value-container {
 	display: block;
 }
 
+// a fractional amount ("8.5" instead of "8") makes the value run wider than
+// the cell, and it broke at the bare " / " text node between the value and
+// its total, dropping the total onto its own row. The separator sits directly
+// in the indicator, so nowrap has to go there; the label is a block above it
+// and keeps its own wrapping.
+body.layout-small #mobile-header .stat-indicator,
+body.layout-small #mobile-header .res {
+	white-space: nowrap;
+}
+
+body.layout-small #mobile-header .stat-indicator > .label {
+	white-space: normal;
+}
+
 body.layout-small #mobile-header .stat-indicator > .label {
 	font-size: 0.8rem;
 	opacity: 0.75;
@@ -715,10 +742,21 @@ body.layout-small #mobile-header .item {
 	padding: 3px;
 }
 
-body.touch #mobile-header .item::after {
+// The tap handler is delegated from `.info-callout-target`, and on a perk or
+// status chip that target is only the 16px icon inside a 28px li. The halo
+// that widens it has to belong to the target itself: hung off the li it
+// covered the target instead, so every tap on a debuff resolved to the li and
+// no tooltip ever opened. (Resource chips were unaffected - their halo sits
+// on .res, which is inside the target.)
+body.touch #mobile-header .item .info-callout-target {
+	display: block;
+	position: relative;
+}
+
+body.touch #mobile-header .item .info-callout-target::after {
 	content: "";
 	position: absolute;
-	inset: -8px -4px;
+	inset: -8px -6px;
 }
 
 body.layout-small #mobile-header .notification-player {

@@ -1,12 +1,20 @@
 {
     "versions": [
         {
-            "version": "0.6.3.m7",
+            "version": "0.6.3.m8",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
             "released": "2026-08-02",
             "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix debuff and status tooltips never opening - the halo that widened their tap target was attached to the chip's list item, which covered the target itself and swallowed every tap"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: a tooltip that would run off the bottom of the screen, or under the pinned action bar, now opens above its button instead. Fractional resource amounts no longer break the value away from its total in the info bar."
+                },
                 {
                     "type": "UI",
                     "summary": "Mobile: the game column no longer sits 15px right of centre, so panels stop bleeding off the right edge. Tapping a debuff, perk or resource chip opens its tooltip in iOS Safari. The log button no longer stretches down the screen while pressed."
