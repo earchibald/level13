@@ -6972,40 +6972,19 @@ body.layout-small.log-drawer-open #log {
   }
   #out-improvements tr#out-improvements-collector-water,
   #out-improvements tr#out-improvements-collector-food {
-    display: grid !important;
-    grid-template-columns: 1fr 3.2em 3.6em;
-    grid-template-areas: "build  storage storage" "useall useone  improve";
+    display: flex !important;
     align-items: center;
     column-gap: 6px;
-    row-gap: 2px;
-    padding: 0;
-    margin: 0 0 22px 0;
+    padding: 3px 0;
+    margin: 0;
   }
-  #out-improvements-collector-water > td:nth-child(1),
-  #out-improvements-collector-food > td:nth-child(1) {
-    grid-area: build;
-  }
-  #out-improvements-collector-water > td:nth-child(2),
-  #out-improvements-collector-food > td:nth-child(2) {
-    grid-area: improve;
-  }
-  #out-improvements-collector-water > td:nth-child(3),
-  #out-improvements-collector-food > td:nth-child(3) {
-    grid-area: useall;
-  }
-  #out-improvements-collector-water > td:nth-child(4),
-  #out-improvements-collector-food > td:nth-child(4) {
-    grid-area: useone;
-  }
-  #out-improvements-collector-water > td.list-storage,
-  #out-improvements-collector-food > td.list-storage {
-    grid-area: storage;
-    text-align: right;
+  #out-improvements-collector-water > .collector-row-label,
+  #out-improvements-collector-food > .collector-row-label {
+    flex: 1 1 auto;
+    min-width: 0;
     white-space: nowrap;
-  }
-  #out-improvements-collector-water > td:nth-child(3) button,
-  #out-improvements-collector-food > td:nth-child(3) button {
-    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   #trade-caravans-incoming-container button {
     width: auto;
@@ -7224,6 +7203,45 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
     overflow: visible;
     flex: 0 0 auto;
   }
+}
+#out-sector-bar {
+  display: none;
+}
+#out-sector-bar.has-actions,
+#out-sector-bar.has-collectors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#out-sector-bar-actions,
+#out-sector-bar-collectors {
+  display: none;
+}
+#out-sector-bar.has-actions #out-sector-bar-actions,
+#out-sector-bar.has-collectors #out-sector-bar-collectors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.collector-chip {
+  display: none;
+}
+.collector-chip.is-built {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.collector-chip-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+.collector-chip-fill {
+  white-space: nowrap;
+  font-size: 0.85em;
 }
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],

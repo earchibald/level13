@@ -1553,65 +1553,30 @@ body.layout-small.log-drawer-open #log {
 		display: block;
 	}
 
-	// COLLECTORS (bucket, trap): build + improve + collect all + collect one +
-	// fill level never fit one phone row, and plain wrapping left the fill
-	// level orphaned on a line of its own under the build button, reading as
-	// if it belonged to nothing. Lay each collector out as a small card: the
-	// name and its fill level on top, the collect actions beneath.
-	// (the ancestor id keeps this above `#out-improvements tr { display: flex }`)
+	// COLLECTORS (bucket, trap): the collect actions and the fill level now live
+	// in the sector action bar, so the row is just the build button (before it is
+	// built) or a name and level (after), plus the upgrade arrow.
+	//
+	// !important because these rows are shown and hidden through jQuery, which
+	// writes an inline `display` that would otherwise beat this and drop the row
+	// to `block`, stranding the arrow on its own line. The guard at the end of
+	// the file keeps the hide working.
 	#out-improvements tr#out-improvements-collector-water,
 	#out-improvements tr#out-improvements-collector-food {
-		// !important for the same reason as the map panel: these rows are shown
-		// and hidden through jQuery, which writes an inline `display` that would
-		// otherwise beat this and drop the row back to the wrapping flex row -
-		// which is exactly the layout that stranded the fill level
-		display: grid !important;
-		// fixed action columns so "1" and the upgrade arrow line up between
-		// the bucket and the trap whatever their fill levels read
-		grid-template-columns: 1fr 3.2em 3.6em;
-		grid-template-areas:
-			"build  storage storage"
-			"useall useone  improve";
+		display: flex !important;
 		align-items: center;
 		column-gap: 6px;
-		// tight inside the card, loose between cards, so the two lines read as
-		// one collector rather than as four unrelated button rows
-		row-gap: 2px;
-		padding: 0;
-		margin: 0 0 22px 0;
+		padding: 3px 0;
+		margin: 0;
 	}
 
-	#out-improvements-collector-water > td:nth-child(1),
-	#out-improvements-collector-food > td:nth-child(1) {
-		grid-area: build;
-	}
-
-	#out-improvements-collector-water > td:nth-child(2),
-	#out-improvements-collector-food > td:nth-child(2) {
-		grid-area: improve;
-	}
-
-	#out-improvements-collector-water > td:nth-child(3),
-	#out-improvements-collector-food > td:nth-child(3) {
-		grid-area: useall;
-	}
-
-	#out-improvements-collector-water > td:nth-child(4),
-	#out-improvements-collector-food > td:nth-child(4) {
-		grid-area: useone;
-	}
-
-	#out-improvements-collector-water > td.list-storage,
-	#out-improvements-collector-food > td.list-storage {
-		grid-area: storage;
-		text-align: right;
+	#out-improvements-collector-water > .collector-row-label,
+	#out-improvements-collector-food > .collector-row-label {
+		flex: 1 1 auto;
+		min-width: 0;
 		white-space: nowrap;
-	}
-
-	// collect all is the action of the row: give it the spare width
-	#out-improvements-collector-water > td:nth-child(3) button,
-	#out-improvements-collector-food > td:nth-child(3) button {
-		width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	// incoming trader rows: content-width buttons (they have no .action
@@ -1956,6 +1921,58 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 		overflow: visible;
 		flex: 0 0 auto;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// SECTOR ACTION BAR
+//
+// The five controls a player uses on every sector visit: scavenge, scout,
+// refill water, and the two collectors' collect actions. Unprefixed, because
+// the bar looks the same on both layouts - only its pinned form below is
+// scoped to the small layout.
+//
+// Shown and hidden with classes rather than uiFunctions.toggle, so no inline
+// `display` is ever written to it and none of these rules needs !important.
+
+#out-sector-bar { display: none; }
+
+#out-sector-bar.has-actions,
+#out-sector-bar.has-collectors {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+#out-sector-bar-actions,
+#out-sector-bar-collectors { display: none; }
+
+#out-sector-bar.has-actions #out-sector-bar-actions,
+#out-sector-bar.has-collectors #out-sector-bar-collectors {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0;
+}
+
+.collector-chip { display: none; }
+
+.collector-chip.is-built {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.collector-chip-icon {
+	width: 16px;
+	height: 16px;
+	flex: 0 0 auto;
+}
+
+.collector-chip-fill {
+	white-space: nowrap;
+	font-size: 0.85em;
 }
 
 // ---------------------------------------------------------------------------
