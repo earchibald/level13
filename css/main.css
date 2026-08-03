@@ -6574,6 +6574,7 @@ body.layout-small.tab-switch-out #out-container-compass {
 }
 body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
   grid-area: map;
+  zoom: 0.72;
 }
 body.layout-small.tab-switch-out #out-container-compass > .infobox {
   grid-area: info;
@@ -6607,20 +6608,10 @@ body.layout-small.tab-switch-out #out-container-compass #out-actions-movement bu
   width: 100%;
   max-width: 150px;
 }
-@media screen and (min-width: 360px) and (max-width: 374px) {
-  body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
-    width: 36px;
-    min-width: 36px;
-  }
-}
-@media screen and (max-width: 359px) {
+@media screen and (max-width: 319px) {
   body.layout-small.tab-switch-out #out-container-compass {
     grid-template-columns: 1fr;
     grid-template-areas: "map" "info" "controls";
-  }
-  body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
-    width: 44px;
-    min-width: 44px;
   }
 }
 body.layout-small.tab-switch-out #grid-switch-content {

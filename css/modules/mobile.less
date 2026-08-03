@@ -943,8 +943,14 @@ body.layout-small.tab-switch-out #out-container-compass {
 	column-gap: 4px;
 }
 
+// The minimap is a fixed 226px block - the canvas has a hard 198px minimum, so
+// it cannot be made responsive from css. Scaled down it always leaves room for
+// the compass beside it, at every phone width, and the panel stops eating a
+// third of the screen. `zoom` and not `transform` because zoom scales layout
+// and hit testing together, so the map's own tap targets stay true.
 body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
 	grid-area: map;
+	zoom: 0.72;
 }
 
 body.layout-small.tab-switch-out #out-container-compass > .infobox {
@@ -992,31 +998,15 @@ body.layout-small.tab-switch-out #out-container-compass #out-actions-movement bu
 	max-width: 150px;
 }
 
-// 360-374px: the column beside the map is ~126px, so the grid needs 36px keys
-// (42px with their hit halo) to stay on the screen
-@media screen and (min-width: 360px) and (max-width: 374px) {
-	body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
-		width: 36px;
-		min-width: 36px;
-	}
-}
-
-// Below 360px the 226px map and a tappable 3x3 grid cannot share a row: the
-// column left over cannot hold three keys and their spacing. Stack them
-// instead - the panel is taller, but nothing runs off the screen and the
-// targets stay full size. 360px is the narrowest common phone and it fits.
-@media screen and (max-width: 359px) {
+// Below 320px there is not enough room for the map and the grid on one row
+// even scaled, so the panel stacks as a last resort.
+@media screen and (max-width: 319px) {
 	body.layout-small.tab-switch-out #out-container-compass {
 		grid-template-columns: 1fr;
 		grid-template-areas:
 			"map"
 			"info"
 			"controls";
-	}
-
-	body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
-		width: 44px;
-		min-width: 44px;
 	}
 }
 
