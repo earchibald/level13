@@ -1,6 +1,19 @@
 {
 	"versions": [
 		{
+			"version": "0.6.3.17",
+			"requiredVersion": "0.6.1",
+			"phase": "beta",
+			"final": true,
+			"released": "2026-08-02",
+			"changes": [
+				{
+					"type": "UI",
+					"summary": "Hover tooltips on the Map tab controls: style, mode and level selectors, download button, and the sector navigation icon buttons"
+				}
+			]
+		},
+		{
 			"version": "0.6.3.16",
 			"requiredVersion": "0.6.1",
 			"phase": "beta",
