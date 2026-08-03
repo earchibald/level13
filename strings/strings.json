@@ -2341,6 +2341,7 @@
             "use_temple_message": "Donated to the temple."
         },
         "main": {
+            "adventurer_button_label": "Adventurer",
             "location_header_in_default": "{name} (Level {level})",
             "location_header_in_onecamp": "{name}",
             "location_header_out": "Level {level}",

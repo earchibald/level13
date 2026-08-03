@@ -87,6 +87,7 @@ define([
 			this.elements = {};
 			this.elements.sectorHeader = $("#header-sector");
 			this.elements.description = $("#out-desc");
+			this.elements.descriptionStats = $("#out-desc-stats");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
 			this.elements.btnClearWorkshop = $("#out-action-clear-workshop");
 			this.elements.btnNap = $("#out-action-nap");
@@ -496,20 +497,17 @@ define([
 			description += "</p><p>";
 			description += this.getStatusDescription(hasVision, isScouted, hasEnemies, featuresComponent, passagesComponent, hasCampHere, hasCampOnLevel);
 			description += this.getMovementDescription(isScouted, passagesComponent, entity);
-			description += "</p><p>";
-			
-			if (isScouted) {
-				if (sectorStatus.graffiti) {
-					description += "There is a graffiti here: " + sectorStatus.graffiti;
-					description += "</p><p>";
-				} else if (featuresComponent.graffiti) {
-					description += "There is a graffiti here: " + featuresComponent.graffiti;
-					description += "</p><p>";
-				}
-			}
-			
-			description += this.getResourcesDescription(isScouted, featuresComponent, sectorStatus);
 			description += "</p>";
+
+			// The scavenged and resources-found figures used to close this text.
+			// They are a table of their own now - see getSectorStatsTable - so
+			// the prose ends with the graffiti if there is one, and the empty
+			// paragraph that used to trail every sector goes with them.
+			if (isScouted) {
+				let graffiti = sectorStatus.graffiti || featuresComponent.graffiti;
+				if (graffiti) description += "<p>There is a graffiti here: " + graffiti + "</p>";
+			}
+
 			return description;
 		},
 
@@ -678,26 +676,55 @@ define([
 			return description;
 		},
 
-		getResourcesDescription: function (isScouted, featuresComponent, statusComponent) {
-			if (!featuresComponent) return;
-			let description = "";
+		// What has been taken from this sector and what is left in it. This is
+		// the one part of the sector text that is numbers rather than prose, and
+		// it is what a player checks before deciding to scavenge again - so it
+		// gets a table of its own and, on a phone, the top of the tab.
+		getSectorStatsTable: function (isScouted, featuresComponent, statusComponent) {
+			let fields = this.getSectorStatsFields(isScouted, featuresComponent, statusComponent);
+			if (fields.length == 0) return "";
+
+			let table = "<table class='sector-stats'>";
+			for (let i = 0; i < fields.length; i++) {
+				table += this.getSectorStatsRow(fields[i]);
+			}
+			table += "</table>";
+
+			return table;
+		},
+
+		// The fields are localized as one "Label: value" string each, so the
+		// split happens here and the string file keeps one entry per field. A
+		// translation that drops the colon still shows - as one wide row rather
+		// than two cells.
+		getSectorStatsRow: function (field) {
+			let separator = field.indexOf(":");
+			if (separator < 0) return "<tr><td colspan='2'>" + field + "</td></tr>";
+
+			let label = field.substring(0, separator);
+			let value = field.substring(separator + 1).trim();
+
+			return "<tr><td class='sector-stats-label'>" + label + "</td><td class='sector-stats-value'>" + value + "</td></tr>";
+		},
+
+		getSectorStatsFields: function (isScouted, featuresComponent, statusComponent) {
+			if (!featuresComponent) return [];
+			let fields = [];
 
 			if (isScouted && GameGlobals.gameState.unlockedFeatures.scavenge) {
-				description += Text.t("ui.exploration.sector_status_scavenged_percent_field", UIConstants.roundValue(Math.floor(statusComponent.getScavengedPercent())));
-				description += "<br />";
+				fields.push(Text.t("ui.exploration.sector_status_scavenged_percent_field", UIConstants.roundValue(Math.floor(statusComponent.getScavengedPercent()))));
 			}
 
 			if (this.showInvestigate()) {
 				let investigatedPercent = statusComponent.getInvestigatedPercent();
 				let investigationComplete = investigatedPercent >= 100;
 				if (investigationComplete) {
-					description += Text.t("ui.exploration.sector_status_investigated_percent_field_completed", Math.floor(investigatedPercent));
+					fields.push(Text.t("ui.exploration.sector_status_investigated_percent_field_completed", Math.floor(investigatedPercent)));
 				} else {
-					description += Text.t("ui.exploration.sector_status_investigated_percent_field_default", Math.floor(investigatedPercent));
+					fields.push(Text.t("ui.exploration.sector_status_investigated_percent_field_default", Math.floor(investigatedPercent)));
 				}
-				description += "<br/>";
 			}
-			
+
 			let scavengedPercent = statusComponent.getScavengedPercent();
 			let discoveredResources = GameGlobals.sectorHelper.getLocationDiscoveredResources();
 			let knownResources = GameGlobals.sectorHelper.getLocationKnownResources();
@@ -714,20 +741,18 @@ define([
 			} else {
 				resourcesFoundValueText = Text.t("ui.common.value_unknown");
 			}
-			description += Text.t("ui.exploration.sector_status_resources_found_field", resourcesFoundValueText);
-			description += "<br />";
-			
+			fields.push(Text.t("ui.exploration.sector_status_resources_found_field", resourcesFoundValueText));
+
 			if (featuresComponent.itemsScavengeable.length > 0) {
 				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
 				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
 				let showIngredients = GameGlobals.sectorHelper.hasSectorVisibleIngredients();
 				if (showIngredients) {
-					description += Text.t("ui.exploration.sector_status_items_found_field", TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable));
-					description += "<br />";
+					fields.push(Text.t("ui.exploration.sector_status_items_found_field", TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable)));
 				}
 			}
 
-			return description;
+			return fields;
 		},
 
 		getMovementDescription: function (isScouted, passagesComponent, entity) {
@@ -1170,6 +1195,9 @@ define([
 				hasVision,
 				isScouted
 			));
+
+			// Scavenged / investigated / found, as a table of its own
+			this.elements.descriptionStats.html(this.getSectorStatsTable(isScouted, featuresComponent, sectorStatus));
 		},
 
 		updateLocationDetails: function () {

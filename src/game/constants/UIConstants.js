@@ -901,7 +901,7 @@ define(['ash',
 			}
 		},
 
-		updateResourceIndicatorCallout: function (id, name, changeSources) {
+		updateResourceIndicatorCallout: function (id, name, changeSources, value, storage) {
 			let content = "";
 			let total = 0;
 			var source;
@@ -923,9 +923,35 @@ define(['ash',
 				// showed. On a phone it is also the only place the rate appears,
 				// because the chips themselves have no room for it.
 				content = displayName + "<br/>" + content + "<hr/>" + this.getResourceNetChangeText(total);
+				let forecast = this.getResourceForecastText(total, value, storage);
+				if (forecast.length > 0) content += "<br/>" + forecast;
 			}
 
 			this.updateCalloutContent(id,  content);
+		},
+
+		// How long the current rate has left to run. The net rate answers "which
+		// way is this going"; the question a player in camp is actually asking is
+		// whether the store empties before they get back, or fills and starts
+		// throwing the surplus away. Callers with no amount and no cap to give -
+		// the tribe tab's per-camp rows - get nothing rather than a wrong number.
+		getResourceForecastText: function (total, value, storage) {
+			if (typeof value !== "number" || typeof storage !== "number") return "";
+			if (storage <= 0) return "";
+
+			if (total > 0) {
+				if (value >= storage) return "full";
+				return "full in " + this.getTimeToNum((storage - value) / total);
+			}
+
+			if (total < 0) {
+				// getTimeToNum takes the absolute value, so the negative rate is
+				// safe to divide by directly
+				if (value <= 0) return "<span class='warning'>empty</span>";
+				return "<span class='warning'>empty in " + this.getTimeToNum(value / total) + "</span>";
+			}
+
+			return "";
 		},
 
 		getResourceNetChangeText: function (total) {

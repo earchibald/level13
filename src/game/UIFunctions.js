@@ -210,6 +210,16 @@ define(['ash',
 					if (isOpening) GlobalSignals.markLogMessagesSeenSignal.dispatch();
 				});
 
+				// adventurer detail in camp (small layout only, see mobile css).
+				// The stats it reveals are already in the header markup and
+				// already current, so this only decides what is on screen.
+				$("#btn-adventurer").click(function () {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					let isOpen = !$("body").hasClass("adventurer-open");
+					$("body").toggleClass("adventurer-open", isOpen);
+					$(this).attr("aria-expanded", isOpen);
+				});
+
 				// keep popups centered within the VISIBLE viewport (the software
 				// keyboard shrinks it on phones)
 				if (window.visualViewport) {

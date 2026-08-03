@@ -409,7 +409,6 @@ define([
 			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
 			if (!this.currentLocationNodes.head) return;
 			
-			let isSmallLayout = this.elements.body.hasClass("layout-small");
 			var playerPosition = this.playerStatsNodes.head.entity.get(PositionComponent);
 			var isInCamp = playerPosition.inCamp;
 			var campComponent = this.currentLocationNodes.head.entity.get(CampComponent);
@@ -424,12 +423,17 @@ define([
 			var isResting = this.isResting();
 			var isHealing = busyComponent && busyComponent.getLastActionName() == "use_in_hospital";
 
-			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorVision, !isSmallLayout || !isInCamp);
+			// Vision and health are always in the markup and always current, and
+			// which of them the small layout puts on screen is a css decision:
+			// the camp header leaves both out and the adventurer button reveals
+			// them. Toggling them off here instead would empty the values behind
+			// the button as well, which is the one place they are wanted.
+			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorVision, true);
 			this.elements.valVision.text(shownVision + " / " + maxVision);
 			this.updateStatsCallout("Makes exploration safer and scavenging more effective", this.elements.statIndicatorVision, playerStatsNode.vision.accSources);
 			this.updateChangeIndicator(this.elements.changeIndicatorVision, maxVision - shownVision, shownVision < maxVision);
 
-			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorHealth, !isSmallLayout);
+			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorHealth, true);
 			this.elements.valHealth.text(Math.round(playerStatsNode.stamina.health));
 			this.updateHealthStatCallout("Determines maximum stamina", this.elements.statIndicatorHealth);
 			let healthAccumulation = playerStatsNode.stamina.healthAccumulation;
@@ -957,7 +961,9 @@ define([
 						now
 					);
 					if (showResourceAcc) {
-						UIConstants.updateResourceIndicatorCallout(elemIDCamp, name, showResourceAcc.getSources(name));
+						// the amount and the cap are what turn the net rate into a
+						// time to full or a time to empty
+						UIConstants.updateResourceIndicatorCallout(elemIDCamp, name, showResourceAcc.getSources(name), currentAmount, storageCap);
 					}
 					this.previousShownCampResAmount[name] = currentAmount;
 				} else {
@@ -1179,8 +1185,21 @@ define([
 			let isSmallLayout = this.elements.body.hasClass("layout-small");
 			let isInCamp = GameGlobals.playerHelper.isInCamp();
 			let isInCampTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.camp;
-			GameGlobals.uiFunctions.toggle("#mobile-header-status", isSmallLayout && !isInCamp);
+			// Perks and debuffs show wherever the player is. They were suppressed
+			// in camp to save a header row, but an empty list costs no cell (see
+			// the :empty rule in mobile.less), so the row only appears when there
+			// is something to say - and a debuff is exactly the thing that has to
+			// say it without being asked for.
+			GameGlobals.uiFunctions.toggle("#mobile-header-status", isSmallLayout);
 			GameGlobals.uiFunctions.toggle("#mobile-header-camp-res", isSmallLayout && isInCamp);
+
+			// The rest of the adventurer - health, vision, the gear numbers - is
+			// read deliberately rather than watched, so it sits behind a button.
+			// The button is a camp thing: outside, the header already shows what
+			// it can and the room is spent.
+			GameGlobals.uiFunctions.toggle("#mobile-header-adventurer", isSmallLayout && isInCamp);
+			if (!isSmallLayout || !isInCamp) this.elements.body.removeClass("adventurer-open");
+
 			this.updateChromeGrouping(isSmallLayout);
 
 			// The shell layout - chrome, scrolling pane and map panel as one flex
@@ -1189,13 +1208,27 @@ define([
 			// re-deriving the media query here, which would drift from it.
 			let isShell = isSmallLayout && this.isShellLayout();
 
+			// The map panel is the only band that can hold anything else, and it
+			// exists on one tab and only once scout is unlocked - every other tab
+			// hides it outright, and before scout the game hides it itself.
+			// Parking the footer or the log pill in it at any other time would
+			// take save, restart and the log off the screen for good.
+			//
+			// unlockedFeatures rather than a visibility test: the flag is set
+			// before featureUnlockedSignal fires, so this pass already reads the
+			// new value, while the panel itself is still hidden until
+			// UIOutLevelSystem gets its turn.
+			let isOutTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.out;
+			let hasOutPanel = isShell && isOutTab && GameGlobals.gameState.unlockedFeatures.scout === true;
+
 			$("#unit-main").css("padding-top", isShell ? "0px" : "15px");
 			$("#log-container").css("padding-top", isShell ? "25px" : "25px");
-			this.updateFooterPlacement(isShell);
 			this.updateLocationHeaderPlacement(isShell);
 			this.updateOutControlsPlacement(isShell);
 			this.updateSectorBarPlacement(isShell);
 			this.updateMapDockPlacement(isShell);
+			this.updateFooterPlacement(isShell, hasOutPanel);
+			this.updateLogButtonPlacement(hasOutPanel);
 
 			// nothing above needs a height: the column sorts that out. The floating
 			// log pill is the one thing still positioned against the bottom chrome,
@@ -1331,25 +1364,68 @@ define([
 			}
 		},
 
-		// With the document locked to the viewport, anything after the scrolling
-		// pane is off-screen for good - and the footer is where save, restart and
-		// the version live. Move it inside the pane so it scrolls with the page.
-		updateFooterPlacement: function (shouldDock) {
+		// The strip along the bottom of the map panel: the footer at the left, the
+		// log pill at the right. Built on demand, like the map column, and placed
+		// by grid area rather than by document order - updateOutControlsPlacement
+		// appends to the same panel and would otherwise decide what comes last.
+		getOutPanelMeta: function () {
+			let $panel = $("#out-container-compass");
+			if ($panel.length === 0) return null;
+
+			let $meta = $("#out-panel-meta");
+			if ($meta.length === 0) $meta = $("<div id='out-panel-meta'></div>");
+			if (!$meta.parent().is($panel)) $panel.append($meta);
+
+			return $meta;
+		},
+
+		// The footer is where save, restart and the version live, and it sat after
+		// the scrolling page. With the document locked that is off-screen for
+		// good, so it moves: into the map panel on the exploration tab, where it
+		// costs no scroll at all, and into the pane on every other tab, where
+		// there is no panel and it scrolls with the page.
+		updateFooterPlacement: function (isShell, dockInPanel) {
 			let $footer = $("#footer");
-			let $pane = $("#grid-switch-content");
-			if ($footer.length === 0 || $pane.length === 0) return;
+			if ($footer.length === 0) return;
 
-			let isDocked = $footer.parent().is($pane);
-			if (shouldDock === isDocked) return;
-
-			if (shouldDock) {
-				// remember where it came from, so the desktop layout gets it back
-				// in its own place rather than a guessed one
-				if (!this.footerHome) this.footerHome = $footer.parent()[0];
-				$pane.append($footer);
+			let $target = null;
+			if (dockInPanel) {
+				$target = this.getOutPanelMeta();
+			} else if (isShell) {
+				$target = $("#grid-switch-content");
 			} else if (this.footerHome) {
-				$(this.footerHome).append($footer);
+				$target = $(this.footerHome);
 			}
+
+			if (!$target || $target.length === 0) return;
+			if ($footer.parent().is($target)) return;
+
+			// remember where it came from, so the desktop layout gets it back
+			// in its own place rather than a guessed one
+			if (!this.footerHome) this.footerHome = $footer.parent()[0];
+			$target.append($footer);
+		},
+
+		// The log pill floated over the scrolling pane, which on a phone means it
+		// covers whatever is under it. On the exploration tab there is a panel to
+		// put it in, so it goes there and stops overlapping anything. Every other
+		// tab has no panel, so it floats as before.
+		updateLogButtonPlacement: function (dockInPanel) {
+			let $button = $("#btn-log-toggle");
+			if ($button.length === 0) return;
+
+			let $target = null;
+			if (dockInPanel) {
+				$target = this.getOutPanelMeta();
+			} else if (this.logButtonHome) {
+				$target = $(this.logButtonHome);
+			}
+
+			if (!$target || $target.length === 0) return;
+			if ($button.parent().is($target)) return;
+
+			if (!this.logButtonHome) this.logButtonHome = $button.parent()[0];
+			$target.append($button);
 		},
 
 		// The stats bar and the tab bar are one block of chrome, but they were two

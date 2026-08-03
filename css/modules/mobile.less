@@ -720,10 +720,44 @@ body.layout-small.location-outside #mobile-header-camp-res {
 	display: none !important;
 }
 
-// equipment stats are gear detail rather than a status the player watches;
-// they stay on the bag and party tabs instead of costing a pinned row
-body.layout-small #container-equipment-stats-mobile {
+// ADVENTURER DETAIL
+// Health, vision and the gear numbers are the adventurer's own state, read
+// deliberately rather than watched between actions, so the camp header leaves
+// them off and the adventurer button reveals them. They stay in the markup and
+// stay current - UIOutHeaderSystem no longer toggles them at all - so opening
+// the panel costs a class and nothing else.
+//
+// !important throughout: every one of these is toggled through jQuery
+// somewhere, which writes an inline display that would otherwise win.
+body.layout-small #container-equipment-stats-mobile,
+body.layout-small #mobile-header .info-callout-target-small:has(> .stat-indicator-health),
+body.layout-small.location-inside #mobile-header .info-callout-target-small:has(> .stat-indicator-vision) {
 	display: none !important;
+}
+
+body.layout-small.adventurer-open #mobile-header .info-callout-target-small:has(> .stat-indicator-health),
+body.layout-small.adventurer-open #mobile-header .info-callout-target-small:has(> .stat-indicator-vision) {
+	// a named cell, like every other stat in the header
+	display: block !important;
+}
+
+// the gear numbers read as one wide row rather than a column of cells - the
+// strip rule further down already says how, this only turns it on
+body.layout-small.adventurer-open #container-equipment-stats-mobile {
+	display: flex !important;
+}
+
+body.layout-small.adventurer-open #mobile-header #btn-adventurer {
+	text-decoration: underline;
+}
+
+// a cell like any other: the label is the button
+body.layout-small #mobile-header #btn-adventurer {
+	display: block;
+	width: 100%;
+	margin: 0;
+	padding: 3px 4px;
+	background: var(--l13-mobile-bg);
 }
 
 // a cell: the label sits over its value, both centred. Two lines per cell
@@ -776,12 +810,13 @@ body.layout-small #mobile-header > div > .notification-player {
 	box-sizing: border-box;
 }
 
-// Outside, the perk and status icons had a full-width strip to themselves and
-// the bag cell below them left its neighbour cell empty - two rows of pinned
-// chrome for one row of content. Let the strip take that empty cell instead:
-// it is the last thing before the bag in the markup, so auto-placement puts
-// the two side by side. Every row saved here is a row the player can read in.
-body.layout-small.location-outside #mobile-header-status > .itemlist {
+// The perk and status icons had a full-width strip to themselves, and whatever
+// followed left its neighbour cells empty - two rows of pinned chrome for one
+// row of content. Let the strip take those cells instead: it is the last thing
+// before the bag outside and before the adventurer button in camp, so
+// auto-placement puts them side by side either way. Every row saved here is a
+// row the player can read in.
+body.layout-small #mobile-header-status > .itemlist {
 	grid-column: auto;
 }
 
@@ -918,10 +953,30 @@ body.layout-small .action-mirror {
 	box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
 }
 
-// The exploration tab leads with the minimap and sector description, which
-// carry no controls at all: on a phone that is a screenful of reading before
-// the compass and scavenge, the two most-used controls in the game. Put the
-// actions first, then the description, then the map.
+// ...and on embark the page's own copy of the button goes with it. The bar is
+// on screen the whole time, so the second "Go" is one more thing to scroll
+// past and one more thing to mis-tap. Its warning stays: that belongs with the
+// packing list it is about, not with the button.
+//
+// min-height and not a plain rule: the bar goes static below 480px tall (see
+// the landscape block further down), and where it is static the copy at the
+// end of the content is a real convenience again. The two thresholds are one
+// decision - move both together.
+//
+// !important because createButtons wraps the button in a container and the
+// game writes an inline display on the pair.
+@media screen and (min-height: 481px) {
+	body.layout-small #in-action-leave,
+	body.layout-small .container-btn-action:has(> #in-action-leave) {
+		display: none !important;
+	}
+}
+
+// The reading order of the exploration tab. Scavenge, scout, the collectors
+// and the compass are all in the docked bands at the bottom of the screen now,
+// so the pane no longer has to lead with controls to keep them reachable - it
+// can lead with what the player is reading it for. Level, then the figures,
+// then where you are, then what else you can do here.
 body.layout-small.tab-switch-out #grid-switch-content {
 	display: flex;
 	flex-direction: column;
@@ -942,20 +997,76 @@ body.layout-small.tab-switch-out #grid-switch-content > * {
 	flex-shrink: 0;
 }
 
-body.layout-small.tab-switch-out #container-tab-two-out-actions {
-	order: 1;
-}
-
 body.layout-small.tab-switch-out #container-tab-two-out {
-	order: 2;
+	order: 1;
 	// a .tabcontainer, so setTab shows it through jQuery on every tab change
 	// and an inline `display` would beat this
 	display: flex !important;
 	flex-direction: column;
 }
 
+body.layout-small.tab-switch-out #container-tab-two-out-actions {
+	order: 2;
+}
+
 body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
 	order: 1;
+	// so the figures can be ordered ahead of the header they used to follow
+	display: flex;
+	flex-direction: column;
+}
+
+// The figures come before the prose: what has been taken from this sector and
+// what is left is what a player checks before scavenging it again, and it was
+// at the far end of a paragraph they had to scroll through to reach.
+body.layout-small.tab-switch-out #out-desc-stats {
+	order: 1;
+	margin-bottom: 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--l13-mobile-border);
+}
+
+// an unscouted sector has no figures, and a rule of its own
+body.layout-small.tab-switch-out #out-desc-stats:empty {
+	display: none;
+}
+
+body.layout-small.tab-switch-out #header-sector {
+	order: 2;
+}
+
+body.layout-small.tab-switch-out #out-desc {
+	order: 3;
+}
+
+// The figures themselves, on every layout: two columns, so the values line up
+// down one edge instead of starting wherever the label happened to end. That
+// alignment is the reason they are a table and no longer a run of lines.
+table.sector-stats {
+	margin: 4px 0;
+	border-collapse: collapse;
+}
+
+table.sector-stats td {
+	padding: 1px 0;
+	vertical-align: top;
+}
+
+table.sector-stats .sector-stats-label {
+	padding-right: 12px;
+	white-space: nowrap;
+	opacity: 0.75;
+}
+
+// full width with a shrink-to-fit label column: the values start in one place
+// however long the widest label is, and long lists still get the rest of the
+// row to wrap into
+body.layout-small #out-desc-stats table.sector-stats {
+	width: 100%;
+}
+
+body.layout-small #out-desc-stats .sector-stats-label {
+	width: 1%;
 }
 
 // The map is the thing you check between every move, and it sat at the far end
@@ -981,9 +1092,12 @@ body.layout-small.tab-switch-out #out-container-compass {
 	border-top: 3px solid var(--l13-mobile-divider);
 	box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
 
-	// A plain non-wrapping row: the map column that UIOutHeaderSystem builds,
-	// then the controls it moves in. nowrap is the point - the controls can
-	// never end up underneath the map, at any width, whatever the map measures.
+	// Two named rows: the map column that UIOutHeaderSystem builds beside the
+	// controls it moves in, then the meta strip under both. Grid and not a flex
+	// row because every child is assigned its cell outright - the controls can
+	// never end up underneath the map, at any width, whatever the map measures,
+	// and document order decides nothing. That last part matters: two different
+	// methods append to this panel, so whoever runs last would otherwise win.
 	//
 	// !important because the panel is shown and hidden through jQuery, which
 	// writes an inline `display` when it restores an element - and an inline
@@ -992,25 +1106,27 @@ body.layout-small.tab-switch-out #out-container-compass {
 	// what a phone was showing: pinned, bordered, and stacked. An important
 	// author declaration outranks a normal inline style, so it cannot happen
 	// again whatever writes the attribute.
-	display: flex !important;
-	flex-wrap: nowrap;
-	// a last-resort bound: if the row ever fails again the panel scrolls its
-	// own content instead of swallowing the screen and leaving nothing to read
+	display: grid !important;
+	grid-template-columns: 126px minmax(0, 1fr);
+	grid-template-areas:
+		"map controls"
+		"meta meta";
+	// a last-resort bound: if the panel ever fails again it scrolls its own
+	// content instead of swallowing the screen and leaving nothing to read
 	max-height: 42vh;
 	overflow-y: auto;
 	align-items: center;
-	justify-content: center;
 	gap: 6px;
 	box-sizing: border-box;
 }
 
-// Both columns are sized outright rather than from their content. `auto` had
-// to be resolved from a map that is scaled with `zoom`, and an engine is free
-// to measure that either before or after the scale - which is the one thing
-// that could still push the controls out of the row. 126px is the 226px map
-// at 0.56 plus a little slack.
+// The map column is sized outright rather than from its content. `auto` had to
+// be resolved from a map that is scaled with `zoom`, and an engine is free to
+// measure that either before or after the scale - which is the one thing that
+// could still push the controls out of the row. 126px is the 226px map at 0.56
+// plus a little slack.
 body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
-	flex: 0 0 126px;
+	grid-area: map;
 	width: 126px;
 	min-width: 126px;
 	max-width: 126px;
@@ -1018,9 +1134,80 @@ body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
 }
 
 body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
-	flex: 1 1 0;
+	grid-area: controls;
+	width: 100%;
 	min-width: 0;
 	box-sizing: border-box;
+}
+
+// The bottom row of the panel: version, save and restart at one end, the log
+// pill at the other. Both used to float over the scrolling pane, which on a
+// phone means they cover whatever is under them; here they are out of the
+// scroll entirely and never move.
+body.layout-small.tab-switch-out #out-container-compass > #out-panel-meta {
+	grid-area: meta;
+	width: 100%;
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	// the unread badge hangs 7px off the top corner of the pill, and the panel
+	// clips (overflow-y: auto computes overflow-x to auto as well). This, plus
+	// the grid gap above, is the room it needs.
+	padding-top: 6px;
+	border-top: 1px solid var(--l13-mobile-border);
+	box-sizing: border-box;
+}
+
+// An empty strip is still a strip: it would leave its top border in the panel
+// as a divider under nothing. It empties whenever the two occupants go back
+// where they came from - landscape, and the out tab before scout is unlocked.
+//
+// The first selector exists only to outrank the panel rule above, which is
+// more specific than the layout-small one and would otherwise keep the flex.
+body.layout-small.tab-switch-out #out-container-compass > #out-panel-meta:empty,
+body.layout-small #out-panel-meta:empty {
+	display: none;
+}
+
+body.layout-small #out-panel-meta > #footer {
+	flex: 1 1 auto;
+	min-width: 0;
+	width: auto;
+	height: auto;
+	margin: 0;
+	// The 84px reserved for the floating pill goes: it is a sibling in this row
+	// now, so there is nothing to reserve for. !important because #footer is a
+	// gridism .unit, and gridism pads the first unit in a grid 15px on the left
+	// with !important of its own - the same fight #unit-main has above.
+	padding: 0 !important;
+	gap: 6px;
+}
+
+// The message slot grows to fill the footer, which at this width pushed save
+// and restart onto a second row and made the whole panel taller. Give it a
+// zero basis instead: it takes what is left over rather than claiming it, so
+// the version and the buttons share one row, and a message that does arrive
+// truncates rather than reflowing the panel under the player's thumb.
+body.layout-small #out-panel-meta > #footer > #game-msg {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+body.layout-small #out-panel-meta > #btn-log-toggle {
+	// out of the fixed layer and into the row
+	position: relative;
+	right: auto;
+	bottom: auto;
+	flex: 0 0 auto;
+	// the badge needs the same room on the right as the strip gives it above
+	margin: 0 8px 0 0;
+	min-height: 32px;
+	padding: 4px 12px;
 }
 
 // The minimap is a fixed 226px block - the canvas has a hard 198px minimum, so
@@ -1123,6 +1310,9 @@ body.layout-small.tab-switch-out #grid-switch-content {
 	padding-bottom: 8px;
 }
 
+// Before scout is unlocked there is no map panel, so the pill has nowhere to
+// dock and floats over the pane as it does on every other tab. It still has to
+// clear the action bar, which is the whole of the bottom chrome at that point.
 body.layout-small.tab-switch-out #btn-log-toggle {
 	bottom: ~"calc(var(--l13-out-bottom-height, 300px) + 12px)";
 }

@@ -1,6 +1,35 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m36",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Camp resource tooltips say how long until the store is full or empty"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Perks and debuffs show in camp again, and an Adventurer button reveals health, vision and gear"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The exploration tab leads with the sector figures as a table, then the description, then the actions"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The version bar and the log button moved into the map panel, out of the scrolling page"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The embark page no longer repeats its Go button at the end of the packing list"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m35",
             "requiredVersion": "0.6.1",
             "phase": "beta",
