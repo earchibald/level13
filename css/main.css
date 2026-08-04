@@ -7554,7 +7554,7 @@ body.layout-small #grid-switch-content > #footer {
   width: 100%;
   max-width: 100%;
   margin: 12px 0 0 0;
-  padding: 10px 4px calc(10px + env(safe-area-inset-bottom)) 4px;
+  padding: 10px 84px calc(10px + env(safe-area-inset-bottom)) 4px !important;
   box-sizing: border-box;
   order: 99;
 }

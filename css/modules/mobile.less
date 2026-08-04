@@ -2557,11 +2557,22 @@ body.layout-small #unit-main > .action-mirror {
 // The footer carries save and restart, and it sat after the scrolling page.
 // With the document locked it would be off-screen for good, so
 // UIOutHeaderSystem moves it inside the pane, where it scrolls with the rest.
+//
+// The 84px on the right keeps the floating log pill off "save". The reserve
+// is set further up as well, and never reached the footer at phone widths:
+// gridism zeroes the side padding of a .unit inside a .grid inside a .unit
+// with an !important of its own below 568px, and the footer's ancestry is
+// exactly that. So this carries !important too - the same fight #unit-main
+// and the banner already have with the same stylesheet.
+//
+// It is also the only place the reserve is needed. The pill is fixed exactly
+// when the footer is here; on the exploration tab both move into
+// #out-panel-meta and share a row instead.
 body.layout-small #grid-switch-content > #footer {
 	width: 100%;
 	max-width: 100%;
 	margin: 12px 0 0 0;
-	padding: 10px 4px ~"calc(10px + env(safe-area-inset-bottom))" 4px;
+	padding: 10px 84px ~"calc(10px + env(safe-area-inset-bottom))" 4px !important;
 	box-sizing: border-box;
 	// the exploration pane is a flex column whose sections are ordered, and an
 	// unordered child sorts to the front - the footer opened the tab
