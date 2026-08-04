@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m40",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The tribe tab's camp overview is a card per camp on a phone instead of a twelve-column table, and none of its columns are dropped any more"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m39",
             "requiredVersion": "0.6.1",
             "phase": "beta",

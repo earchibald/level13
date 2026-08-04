@@ -1928,20 +1928,155 @@ body.layout-small.log-drawer-open #log {
 	}
 }
 
-body.layout-small #camp-overview tr.hide-in-small-layout {
-	display: table-row;
-	visibility: visible;
-}
+// ---------------------------------------------------------------------------
+// CAMP OVERVIEW (tribe tab)
+//
+// Twelve columns of a camp's state: level, name, population, robots,
+// reputation, raid and disease risk, storage, what it produces, what it earns,
+// a notification bubble and a way to travel there. As a table that is far wider
+// than a phone, and the desktop layout drops most of it with
+// .hide-in-small-layout - which leaves a phone with a name and a Go button.
+//
+// So keep every column and stop it being a table: each row becomes a card of
+// labelled cells, three to a line, the way the stats header already reads.
 
-body.layout-small #camp-overview th.hide-in-small-layout,
 body.layout-small #camp-overview td.hide-in-small-layout {
-	display: table-cell;
 	visibility: visible;
 }
 
 body.layout-small #camp-overview span.hide-in-small-layout {
 	display: inline-block;
 	visibility: visible;
+}
+
+// the column headings cannot line up with cards, and each cell carries its own
+// label below instead
+body.layout-small #camp-overview tr#camp-overview-header {
+	display: none;
+}
+
+body.layout-small #camp-overview,
+body.layout-small #camp-overview tbody {
+	display: block;
+	width: 100%;
+}
+
+body.layout-small #camp-overview tr.camp-overview-camp {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	align-items: center;
+	gap: 3px 6px;
+	padding: 8px 0;
+	// one card per camp, and the eye needs to know where each one ends
+	border-top: 1px solid var(--l13-mobile-border);
+}
+
+body.layout-small #camp-overview tr.camp-overview-camp:first-of-type {
+	border-top: none;
+}
+
+body.layout-small #camp-overview td {
+	display: block;
+	padding: 0;
+	// the desktop table right-aligns its numbers against a column edge that no
+	// longer exists
+	text-align: left;
+}
+
+// The top line: which camp this is, and whether it wants attention. Placed by
+// row and column rather than by document order - the bubble is the last cell in
+// the markup and belongs beside the name.
+body.layout-small #camp-overview .camp-overview-level {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+body.layout-small #camp-overview .camp-overview-name {
+	grid-column: 2;
+	grid-row: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+body.layout-small #camp-overview .camp-overview-camp-bubble {
+	grid-column: 3;
+	grid-row: 1;
+	justify-self: end;
+}
+
+// then the six numbers fill the next two lines, three to a line, in the order
+// the markup already has them
+body.layout-small #camp-overview .camp-overview-population::before { content: "pop "; }
+body.layout-small #camp-overview .camp-overview-robots::before { content: "robots "; }
+body.layout-small #camp-overview .camp-overview-reputation::before { content: "rep "; }
+body.layout-small #camp-overview .camp-overview-raid::before { content: "raid "; }
+body.layout-small #camp-overview .camp-overview-disease::before { content: "disease "; }
+body.layout-small #camp-overview .camp-overview-storage::before { content: "storage "; }
+
+body.layout-small #camp-overview .camp-overview-population::before,
+body.layout-small #camp-overview .camp-overview-robots::before,
+body.layout-small #camp-overview .camp-overview-reputation::before,
+body.layout-small #camp-overview .camp-overview-raid::before,
+body.layout-small #camp-overview .camp-overview-disease::before,
+body.layout-small #camp-overview .camp-overview-storage::before {
+	font-size: 0.8rem;
+	opacity: 0.75;
+}
+
+// what it makes and what it earns are strips, not cells: a row of chips that
+// wraps, like the resource strip in the header
+body.layout-small #camp-overview .camp-overview-production,
+body.layout-small #camp-overview .camp-overview-stats {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 2px 6px;
+}
+
+body.layout-small #camp-overview .camp-overview-production {
+	grid-column: ~"1 / -1";
+}
+
+// The three earnings icons need a third of the card at most, so the way there
+// shares their line rather than costing the card another 40px of its own. With
+// fifteen camps on the list that is most of a screen.
+body.layout-small #camp-overview .camp-overview-stats {
+	grid-column: ~"1 / 3";
+}
+
+body.layout-small #camp-overview .camp-overview-btn {
+	grid-column: 3;
+	justify-self: end;
+}
+
+body.layout-small #camp-overview .camp-overview-btn button {
+	width: auto;
+	min-width: 5em;
+}
+
+// The card-row touch rule further up excludes .action-move, because that class
+// belongs to the 55px compass buttons. This Go carries it too and is not one of
+// them, so it gets the same 40px visual and 44px hit halo on its own.
+body.touch #camp-overview .camp-overview-btn button.action {
+	min-height: 40px;
+}
+
+body.touch #camp-overview .camp-overview-btn button.action::after {
+	content: "";
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	left: 0;
+	right: 0;
+}
+
+// the level 14 divider spans a table that is no longer a table
+body.layout-small #camp-overview tr.camp-overview-special-row,
+body.layout-small #camp-overview td.camp-overview-lvl14 {
+	display: block;
+	width: 100%;
 }
 
 // ---------------------------------------------------------------------------
