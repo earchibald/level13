@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m48" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m48" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m48" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m50" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m50" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m50" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -628,6 +628,10 @@
 									<p class="meta text-key" id="mainmap-sector-details-empty-text-ascii" data-text-key="ui.map.sector_details_empty_info_ascii"></p>
 								</div>
 								<div id="mainmap-sector-details-content">
+									<!-- on a phone this block is a panel over the map rather than a
+									     section under it, so it needs a way out; on the desktop layout
+									     it is in the flow and the css hides this -->
+									<button id="btn-mainmap-sector-details-close" class="context btn-glyph" aria-label="Close sector details">&times;</button>
 									<h3><span id="mainmap-sector-details-name">Sector</span> <span id="mainmap-sector-details-pos"/></h3>
 									<table class="spacious full-width">
 										<tr><td class="textwidth text-key" data-text-key="ui.map.sector_detail_district_label"></td><td><span id="mainmap-sector-details-district"></span></td></tr>

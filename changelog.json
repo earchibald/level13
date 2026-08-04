@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m50",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The map tab gives the whole screen to the map: no level banner, no stats block, tabs at the top"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Sector details are a panel over the map that closes again, instead of a wall of text under it"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m48",
             "requiredVersion": "0.6.1",
             "phase": "beta",

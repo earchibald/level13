@@ -133,6 +133,7 @@ define([
 			$("#btn-mainmap-sector-details-investigate").click($.proxy(this.selectInvestigateSector, this));
 			
 			$("#btn-mainmap-sector-path").click($.proxy(this.showSectorPath, this));
+			$("#btn-mainmap-sector-details-close").click($.proxy(this.deselectSector, this));
 
 			$("#btn-mainmap-zoom-in").click($.proxy(function () {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
@@ -295,6 +296,15 @@ define([
 		selectSector: function (level, x, y) {
 			this.selectedSector = GameGlobals.levelHelper.getSectorByPosition(level, x, y);
 			GameGlobals.uiMapHelper.setSelectedSector(this.map, this.selectedSector);
+			this.updateSector();
+		},
+
+		// Drops the selection, which is what hides the details - updateSector
+		// toggles the content block on whether there is a selected sector. Same
+		// two steps selectLevel takes, so the map redraws without its highlight.
+		deselectSector: function () {
+			this.selectedSector = null;
+			this.updateMap();
 			this.updateSector();
 		},
 		
