@@ -1240,17 +1240,25 @@ define(['ash',
 
 			scrollToTabTop: function () {
 				let element = $(document.getElementById("grid-location-header"));
-				if (element.length == 0) return;
 
 				// on a phone the document is locked and the tab content is its
 				// own scroller (see APP SHELL in mobile.less), so scrolling the
 				// window would do nothing at all
 				let $pane = $("#grid-switch-content");
 				if ($pane.length > 0 && $pane.css("overflow-y") == "auto") {
-					let offset = element.offset().top - $pane.offset().top;
+					// The title is chrome in the shell layout: it is above the
+					// pane and never scrolls, so the top of the pane is the whole
+					// answer. Measuring to it from in here would read a negative
+					// offset on every call and scroll past the top.
+					let isInPane = element.length > 0 && $.contains($pane[0], element[0]);
+					let offset = isInPane
+						? element.offset().top - $pane.offset().top
+						: -$pane.scrollTop();
 					if (offset < 0) $pane.animate({ scrollTop: $pane.scrollTop() + offset }, 250);
 					return;
 				}
+
+				if (element.length == 0) return;
 
 				let elementTop = element.offset().top;
 			    let offset = elementTop - $(window).scrollTop();

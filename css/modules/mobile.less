@@ -1394,7 +1394,53 @@ body.layout-small.tab-switch-projects #btn-log-toggle {
 	}
 }
 
-// the location row sits directly under the fixed header; keep it slim
+// ---------------------------------------------------------------------------
+// LOCATION TITLE
+// Which level you are on does not change while you read, so it is chrome now
+// rather than the first thing in the scroll - UIOutHeaderSystem docks it at the
+// top of #mobile-chrome, above the stats. It has to pay for the band it holds:
+// the title comes down from the 22px heading scale to body size and the icon
+// comes down to match, which is about half the row the desktop layout takes.
+
+body.layout-small #mobile-chrome > #grid-location {
+	margin: 0;
+	background: var(--l13-mobile-bg);
+}
+
+// gridism pads the first .unit in a .grid 15px on the left with !important of
+// its own, and #grid-location-header is that unit
+body.layout-small #mobile-chrome #grid-location-header {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 3px 10px !important;
+}
+
+body.layout-small #mobile-chrome #grid-location-header h1 {
+	font-size: 1rem;
+	line-height: 1.2;
+	margin: 0;
+	min-width: 0;
+	// a long camp name must not push the icon off its own row
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+body.layout-small #mobile-chrome #level-icon {
+	width: 20px;
+	height: 20px;
+	margin: 0;
+}
+
+// the icon's callout is placed from the width of its target, so the wrapper
+// has to stay the width of the icon rather than stretching to the row
+body.layout-small #mobile-chrome #grid-location-header > .callout-container {
+	flex: 0 0 auto;
+}
+
+// where the title is still in the pane - the short-viewport layout, which
+// keeps the ordinary document scroll - it just sits close to what is above it
 body.layout-small #grid-location-header {
 	padding-top: 2px;
 }
@@ -1484,10 +1530,18 @@ body.layout-small .sticky-footer {
 // style is black-translucent, so the game paints the whole screen and owns the
 // spacing. UIFunctions puts the .standalone class on body.
 
-// on notched phones the inset covers the status bar; on flat ones it is 0
-// while a 20px status bar still sits on top of the header
-body.layout-small.standalone #mobile-header {
-	padding-top: ~"max(20px, calc(2px + env(safe-area-inset-top)))";
+// On the chrome and not on #mobile-header: the level title is the first thing
+// in the chrome now, so padding on the stats grid would leave the title above
+// the status bar clearance rather than below it.
+//
+// The inset is the height of the status bar, and that is the whole of what the
+// chrome needs to clear it. There used to be a 20px floor under this, for a
+// flat phone whose status bar overlays the page while reporting no inset. But
+// where iOS lays the web view out BELOW the status bar rather than under it,
+// the inset reads 0 and there is nothing to clear - so the floor was just an
+// empty band of chrome above the stats, on every screen, in camp and outside.
+body.layout-small.standalone #mobile-chrome {
+	padding-top: ~"env(safe-area-inset-top)";
 }
 
 // no rubber-band bounce revealing white behind the page (body propagates to
@@ -1666,19 +1720,40 @@ body.layout-small.log-drawer-open #log {
 // TABLES AND ACTION ROWS AT PHONE WIDTHS
 
 @media screen and (max-width: 568px) {
-	// action buttons size to content instead of fixed desktop widths;
-	// tighter padding keeps three-button rows on one line
-	button.action {
+	// Action buttons size to their label instead of the fixed desktop widths,
+	// tighter padding keeps three-button rows on one line, and a label that
+	// still will not fit takes a second line rather than running out of the
+	// button.
+	//
+	// body.layout-small is not decoration here. main.less imports every themed
+	// module inside `body.dark` and `body.sunlit`, so the rules this overrides
+	// are emitted as `body.dark button` and `body.dark button.action` - and a
+	// bare `button.action` loses to both on specificity. This whole block did
+	// nothing at all until 0.6.3.m39: every action button stayed 95pt wide and
+	// any label longer than that spilled out of its right-hand edge, which is
+	// what "examine settlement" does. Prefix anything in here that overrides a
+	// themed rule, or it will not land.
+	// No max-width, on purpose. Every box between the button and the actionbox
+	// is a shrink-to-fit inline-block, so a percentage here resolves against a
+	// box the button itself sized - circular, and the browser settles it at
+	// min-content. That wrapped every two-word label that had a whole row to
+	// spare: "get up" came out 77px wide on two lines. Shrink-to-fit already
+	// clamps to the width the actionbox offers, so a label that genuinely does
+	// not fit wraps, and one that does stays on its line.
+	body.layout-small button.action {
 		width: auto;
 		min-width: 70px;
-		max-width: 100%;
 		padding: 8px 10px;
+		white-space: normal;
+		line-height: 1.15;
+		// only reachable by a label with no spaces in it, which no spot name
+		// has - but an unbreakable word is the one thing wrapping cannot save
+		overflow-wrap: break-word;
 	}
 
-	button.btn-wide,
-	button.btn-x-wide {
+	body.layout-small button.btn-wide,
+	body.layout-small button.btn-x-wide {
 		width: auto;
-		max-width: 100%;
 	}
 
 	// card-row action buttons: 40px visual, 44px hit via the halo; row
@@ -2150,7 +2225,8 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 #out-sector-bar { display: none; }
 
 #out-sector-bar.has-actions,
-#out-sector-bar.has-collectors {
+#out-sector-bar.has-collectors,
+#out-sector-bar.has-finds {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
@@ -2167,6 +2243,28 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 	justify-content: center;
 	gap: 6px;
 	margin: 0;
+}
+
+// The Search box as a row of the bar (see updateOutActionsPlacement): examine,
+// investigate, scavenge the heap, rest, wait - whichever few of them apply to
+// where the player is standing.
+//
+// !important on both states, unlike the bar's own rows. This box exists on the
+// desktop layout too, so the game keeps toggling it with an inline display of
+// its own; has-finds is set from the same count, and has to outrank it either
+// way round.
+#out-sector-bar #out-actions {
+	display: none !important;
+}
+
+#out-sector-bar.has-finds #out-actions {
+	display: flex !important;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
 }
 
 .collector-chip { display: none; }
@@ -2247,7 +2345,8 @@ body.layout-small #unit-main.out-map-hidden > #out-sector-bar {
 // BEFORE the panel - if the two ever disagree the column still looks right
 // and this rule silently stops matching, leaving a double border at the seam.
 body.layout-small.tab-switch-out #out-sector-bar.has-actions + #out-container-compass,
-body.layout-small.tab-switch-out #out-sector-bar.has-collectors + #out-container-compass {
+body.layout-small.tab-switch-out #out-sector-bar.has-collectors + #out-container-compass,
+body.layout-small.tab-switch-out #out-sector-bar.has-finds + #out-container-compass {
 	border-top: none;
 	box-shadow: none;
 }

@@ -1,7 +1,12 @@
 
 var versions;
 
-$.getJSON('changelog.json', function (json) {
+// The game asks for changelog.json with the module loader's cache-buster on it
+// (see ChangeLogHelper). This page has no loader to borrow one from, and a
+// changelog served from cache is a changelog missing the release the reader
+// came here to check. cache: false appends a timestamp instead, so this stays
+// correct without adding another thing to remember at release time.
+$.ajax({ url: 'changelog.json', dataType: 'json', cache: false }).done(function (json) {
 	versions = json.versions;
 	
 	var html = "<h4 class='infobox-scrollable-header'>Changelog</h4>";

@@ -1226,6 +1226,7 @@ define([
 			this.updateLocationHeaderPlacement(isShell);
 			this.updateOutControlsPlacement(isShell);
 			this.updateSectorBarPlacement(isShell);
+			this.updateOutActionsPlacement(isShell);
 			this.updateMapDockPlacement(isShell);
 			this.updateActionMirrorPlacement(isShell);
 			this.updateFooterPlacement(isShell, hasOutPanel);
@@ -1287,29 +1288,38 @@ define([
 			this.updateBottomChromeState(isShell);
 		},
 
-		// The level title sits between the chrome and the tab content in the
-		// markup. As a band of the shell column it would hold a permanent 48px of
-		// screen for one line of text; inside the pane it scrolls away like the
-		// rest of the tab, which is where it was before the shell.
+		// Which level you are on is the one thing on screen that does not change
+		// while you read, and inside the pane it scrolled away with everything
+		// else. It goes at the top of the chrome instead, above the stats, where
+		// it reads as the page title and stays put. That costs a band of the
+		// column, which is why the small layout also cuts the band down to about
+		// a line - see LOCATION TITLE in mobile.less.
 		updateLocationHeaderPlacement: function (shouldDock) {
 			let $header = $("#grid-location");
-			let $pane = $("#grid-switch-content");
-			if ($header.length === 0 || $pane.length === 0) return;
-
-			let isDocked = $header.parent().is($pane);
-			if (shouldDock === isDocked) return;
+			if ($header.length === 0) return;
 
 			if (shouldDock) {
+				let $chrome = $("#mobile-chrome");
+				if ($chrome.length === 0) return;
+				if ($header.parent().is($chrome)) return;
+
 				// a marker where it came from, so the desktop layout gets it back in
 				// its own place in the order rather than at the front
 				if (!this.locationHeaderMarker) {
 					this.locationHeaderMarker = document.createComment("grid-location");
 					$header.after(this.locationHeaderMarker);
 				}
-				$pane.prepend($header);
-			} else if (this.locationHeaderMarker) {
-				$(this.locationHeaderMarker).before($header);
+				$chrome.prepend($header);
+				return;
 			}
+
+			if (!this.locationHeaderMarker) return;
+			// Already home. Testing the marker and not the chrome on purpose:
+			// updateChromeGrouping tears the chrome down before this runs, and
+			// leaves the title wherever the chrome used to be - which is not the
+			// same as putting it back.
+			if ($header[0].nextSibling === this.locationHeaderMarker) return;
+			$(this.locationHeaderMarker).before($header);
 		},
 
 		// The action bar is the top half of the bottom chrome. Like the map panel
@@ -1342,6 +1352,42 @@ define([
 				}
 			} else if (this.sectorBarMarker) {
 				$(this.sectorBarMarker).before($bar);
+			}
+		},
+
+		// The Search box - examine, investigate, scavenge the heap, rest, wait -
+		// is the other half of what you do to a sector, and it sat below the
+		// description where it had to be scrolled to. It joins the bar.
+		//
+		// It does not cost a permanent row: the game shows only the few of those
+		// buttons that apply to where you are standing, and UIOutLevelSystem
+		// already hides the box outright when none of them do. It lands between
+		// the fixed actions and the collectors, which is the order they are used
+		// in.
+		updateOutActionsPlacement: function (shouldDock) {
+			let $box = $("#out-actions");
+			let $bar = $("#out-sector-bar");
+			if ($box.length === 0 || $bar.length === 0) return;
+
+			let isDocked = $box.parent().is($bar);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				// a marker where it came from, so the desktop layout gets it back
+				// under its own heading rather than at the end of the tab
+				if (!this.outActionsMarker) {
+					this.outActionsMarker = document.createComment("out-actions");
+					$box.after(this.outActionsMarker);
+				}
+				let $collectors = $("#out-sector-bar-collectors");
+				if ($collectors.length > 0) $collectors.before($box);
+				else $bar.append($box);
+			} else if (this.outActionsMarker) {
+				$(this.outActionsMarker).before($box);
+				// The bar's own display keys off this class, and the row it named
+				// has just left. Without this the desktop layout gets a bar with
+				// nothing in it until the level system next recounts.
+				$bar.removeClass("has-finds");
 			}
 		},
 
@@ -1504,6 +1550,11 @@ define([
 				// tab content it labels
 				$chrome.before($header);
 				$("#grid-switch-content").before($tabs);
+				// Whatever else was parked in here - the level title - is put
+				// back by its own placement method later in this same pass, but
+				// only if it is still in the document to be found. Removing the
+				// wrapper around it would take it out for good.
+				$chrome.before($chrome.children());
 				$chrome.remove();
 			}
 		},

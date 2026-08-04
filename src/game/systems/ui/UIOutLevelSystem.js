@@ -293,10 +293,18 @@ define([
 				numVisible++;
 			}
 
+			// Docked into the sector bar the box is one of the bar's own rows, and
+			// the heading that labelled it in the pane has nothing left to label.
+			// The bar shows and hides its rows with classes rather than a display
+			// of their own - see SECTOR ACTION BAR in mobile.less - so the same
+			// count drives has-finds there.
+			let isDocked = $("#out-actions").parent().is("#out-sector-bar");
+
 			// the box keeps .actionbox's margin and padding when empty, so it goes
 			// with the heading rather than leaving a gap under it
-			GameGlobals.uiFunctions.toggle("#header-out-actions", numVisible > 0);
+			GameGlobals.uiFunctions.toggle("#header-out-actions", !isDocked && numVisible > 0);
 			GameGlobals.uiFunctions.toggle("#out-actions", numVisible > 0);
+			$("#out-sector-bar").toggleClass("has-finds", isDocked && numVisible > 0);
 		},
 
 		// setTab force-shows #out-action-sca (a .tabbutton for this tab) without
