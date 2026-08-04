@@ -722,8 +722,10 @@ body.layout-small.location-outside #mobile-header-camp-res {
 
 // ADVENTURER DETAIL
 // Health, vision and the gear numbers are the adventurer's own state, read
-// deliberately rather than watched between actions, so the camp header leaves
-// them off and the adventurer button reveals them. They stay in the markup and
+// deliberately rather than watched between actions, so the small-layout header
+// leaves them off and the adventurer button reveals them. Health and the gear
+// numbers are off in both locations; vision is off in camp only, because
+// outside it is spent by the step and has to be watched. They stay in the markup and
 // stay current - UIOutHeaderSystem no longer toggles them at all - so opening
 // the panel costs a class and nothing else.
 //
@@ -747,17 +749,52 @@ body.layout-small.adventurer-open #container-equipment-stats-mobile {
 	display: flex !important;
 }
 
-body.layout-small.adventurer-open #mobile-header #btn-adventurer {
-	text-decoration: underline;
+// The control is a chip at the right end of the location banner, not a cell in
+// the header grid. Two reasons. The banner is the one row on screen on every
+// tab and in both locations, so the button reaches outside as well as camp; and
+// a bare word sitting in a grid of stats read as another stat rather than as
+// something to press. The banner holds one short title, so the room is free.
+// The margin is the base button's 4px, which the banner cannot afford: without
+// it the chip is exactly as tall as the level icon and the row costs nothing.
+// border-radius carries !important because btn-meta squares its corners with
+// one of its own. Opacity is left alone - the vision system writes it inline on
+// .hidden-when-down, and the chip has to fade out with the rest when the player
+// is down.
+body.layout-small #grid-location-header > #btn-adventurer {
+	flex: 0 0 auto;
+	margin: 0 0 0 auto;
+	min-height: 0;
+	padding: 2px 8px;
+	font-size: 0.72rem;
+	line-height: 1.4;
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 11px !important;
+	background: var(--l13-mobile-bg);
 }
 
-// a cell like any other: the label is the button
-body.layout-small #mobile-header #btn-adventurer {
-	display: block;
-	width: 100%;
-	margin: 0;
-	padding: 3px 4px;
-	background: var(--l13-mobile-bg);
+// open: the chip inverts. Underlining a word says "link"; the point of the
+// change was that this is a control with a state.
+body.layout-small.adventurer-open #grid-location-header > #btn-adventurer {
+	background: var(--l13-mobile-badge-bg);
+	color: var(--l13-mobile-badge-fg);
+	border-color: var(--l13-mobile-badge-bg);
+}
+
+// The chip is small on purpose; the tap target is not. It is the only control
+// in the banner, so the free space up and to the left belongs to it - up is
+// the safe-area padding above the chrome, left is the gap after the title.
+// Not down: the stats start immediately below and their first row is a callout
+// target of its own. Measured 82x31 tappable, and the banner does not grow.
+body.touch #grid-location-header > #btn-adventurer::after {
+	content: "";
+	position: absolute;
+	inset: -9px -9px 0 -9px;
+	border-radius: 20px 20px 0 0;
+}
+
+// invisible chrome must not stay tappable while the player is "down"
+body.vision-step-0 #btn-adventurer {
+	pointer-events: none;
 }
 
 // a cell: the label sits over its value, both centred. Two lines per cell
@@ -813,9 +850,9 @@ body.layout-small #mobile-header > div > .notification-player {
 // The perk and status icons had a full-width strip to themselves, and whatever
 // followed left its neighbour cells empty - two rows of pinned chrome for one
 // row of content. Let the strip take those cells instead: it is the last thing
-// before the bag outside and before the adventurer button in camp, so
-// auto-placement puts them side by side either way. Every row saved here is a
-// row the player can read in.
+// before the bag outside and before the camp stats in camp, so auto-placement
+// puts them side by side either way. Every row saved here is a row the player
+// can read in.
 body.layout-small #mobile-header-status > .itemlist {
 	grid-column: auto;
 }
@@ -1407,24 +1444,35 @@ body.layout-small #mobile-chrome > #grid-location {
 	background: var(--l13-mobile-bg);
 }
 
-// gridism pads the first .unit in a .grid 15px on the left with !important of
-// its own, and #grid-location-header is that unit
-body.layout-small #mobile-chrome #grid-location-header {
+// One row either way - docked in the chrome or still in the pane, where the
+// short-viewport layout leaves it - because the adventurer chip rides at the
+// right end of it and has to have a row to ride on.
+body.layout-small #grid-location-header {
 	display: flex;
 	align-items: center;
 	gap: 5px;
+	// where the title is still in the pane, it just sits close to what is above
+	padding-top: 2px;
+}
+
+// gridism pads the first .unit in a .grid 15px on the left with !important of
+// its own, and #grid-location-header is that unit
+body.layout-small #mobile-chrome #grid-location-header {
 	padding: 3px 10px !important;
+}
+
+// a long camp name must not push the icon or the chip off its own row
+body.layout-small #grid-location-header h1 {
+	margin: 0;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 body.layout-small #mobile-chrome #grid-location-header h1 {
 	font-size: 1rem;
 	line-height: 1.2;
-	margin: 0;
-	min-width: 0;
-	// a long camp name must not push the icon off its own row
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 body.layout-small #mobile-chrome #level-icon {
@@ -1437,12 +1485,6 @@ body.layout-small #mobile-chrome #level-icon {
 // has to stay the width of the icon rather than stretching to the row
 body.layout-small #mobile-chrome #grid-location-header > .callout-container {
 	flex: 0 0 auto;
-}
-
-// where the title is still in the pane - the short-viewport layout, which
-// keeps the ordinary document scroll - it just sits close to what is above it
-body.layout-small #grid-location-header {
-	padding-top: 2px;
 }
 
 // camp tab: the location h1 directly above already shows camp name + level

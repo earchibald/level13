@@ -6430,15 +6430,30 @@ body.layout-small.adventurer-open #mobile-header .info-callout-target-small:has(
 body.layout-small.adventurer-open #container-equipment-stats-mobile {
   display: flex !important;
 }
-body.layout-small.adventurer-open #mobile-header #btn-adventurer {
-  text-decoration: underline;
-}
-body.layout-small #mobile-header #btn-adventurer {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding: 3px 4px;
+body.layout-small #grid-location-header > #btn-adventurer {
+  flex: 0 0 auto;
+  margin: 0 0 0 auto;
+  min-height: 0;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  border: 1px solid var(--l13-mobile-border);
+  border-radius: 11px !important;
   background: var(--l13-mobile-bg);
+}
+body.layout-small.adventurer-open #grid-location-header > #btn-adventurer {
+  background: var(--l13-mobile-badge-bg);
+  color: var(--l13-mobile-badge-fg);
+  border-color: var(--l13-mobile-badge-bg);
+}
+body.touch #grid-location-header > #btn-adventurer::after {
+  content: "";
+  position: absolute;
+  inset: -9px -9px 0 -9px;
+  border-radius: 20px 20px 0 0;
+}
+body.vision-step-0 #btn-adventurer {
+  pointer-events: none;
 }
 body.layout-small #mobile-header .stat-indicator {
   display: block;
@@ -6827,20 +6842,25 @@ body.layout-small #mobile-chrome > #grid-location {
   margin: 0;
   background: var(--l13-mobile-bg);
 }
-body.layout-small #mobile-chrome #grid-location-header {
+body.layout-small #grid-location-header {
   display: flex;
   align-items: center;
   gap: 5px;
+  padding-top: 2px;
+}
+body.layout-small #mobile-chrome #grid-location-header {
   padding: 3px 10px !important;
 }
-body.layout-small #mobile-chrome #grid-location-header h1 {
-  font-size: 1rem;
-  line-height: 1.2;
+body.layout-small #grid-location-header h1 {
   margin: 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+body.layout-small #mobile-chrome #grid-location-header h1 {
+  font-size: 1rem;
+  line-height: 1.2;
 }
 body.layout-small #mobile-chrome #level-icon {
   width: 20px;
@@ -6849,9 +6869,6 @@ body.layout-small #mobile-chrome #level-icon {
 }
 body.layout-small #mobile-chrome #grid-location-header > .callout-container {
   flex: 0 0 auto;
-}
-body.layout-small #grid-location-header {
-  padding-top: 2px;
 }
 body.layout-small.tab-switch-in #tab-header h2 {
   display: none;

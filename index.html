@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m42" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m42" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m42" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m43" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m43" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m43" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -65,11 +65,6 @@
 					<div id="mobile-header-status" class="mobile-header-section">
 						<ul class="itemlist player-perks-list" id="player-perks-list-mobile"></ul>
 						<ul class="itemlist player-statuses-list" id="player-statuses-list-mobile"></ul>
-					</div>
-					<!-- reveals the adventurer's own stats, which the camp header
-					     otherwise leaves off (see mobile.less) -->
-					<div id="mobile-header-adventurer" class="mobile-header-section">
-						<button id="btn-adventurer" class="btn-meta text-key" aria-expanded="false" data-text-key="ui.main.adventurer_button_label"></button>
 					</div>
 					<div id="mobile-header-bag" class="mobile-header-section">
 						<div id="header-bag-storage-mobile" class="header-bag-storage stat-indicator">
@@ -208,6 +203,12 @@
 					<div id="grid-location-header" class="unit whole vision-container">
 						<div class='info-callout-target info-callout-target-side'><img id="level-icon" /></div>
 						<h1>Camp</h1>
+						<!-- reveals the adventurer's own stats, which the small-layout
+						     header otherwise leaves off (see mobile.less). It rides in
+						     the banner because the banner is on screen on every tab, in
+						     camp and out. Hidden until UIOutHeaderSystem has decided the
+						     layout, so the regular layout never flashes it. -->
+						<button id="btn-adventurer" class="btn-meta text-key hidden-when-down" aria-expanded="false" data-text-key="ui.main.adventurer_button_label" style="display:none"></button>
 					</div>
 				</div>
 				

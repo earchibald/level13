@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m43",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "CHANGE",
+                    "summary": "The adventurer button is a small chip at the right of the level banner instead of a word in the stats"
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "The adventurer button now works outside as well as in camp, where health and the gear numbers could not be read at all"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m42",
             "requiredVersion": "0.6.1",
             "phase": "beta",

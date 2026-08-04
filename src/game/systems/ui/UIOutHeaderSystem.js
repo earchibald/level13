@@ -1193,12 +1193,14 @@ define([
 			GameGlobals.uiFunctions.toggle("#mobile-header-status", isSmallLayout);
 			GameGlobals.uiFunctions.toggle("#mobile-header-camp-res", isSmallLayout && isInCamp);
 
-			// The rest of the adventurer - health, vision, the gear numbers - is
-			// read deliberately rather than watched, so it sits behind a button.
-			// The button is a camp thing: outside, the header already shows what
-			// it can and the room is spent.
-			GameGlobals.uiFunctions.toggle("#mobile-header-adventurer", isSmallLayout && isInCamp);
-			if (!isSmallLayout || !isInCamp) this.elements.body.removeClass("adventurer-open");
+			// The rest of the adventurer - health, the gear numbers, and vision
+			// where camp leaves it out - is read deliberately rather than watched,
+			// so it sits behind a button. The button was a camp thing, which left
+			// no way at all to read health or the gear numbers outside, where the
+			// header shows vision and stamina and nothing else. It is in the
+			// location banner now, which is the one row on screen on every tab.
+			GameGlobals.uiFunctions.toggle("#btn-adventurer", isSmallLayout);
+			if (!isSmallLayout) this.elements.body.removeClass("adventurer-open");
 
 			this.updateChromeGrouping(isSmallLayout);
 
