@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m42",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The bucket and trap collect buttons stop showing a stale disabled state when you walk onto a sector that already has one"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Compass directions no longer stack a letter to a line"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a save no longer sometimes throws an error popup over the loading screen"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m40",
             "requiredVersion": "0.6.1",
             "phase": "beta",

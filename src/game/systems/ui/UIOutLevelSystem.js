@@ -58,6 +58,8 @@ define([
 			improveID: "#out-action-improve-bucket",
 			chipID: "#out-collector-chip-water",
 			fillID: "#out-collector-fill-water",
+			useAllID: "#out-action-use-bucket",
+			useOneID: "#out-action-use-bucket_one",
 		},
 		{
 			improvementName: improvementNames.collector_food,
@@ -68,6 +70,8 @@ define([
 			improveID: "#out-action-improve-trap",
 			chipID: "#out-collector-chip-food",
 			fillID: "#out-collector-fill-food",
+			useAllID: "#out-action-use-trap",
+			useOneID: "#out-action-use-trap_one",
 		},
 	];
 
@@ -951,6 +955,19 @@ define([
 				// Two states for one chip, and they cannot overlap: before it is
 				// built the chip is the icon and the button that builds it, after
 				// it is the fill level and the two collect actions.
+				//
+				// Toggled here rather than hidden by the chip's own class.
+				// UIOutElementsSystem keeps a cached list of the buttons worth
+				// updating and rebuilds it from what is visible, so a button that
+				// css alone had hidden dropped out of that list - and the pass
+				// that dropped it also left an inline hide on its container,
+				// which kept it invisible after the class came back. It could
+				// never earn its way in again, and sat there with whatever
+				// disabled state it had when it left: a full bucket beside a
+				// struck-through "all". Toggling says so out loud instead.
+				GameGlobals.uiFunctions.toggle(def.useAllID, isBuilt);
+				GameGlobals.uiFunctions.toggle(def.useOneID, isBuilt);
+
 				$(def.chipID).toggleClass("is-built", isBuilt);
 				$(def.chipID).toggleClass("is-buildable", showBuild);
 				if (isBuilt || showBuild) numChips++;

@@ -311,10 +311,17 @@ define([
 			if (!messageVO.position) return true;
 
 			if (playerPosition.inCamp) {
+				// The camp is not in the engine for the first few ticks of a load,
+				// and a tick that lands in that window threw here and put the "you
+				// found a bug" popup over the loading game. All this decides is
+				// whether a log line predates the camp; with no camp to compare
+				// against there is nothing to hide.
 				let campSector = GameGlobals.levelHelper.getCampSectorOnLevel(playerPosition.level);
-				let campFoundedTimestamp = campSector.get(CampComponent).foundedTimeStamp;
-				let campFoundedDate = new Date(campFoundedTimestamp);
-				if (campFoundedDate && messageVO.timestamp && messageVO.timestamp < campFoundedTimestamp - 1000) return false;
+				if (campSector) {
+					let campFoundedTimestamp = campSector.get(CampComponent).foundedTimeStamp;
+					let campFoundedDate = new Date(campFoundedTimestamp);
+					if (campFoundedDate && messageVO.timestamp && messageVO.timestamp < campFoundedTimestamp - 1000) return false;
+				}
 			}
 
 			if (messageVO.visibility == LogConstants.MSG_VISIBILITY_GLOBAL) {

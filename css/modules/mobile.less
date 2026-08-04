@@ -1756,6 +1756,17 @@ body.layout-small.log-drawer-open #log {
 		width: auto;
 	}
 
+	// The compass is the exception, and it has to be stated. Those buttons keep
+	// a fixed width - 40px, so the 3x3 grid fits the column beside the map - and
+	// 10px of side padding leaves 20px for a label that needs 24. Wrapping is
+	// the right answer everywhere else and exactly the wrong one here: every
+	// direction came out stacked a letter to a line, three rows tall.
+	body.layout-small button.action-move {
+		white-space: nowrap;
+		padding-left: 2px;
+		padding-right: 2px;
+	}
+
 	// card-row action buttons: 40px visual, 44px hit via the halo; row
 	// pitch 40 + 2x2px margins = 44, halos meet without overlap
 	body.touch table .container-btn-action > button.action:not(.action-move) {
@@ -2421,21 +2432,14 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 	display: none;
 }
 
-// Nothing built, nothing to collect - and once it is built there is nothing
-// left to build. The game decides each button's own visibility from the
-// improvement count, but it does that on its own cadence, and in between the
-// chip would show three buttons for one collector and grow wide enough to push
-// its neighbour onto a second row. The chip's state settles it.
-//
-// Forcing `display: none` and not a display, so this can only ever hide
-// something in a state that contradicts the class - it can never stop the game
-// hiding anything (see HIDE STILL MEANS HIDE at the end of this file).
-.collector-chip:not(.is-built) .action-use,
-.collector-chip:not(.is-built) .callout-container:has(.action-use),
-.collector-chip.is-built .action-build,
-.collector-chip.is-built .callout-container:has(.action-build) {
-	display: none !important;
-}
+// Nothing here hides the chip's BUTTONS. updateCollectorRows toggles the build
+// and the collect actions itself, which is the only way UIOutElementsSystem
+// learns they exist: it rebuilds its list of buttons to keep updated from what
+// is visible, and a button hidden by css alone drops out of that list and never
+// earns its way back - the same pass leaves an inline hide on its container, so
+// it stays invisible even after the css stops applying. It then sits there with
+// whatever disabled state it had when it left, which is how a full bucket ended
+// up beside a struck-through "all". Classes here are for the chip's own layout.
 
 .collector-chip-icon {
 	// An empty span, NOT an img. background-color paints behind an img's own
