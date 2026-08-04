@@ -12,7 +12,7 @@
  * src/config.js urlArgs, and the ?v= query on the css links in index.html.
  */
 
-var CACHE_VERSION = "0.6.3.m43";
+var CACHE_VERSION = "0.6.3.m44";
 var STATIC_CACHE = "l13-static-" + CACHE_VERSION;
 var SHELL_CACHE = "l13-shell-" + CACHE_VERSION;
 var OFFLINE_URL = "offline.html";
@@ -26,7 +26,7 @@ var APP_SHELL = [
 	"favicon.svg",
 ];
 
-var STATIC_PATTERN = /\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|mp3|ogg|wav)$/;
+var STATIC_PATTERN = /\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|mp3|m4a|ogg|wav)$/;
 
 self.addEventListener("install", function (event) {
 	event.waitUntil(

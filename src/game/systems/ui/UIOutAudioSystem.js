@@ -17,6 +17,10 @@ define([
 
 		soundTimestamps: {}, // triggerID -> timestamp
 
+		audios: {}, // triggerID -> the one Audio element for that sound
+		paths: {}, // triggerID -> file
+		brokenSounds: {}, // triggerID -> true once the file has failed to load
+
 		constructor: function () {
 			return this;
 		},
@@ -48,11 +52,21 @@ define([
 
 			this.audios = {};
 			this.paths = {};
+			this.brokenSounds = {};
 
 			for (let key in this.elements) {
 				let path = this.elements[key].find("source").attr("src");
 				this.paths[key] = path;
-				this.audios[key] = new Audio(path);
+				let audio = new Audio(path);
+				audio.preload = "auto";
+				// a format the browser cannot decode must fail once here rather
+				// than on every trigger for the rest of the session
+				let sys = this;
+				audio.addEventListener("error", function () {
+					sys.brokenSounds[key] = true;
+					log.w("could not load sound: " + key + " (" + path + ")", sys);
+				});
+				this.audios[key] = audio;
 			}
 		},
 
@@ -91,7 +105,29 @@ define([
 					return;
 				}
 
-				let audio = new Audio(this.paths[soundTriggerID]);
+				// Reuse the element loaded at page setup rather than building a
+				// new one per sound. Three reasons, and the third is the one
+				// that matters on a phone.
+				//
+				// A new Audio() fetches and decodes the file again - the click
+				// sound is an uncompressed 75kB wav, and it plays on every
+				// button, every tab and every log line. The old elements were
+				// never released either: only previousSound was kept, so a long
+				// session left media elements behind, and ios keeps a hard limit
+				// on how many can exist at once.
+				//
+				// And ios only lets an element play without a gesture once THAT
+				// element has played under one. A fresh element every time meant
+				// every sound needed its own gesture, so most of them just threw
+				// after paying for the fetch and the decode.
+				if (this.brokenSounds[soundTriggerID]) return;
+
+				let audio = this.audios[soundTriggerID];
+				if (!audio) return;
+
+				// rewind so a repeated trigger restarts the sound rather than
+				// being ignored because the element is already past the end
+				try { audio.currentTime = 0; } catch (e) { }
 
 				audio.play().catch(e => {
 					log.w("failed to play audio: " + soundTriggerID + " | " + e, this);
