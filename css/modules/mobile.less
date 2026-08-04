@@ -2467,6 +2467,62 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 	padding: 0;
 }
 
+// Whoever is standing here, and where this sector leads on to. Same reasoning
+// and the same !important as the Search box above: both exist on the desktop
+// layout too, so the game keeps writing an inline display to each and the
+// has-* class has to outrank it either way round.
+#out-sector-bar #out-characters,
+#out-sector-bar #out-locales {
+	display: none !important;
+}
+
+#out-sector-bar.has-characters #out-characters,
+#out-sector-bar.has-locales #out-locales {
+	display: flex !important;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+}
+
+// The bar has no room for headings, and what a row is is obvious from what is
+// in it. #out-actions is labelled from outside the box so the level system
+// hides its heading directly; the locales box carries its own, so it is hidden
+// here instead.
+#out-sector-bar #out-locales > .subheader {
+	display: none;
+}
+
+// A locale is a button and a note about it. Left as a table the whole list is
+// one unbreakable block in a row that has to wrap, so let the rows themselves
+// be the things that wrap.
+#out-sector-bar #out-locales table,
+#out-sector-bar #out-locales tbody {
+	display: contents;
+}
+
+#out-sector-bar #out-locales tr {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+#out-sector-bar #out-locales td {
+	display: block;
+	padding: 0;
+	border: none;
+}
+
+// the note is secondary to the button and must not be what sets the row's width
+#out-sector-bar #out-locales .p-meta {
+	margin: 0;
+	font-size: 0.72rem;
+	line-height: 1.15;
+	max-width: 10em;
+}
+
 .collector-chip { display: none; }
 
 // is-buildable is the other half of the chip's life: before there is a bucket

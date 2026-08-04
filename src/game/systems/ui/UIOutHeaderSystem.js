@@ -265,12 +265,24 @@ define([
 				
 				let bonusName = UIConstants.getItemBonusName(bonusType);
 				let icons = UIConstants.getIconOrFallback(ItemConstants.getItemBonusIcons(bonusType));
+				// The gear stats are an icon and a number and nothing else - no
+				// label, unlike every other stat in the header - so what they mean
+				// has to come from a tooltip. updateItemStats has always computed
+				// that text and handed it to updateCalloutContent, which walks up
+				// to the nearest .info-callout-target to put it in; there was
+				// never one here, so the text went nowhere on either layout.
+				//
+				// Wrapping is enough: generateInfoCallouts("body") runs from
+				// uiFunctions.init, which is after the ui systems are added, so it
+				// builds the callout for these along with everything else.
 				let div = "";
+				div += "<div class='info-callout-target info-callout-target-small'>";
 				div += "<div class='stats-equipment-" + bonusKey + " stat-indicator stat-indicator-secondary'>";
 				div += "<img class='stat-icon img-themed' src='" + icons.dark + "' data-src-sunlit='" + icons.sunlit + "' alt='" + bonusName + "'/>";
 				div += "<span class='value'/>";
 				div += "</div>";
-				
+				div += "</div>";
+
 				$(".container-equipment-stats").append(div);
 			}
 		
@@ -1367,39 +1379,56 @@ define([
 			}
 		},
 
-		// The Search box - examine, investigate, scavenge the heap, rest, wait -
-		// is the other half of what you do to a sector, and it sat below the
-		// description where it had to be scrolled to. It joins the bar.
+		// Everything the exploration tab offers below the description is
+		// situational: the Search actions, whoever happens to be standing here,
+		// and the locales this sector leads to. Each one sat where it had to be
+		// scrolled to, and each one is empty most of the time. They join the bar.
 		//
-		// It does not cost a permanent row: the game shows only the few of those
-		// buttons that apply to where you are standing, and UIOutLevelSystem
-		// already hides the box outright when none of them do. It lands between
-		// the fixed actions and the collectors, which is the order they are used
-		// in.
+		// None of them costs a permanent row. The game already shows only the few
+		// buttons that apply to where the player is standing and hides each box
+		// outright when none do, and they rarely coincide - so the bar's wrap is
+		// what carries them. They dock in the order they are used: what you do to
+		// the sector, who is here, where you can go on to, then the collectors.
+		//
+		// Each box keeps a comment marker where it came from, so the desktop
+		// layout gets it back under its own heading rather than at the end of the
+		// tab. The bar's has-* classes are what make each row visible, so undock
+		// clears them all: otherwise the desktop layout gets a bar naming rows it
+		// no longer holds, until the level system next recounts.
+		OUT_DOCK_BOXES: [
+			{ id: "#out-actions", marker: "outActionsMarker", barClass: "has-finds" },
+			{ id: "#out-characters", marker: "outCharactersMarker", barClass: "has-characters" },
+			{ id: "#out-locales", marker: "outLocalesMarker", barClass: "has-locales" },
+		],
+
 		updateOutActionsPlacement: function (shouldDock) {
-			let $box = $("#out-actions");
 			let $bar = $("#out-sector-bar");
-			if ($box.length === 0 || $bar.length === 0) return;
+			if ($bar.length === 0) return;
+
+			for (let i = 0; i < this.OUT_DOCK_BOXES.length; i++) {
+				let def = this.OUT_DOCK_BOXES[i];
+				this.updateOutBoxPlacement(def, shouldDock, $bar);
+				if (!shouldDock) $bar.removeClass(def.barClass);
+			}
+		},
+
+		updateOutBoxPlacement: function (def, shouldDock, $bar) {
+			let $box = $(def.id);
+			if ($box.length === 0) return;
 
 			let isDocked = $box.parent().is($bar);
 			if (shouldDock === isDocked) return;
 
 			if (shouldDock) {
-				// a marker where it came from, so the desktop layout gets it back
-				// under its own heading rather than at the end of the tab
-				if (!this.outActionsMarker) {
-					this.outActionsMarker = document.createComment("out-actions");
-					$box.after(this.outActionsMarker);
+				if (!this[def.marker]) {
+					this[def.marker] = document.createComment(def.id);
+					$box.after(this[def.marker]);
 				}
 				let $collectors = $("#out-sector-bar-collectors");
 				if ($collectors.length > 0) $collectors.before($box);
 				else $bar.append($box);
-			} else if (this.outActionsMarker) {
-				$(this.outActionsMarker).before($box);
-				// The bar's own display keys off this class, and the row it named
-				// has just left. Without this the desktop layout gets a bar with
-				// nothing in it until the level system next recounts.
-				$bar.removeClass("has-finds");
+			} else if (this[def.marker]) {
+				$(this[def.marker]).before($box);
 			}
 		},
 

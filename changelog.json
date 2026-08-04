@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m46",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Building a camp or a beacon is done from the bar above the map instead of a table below the description"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Whoever is in the sector, and the locales it leads on to, are rows of the bar too, so nothing situational has to be scrolled to"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The gear stat icons have tooltips saying what they are; the text was already written and had nowhere to go"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m45",
             "requiredVersion": "0.6.1",
             "phase": "beta",

@@ -7503,6 +7503,43 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
   margin: 0;
   padding: 0;
 }
+#out-sector-bar #out-characters,
+#out-sector-bar #out-locales {
+  display: none !important;
+}
+#out-sector-bar.has-characters #out-characters,
+#out-sector-bar.has-locales #out-locales {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+#out-sector-bar #out-locales > .subheader {
+  display: none;
+}
+#out-sector-bar #out-locales table,
+#out-sector-bar #out-locales tbody {
+  display: contents;
+}
+#out-sector-bar #out-locales tr {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#out-sector-bar #out-locales td {
+  display: block;
+  padding: 0;
+  border: none;
+}
+#out-sector-bar #out-locales .p-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  max-width: 10em;
+}
 .collector-chip {
   display: none;
 }

@@ -357,10 +357,26 @@ define([
 			let showScavenge = isAwake;
 			let showScout = isAwake && GameGlobals.gameState.unlockedFeatures.vision && GameGlobals.playerActionsHelper.isVisible("scout");
 			let showSpring = isAwake && isScouted && featuresComponent.hasSpring;
+			// The camp build was a row of the improvements table, and that table
+			// lives inside #out-improvements, which is itself gated on vision -
+			// so the vision test here is not new, it is the gate the row already
+			// sat behind. The rest is the row's own rule: the table showed a row
+			// when the action was visible or one was already built, and a second
+			// camp cannot be built where one stands, so only the first half
+			// applies.
+			let showCamp = isAwake
+				&& GameGlobals.gameState.unlockedFeatures.vision
+				&& GameGlobals.playerActionsHelper.isVisible("build_out_camp");
+			let showBeacon = isAwake
+				&& GameGlobals.gameState.unlockedFeatures.vision
+				&& GameGlobals.playerActionsHelper.isVisible("build_out_beacon");
+
 			GameGlobals.uiFunctions.toggle("#out-action-sca", showScavenge);
 			GameGlobals.uiFunctions.toggle("#out-action-scout", showScout);
 			GameGlobals.uiFunctions.toggle("#out-action-use-spring", showSpring);
-			$("#out-sector-bar").toggleClass("has-actions", showScavenge || showScout || showSpring);
+			GameGlobals.uiFunctions.toggle("#out-action-build-camp", showCamp);
+			GameGlobals.uiFunctions.toggle("#out-action-build-beacon", showBeacon);
+			$("#out-sector-bar").toggleClass("has-actions", showScavenge || showScout || showSpring || showCamp || showBeacon);
 			GameGlobals.uiFunctions.toggle("#out-action-investigate", isAwake && this.showInvestigate());
 
 			// examine spots
@@ -388,7 +404,19 @@ define([
 				this.elements.btnScavengeHeap.find(".btn-label").text("scavenge " + heapName);
 			}
 
-			GameGlobals.uiFunctions.slideToggleIf("#out-locales", null, this.getVisibleLocales(isScouted).length > 0, 200, 0);
+			// Locales are where this sector leads on to, and they sat at the very
+			// end of the tab. Docked into the bar they are one of its rows, shown
+			// by class like the others - and not slid, because the bar is chrome
+			// and animating its height would shove the reading pane about.
+			let showLocales = this.getVisibleLocales(isScouted).length > 0;
+			let localesDocked = $("#out-locales").parent().is("#out-sector-bar");
+			if (localesDocked) {
+				GameGlobals.uiFunctions.toggle("#out-locales", showLocales);
+			} else {
+				GameGlobals.uiFunctions.slideToggleIf("#out-locales", null, showLocales, 200, 0);
+			}
+			$("#out-sector-bar").toggleClass("has-locales", localesDocked && showLocales);
+
 			GameGlobals.uiFunctions.slideToggleIf("#container-out-actions-movement-related", null, isScouted, 200, 0);
 
 			GameGlobals.uiFunctions.toggle("#table-out-actions-movement", GameGlobals.gameState.isFeatureUnlocked("move"));
@@ -1021,7 +1049,12 @@ define([
 						let existingImprovements = improvements.getCount(improvementName);
 						$(this).find(".list-amount").text(existingImprovements);
 
-						let isVisible = actionVisible || existingImprovements > 0;
+						// A row whose build button has moved to the sector bar has
+						// nothing to offer until something is standing here - only
+						// the dismantle is left in it. Without this the beacon row
+						// would show empty wherever a beacon could be built.
+						let hasBuildButton = $(this).find("button.action-build").length > 0;
+						let isVisible = (hasBuildButton && actionVisible) || existingImprovements > 0;
 						GameGlobals.uiFunctions.toggle($(this), isVisible);
 						if (isVisible) numVisible++;
 					}
@@ -1138,8 +1171,15 @@ define([
 			let isScouted = sectorStatus.scouted;
 			let showCharacters = hasCharacters && isScouted;
 
-			GameGlobals.uiFunctions.toggle($("#header-out-characters"), showCharacters);
+			// Same arrangement as the Search box: docked into the sector bar this
+			// is one of the bar's own rows, the heading has nothing left to label,
+			// and the bar shows its rows by class rather than by a display of
+			// their own (see SECTOR ACTION BAR in mobile.less).
+			let isDocked = $("#out-characters").parent().is("#out-sector-bar");
+
+			GameGlobals.uiFunctions.toggle($("#header-out-characters"), !isDocked && showCharacters);
 			GameGlobals.uiFunctions.toggle($("#out-characters"), showCharacters);
+			$("#out-sector-bar").toggleClass("has-characters", isDocked && showCharacters);
 
 			if (!showCharacters) return;
 

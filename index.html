@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m45" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m45" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m45" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m46" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m46" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m46" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -416,6 +416,15 @@
 									<button class="action action-location tabbutton" data-tab="switch-out" id="out-action-sca" action="scavenge">Scavenge</button>
 									<button class="action action-location" id="out-action-scout" action="scout">Scout</button>
 									<button class="action action-location" id="out-action-use-spring" action="use_spring">Refill water</button>
+									<!-- Founding a camp changes the whole game and it was the last row of a
+									     table below the description, so it was the one action you had to go
+									     looking for. It belongs with the other things you do to a sector, and
+									     so does the beacon: both are things you place here, both appear only
+									     where they can be placed, and neither shows for long. What stays in
+									     the Build table is what you do to something already standing - the
+									     collector upgrades and the beacon's dismantle. -->
+									<button class="action action-build action-location" id="out-action-build-camp" action="build_out_camp">Camp</button>
+									<button class="action action-build action-location" id="out-action-build-beacon" action="build_out_beacon">Beacon</button>
 								</div>
 								<div id="out-sector-bar-collectors">
 									<div id="out-collector-chip-water" class="collector-chip">
@@ -472,11 +481,12 @@
 								</tr><tr id="out-improvements-collector-food" class="collector-row">
 									<td class="collector-row-label vision-text"><span></span></td>
 									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-trap" action="improve_out_collector_food">▲</button></td>
-								</tr><tr id="out-improvements-beacon">
-									<td><button class="action action-build action-location" action="build_out_beacon" id="out-action-build-beacon">Beacon</button></td>
+								</tr><!-- the builds moved into the sector bar (#out-action-build-camp,
+								     #out-action-build-beacon); btn-action names the row's improvement now
+								     that the button it used to be read from has gone -->
+								<tr id="out-improvements-beacon" btn-action="build_out_beacon">
+									<td class="collector-row-label vision-text"><span>Beacon</span></td>
 									<td><button class='action action-dismantle btn-glyph-big' id="out-action-dismantle-beacon" action='dismantle_out_beacon'>×</button></td>
-								</tr><tr id="out-improvements-camp">
-									<td><button class="action action-build action-location" action="build_out_camp" >Camp</button></td>
 								</tr>
 								</table>
 							</div>
