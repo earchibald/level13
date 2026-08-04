@@ -1826,9 +1826,10 @@ body.layout-small.log-drawer-open #log {
 		display: block;
 	}
 
-	// COLLECTORS (bucket, trap): the collect actions and the fill level now live
-	// in the sector action bar, so the row is just the build button (before it is
-	// built) or a name and level (after), plus the upgrade arrow.
+	// COLLECTORS (bucket, trap): the collect actions, the fill level and the
+	// build button all live in the sector action bar now, so the row is a name
+	// and level plus the upgrade arrow - and it only exists at all once there is
+	// something built to upgrade.
 	//
 	// !important because these rows are shown and hidden through jQuery, which
 	// writes an inline `display` that would otherwise beat this and drop the row
@@ -2269,10 +2270,36 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 
 .collector-chip { display: none; }
 
-.collector-chip.is-built {
+// is-buildable is the other half of the chip's life: before there is a bucket
+// here it is the icon and the button that builds one, after it is the fill
+// level and the two collect actions. Never both - see updateCollectorRows.
+.collector-chip.is-built,
+.collector-chip.is-buildable {
 	display: flex;
 	align-items: center;
 	gap: 4px;
+}
+
+// the fill span has no text until something is built, but it still opens the
+// chip's gap beside an icon with nothing to say
+.collector-chip:not(.is-built) > .collector-chip-fill {
+	display: none;
+}
+
+// Nothing built, nothing to collect - and once it is built there is nothing
+// left to build. The game decides each button's own visibility from the
+// improvement count, but it does that on its own cadence, and in between the
+// chip would show three buttons for one collector and grow wide enough to push
+// its neighbour onto a second row. The chip's state settles it.
+//
+// Forcing `display: none` and not a display, so this can only ever hide
+// something in a state that contradicts the class - it can never stop the game
+// hiding anything (see HIDE STILL MEANS HIDE at the end of this file).
+.collector-chip:not(.is-built) .action-use,
+.collector-chip:not(.is-built) .callout-container:has(.action-use),
+.collector-chip.is-built .action-build,
+.collector-chip.is-built .callout-container:has(.action-build) {
+	display: none !important;
 }
 
 .collector-chip-icon {

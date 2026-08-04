@@ -7379,10 +7379,20 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
 .collector-chip {
   display: none;
 }
-.collector-chip.is-built {
+.collector-chip.is-built,
+.collector-chip.is-buildable {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.collector-chip:not(.is-built) > .collector-chip-fill {
+  display: none;
+}
+.collector-chip:not(.is-built) .action-use,
+.collector-chip:not(.is-built) .callout-container:has(.action-use),
+.collector-chip.is-built .action-build,
+.collector-chip.is-built .callout-container:has(.action-build) {
+  display: none !important;
 }
 .collector-chip-icon {
   display: inline-block;

@@ -928,7 +928,10 @@ define([
 				// collector with a permanently dead row
 				let showBuild = !isBuilt && GameGlobals.playerActionsHelper.isVisible(def.buildAction);
 				let showImprove = isBuilt && level < maxLevel;
-				let showRow = showBuild || showImprove;
+				// The build button is in the chip now, so the row is left with the
+				// upgrade and the name it upgrades. The two are the same condition:
+				// there is nothing to upgrade until there is something built.
+				let showRow = showImprove;
 
 				GameGlobals.uiFunctions.toggle(def.buildID, showBuild);
 				GameGlobals.uiFunctions.toggle(def.improveID, showImprove);
@@ -945,8 +948,12 @@ define([
 					$label.find("span").text(ImprovementConstants.getImprovementDisplayName(def.improvementName, level) + " · lvl " + level);
 				}
 
+				// Two states for one chip, and they cannot overlap: before it is
+				// built the chip is the icon and the button that builds it, after
+				// it is the fill level and the two collect actions.
 				$(def.chipID).toggleClass("is-built", isBuilt);
-				if (isBuilt) numChips++;
+				$(def.chipID).toggleClass("is-buildable", showBuild);
+				if (isBuilt || showBuild) numChips++;
 			}
 
 			$("#out-sector-bar").toggleClass("has-collectors", numChips > 0);

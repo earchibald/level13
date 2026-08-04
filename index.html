@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m38" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m38" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m38" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m39" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m39" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m39" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -420,12 +420,16 @@
 									<div id="out-collector-chip-water" class="collector-chip">
 										<span class="collector-chip-icon" role="img" aria-label="water"></span>
 										<span id="out-collector-fill-water" class="collector-chip-fill vision-text"></span>
+										<!-- before it is built the chip is the icon and this button; after,
+										     the fill and the two collect actions. The states never overlap. -->
+										<button class="action action-build action-location text-key" action="build_out_collector_water" id="out-action-build-bucket" data-text-key="game.improvements.collector_water_name_default"></button>
 										<button class="action action-use action-location btn-narrow text-key" action="use_out_collector_water" id="out-action-use-bucket" data-text-key="ui.exploration.collect_all_short_label"></button>
 										<button class="action action-use action-location btn-compact" action="use_out_collector_water_one" id="out-action-use-bucket_one">1</button>
 									</div>
 									<div id="out-collector-chip-food" class="collector-chip">
 										<span class="collector-chip-icon" role="img" aria-label="food"></span>
 										<span id="out-collector-fill-food" class="collector-chip-fill vision-text"></span>
+										<button class="action action-build action-location text-key" action="build_out_collector_food" id="out-action-build-trap" data-text-key="game.improvements.collector_food_name_default"></button>
 										<button class="action action-use action-location btn-narrow text-key" action="use_out_collector_food" id="out-action-use-trap" data-text-key="ui.exploration.collect_all_short_label"></button>
 										<button class="action action-use action-location btn-compact" action="use_out_collector_food_one" id="out-action-use-trap_one">1</button>
 									</div>
@@ -459,12 +463,12 @@
 							</div>
 							<div id="out-improvements" class="actionbox">
 								<table>
+								<!-- the build buttons moved into the chips in the sector bar; what is left
+								     here is the upgrade, which only applies once one is built -->
 								<tr id="out-improvements-collector-water" class="collector-row">
-									<td><button class="action action-build action-location text-key" action="build_out_collector_water" id="out-action-build-bucket" data-text-key="game.improvements.collector_water_name_default"></button></td>
 									<td class="collector-row-label vision-text"><span></span></td>
 									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-bucket" action="improve_out_collector_water">▲</button></td>
 								</tr><tr id="out-improvements-collector-food" class="collector-row">
-									<td><button class="action action-build action-location text-key" action="build_out_collector_food" id="out-action-build-trap" data-text-key="game.improvements.collector_food_name_default"></button></td>
 									<td class="collector-row-label vision-text"><span></span></td>
 									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-trap" action="improve_out_collector_food">▲</button></td>
 								</tr><tr id="out-improvements-beacon">
