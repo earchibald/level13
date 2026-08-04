@@ -72,7 +72,12 @@ Then confirm the new rule is really loaded by reading it back out of `d.styleShe
 
 ## Task 1: The footer reserves room for the floating log pill
 
-`css/modules/mobile.less:1636` already reserves 84px on the right of the footer so the fixed log pill cannot cover "save". `css/modules/mobile.less:2560` re-homes the footer inside the scrolling pane and sets the `padding` shorthand. That selector carries two ids to the first rule's one, so it wins, and the shorthand resets `padding-right` to 4px.
+`css/modules/mobile.less:1636` already reserves 84px on the right of the footer so the fixed log pill cannot cover "save". Two things defeat it.
+
+1. `css/modules/mobile.less:2560` re-homes the footer inside the scrolling pane and sets the `padding` shorthand. That selector carries two ids to the first rule's one, so it wins, and the shorthand resets `padding-right` to 4px.
+2. Below 568px, `css/gridism.css:142-145` sets `.unit .grid .unit { padding-left: 0 !important; padding-right: 0 !important; }`. The footer's ancestry is `#footer.unit` → `#grid-switch-content.grid` → `#unit-main.unit`, so it matches, and `!important` beats any id count. This is why the reserve at line 1636 never worked at phone widths either.
+
+The fix therefore needs `!important` of its own. `mobile.less` already fights this same stylesheet the same way at `:1226` and `:1477`.
 
 **Files:**
 - Modify: `css/modules/mobile.less:2557-2569`
@@ -140,17 +145,21 @@ with:
 // With the document locked it would be off-screen for good, so
 // UIOutHeaderSystem moves it inside the pane, where it scrolls with the rest.
 //
-// The 84px on the right is the same reserve the rule above sets for the
-// floating log pill, restated because this selector carries two ids to that
-// one's one and the shorthand would drop it either way. Without it the pill
-// lands on "save". This is also the only place it is needed: the pill is
-// fixed exactly when the footer is here, and on the exploration tab both
-// move into #out-panel-meta and share a row instead.
+// The 84px on the right keeps the floating log pill off "save". The reserve
+// is set further up as well, and never reached the footer at phone widths:
+// gridism zeroes the side padding of a .unit inside a .grid inside a .unit
+// with an !important of its own below 568px, and the footer's ancestry is
+// exactly that. So this carries !important too - the same fight #unit-main
+// and the banner already have with the same stylesheet.
+//
+// It is also the only place the reserve is needed. The pill is fixed exactly
+// when the footer is here; on the exploration tab both move into
+// #out-panel-meta and share a row instead.
 body.layout-small #grid-switch-content > #footer {
 	width: 100%;
 	max-width: 100%;
 	margin: 12px 0 0 0;
-	padding: 10px 84px ~"calc(10px + env(safe-area-inset-bottom))" 4px;
+	padding: 10px 84px ~"calc(10px + env(safe-area-inset-bottom))" 4px !important;
 	box-sizing: border-box;
 	// the exploration pane is a flex column whose sections are ordered, and an
 	// unordered child sorts to the front - the footer opened the tab
