@@ -205,6 +205,9 @@ define(['ash',
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 					let isOpening = !$("body").hasClass("log-drawer-open");
 					$("body").toggleClass("log-drawer-open");
+					// the pill cannot stay docked in the map panel while the
+					// drawer covers it, so the layout has to be re-run
+					GlobalSignals.logDrawerToggledSignal.dispatch(isOpening);
 					// opening the drawer is reading the log: clear the unread
 					// badge through the game's own seen-marking
 					if (isOpening) GlobalSignals.markLogMessagesSeenSignal.dispatch();

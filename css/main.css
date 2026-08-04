@@ -6798,6 +6798,12 @@ body.layout-small.tab-switch-milestones #btn-log-toggle,
 body.layout-small.tab-switch-projects #btn-log-toggle {
   bottom: calc(var(--l13-out-bottom-height, 72px) + 12px);
 }
+body.layout-small.log-drawer-open.tab-switch-out #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-embark #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-milestones #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-projects #btn-log-toggle {
+  bottom: calc(12px + env(safe-area-inset-bottom));
+}
 @media screen and (max-height: 480px) {
   body.layout-small .action-mirror {
     position: static;

@@ -1374,6 +1374,17 @@ body.layout-small.tab-switch-projects #btn-log-toggle {
 	bottom: ~"calc(var(--l13-out-bottom-height, 72px) + 12px)";
 }
 
+// With the drawer open there is no bottom chrome left to clear - the drawer
+// covers all of it - so the pill drops back to the corner the drawer's own
+// bottom padding keeps clear for it. Each selector names its tab rather than
+// relying on source order to outrank the rules above.
+body.layout-small.log-drawer-open.tab-switch-out #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-embark #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-milestones #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-projects #btn-log-toggle {
+	bottom: ~"calc(12px + env(safe-area-inset-bottom))";
+}
+
 // landscape: a fixed bar would eat a 390px-tall viewport, so it flows
 @media screen and (max-height: 480px) {
 	body.layout-small .action-mirror {

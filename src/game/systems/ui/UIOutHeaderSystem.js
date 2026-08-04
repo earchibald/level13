@@ -157,6 +157,7 @@ define([
 			GlobalSignals.slowUpdateSignal.add(function () { sys.slowUpdate(); });
 			GlobalSignals.visualUpdateSignal.add(function () { sys.visualUpdate(); });
 			GlobalSignals.changelogLoadedSignal.add(function () { sys.updateGameVersion(); });
+			GlobalSignals.logDrawerToggledSignal.add(function () { sys.updateLayout(); });
 			GlobalSignals.add(this, GlobalSignals.playerMoveStartedSignal, this.onPlayerMoveStarted);
 			GlobalSignals.add(this, GlobalSignals.playerLocationChangedSignal, this.onPlayerLocationChanged);
 			GlobalSignals.add(this, GlobalSignals.playerPositionChangedSignal, this.onPlayerPositionChanged);
@@ -1232,7 +1233,16 @@ define([
 			this.updateMapDockPlacement(isShell);
 			this.updateActionMirrorPlacement(isShell);
 			this.updateFooterPlacement(isShell, hasOutPanel);
-			this.updateLogButtonPlacement(hasOutPanel);
+
+			// The drawer is fixed over the bottom of the screen, and on the
+			// exploration tab the map panel it docks into is itself a fixed,
+			// z-indexed band. A stacking context cannot be escaped from the
+			// inside, so a docked pill is painted under the drawer whatever
+			// z-index it is given - and the pill is the only way to close the
+			// drawer. Float it while the drawer is open; the drawer's bottom
+			// padding is already sized to keep that corner clear.
+			let isLogDrawerOpen = this.elements.body.hasClass("log-drawer-open");
+			this.updateLogButtonPlacement(hasOutPanel && !isLogDrawerOpen);
 
 			// nothing above needs a height: the column sorts that out. The floating
 			// log pill is the one thing still positioned against the bottom chrome,

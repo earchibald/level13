@@ -25,6 +25,9 @@ define(['ash',], function (Ash) {
 		windowResizedSignal: new Ash.Signals.Signal(),
 		popupResizedSignal: new Ash.Signals.Signal(),
 		layoutChangedSignal: new Ash.Signals.Signal(),
+		// the mobile log drawer opened or closed: it decides where the log pill
+		// can live, so the layout has to be re-run
+		logDrawerToggledSignal: new Ash.Signals.Signal(),
 		updateButtonsSignal: new Ash.Signals.Signal(),
 		clearBubblesSignal: new Ash.Signals.Signal(),
 		markLogMessagesSeenSignal: new Ash.Signals.Signal(),
