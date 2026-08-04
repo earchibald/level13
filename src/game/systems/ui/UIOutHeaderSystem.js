@@ -1330,6 +1330,7 @@ define([
 			// log pill is the one thing still positioned against the bottom chrome,
 			// which is whichever bands the current tab ends with.
 			this.updateBottomChromeState(isShell);
+			this.updateTopChromeState(isShell);
 
 			// the panel was just rebuilt in this same pass, so a height read now
 			// can be one layout behind; read it again on the next frame
@@ -1375,11 +1376,29 @@ define([
 			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
 		},
 
+		// The two overlays that hang under the fixed chrome - the log toasts and
+		// the room panel - have to know where it ends, and #mobile-chrome is
+		// built at runtime by updateChromeGrouping, so no stylesheet can measure
+		// it. Published beside the bottom height and re-read on the same
+		// next-frame pass, for the same reason: the chrome is often rebuilt in
+		// the pass that reads it.
+		updateTopChromeState: function (isShell) {
+			let height = 0;
+			if (isShell) {
+				let $chrome = $("#mobile-chrome");
+				if ($chrome.length > 0 && $chrome.is(":visible")) {
+					height = Math.ceil($chrome.outerHeight());
+				}
+			}
+			document.documentElement.style.setProperty("--l13-chrome-height", height + "px");
+		},
+
 		// the measuring half of updateLayout, without any of the DOM moves, so it
 		// is safe to run again from a frame callback
 		updateMeasurements: function () {
 			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
 			this.updateBottomChromeState(isShell);
+			this.updateTopChromeState(isShell);
 		},
 
 		// Which level you are on is the one thing on screen that does not change

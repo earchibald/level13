@@ -5957,6 +5957,9 @@ body.sunlit {
   --l13-mobile-badge-bg: #333333;
   --l13-mobile-badge-fg: #ffffff;
 }
+:root {
+  --l13-chrome-height: 0px;
+}
 #rotate-notice {
   display: none;
 }

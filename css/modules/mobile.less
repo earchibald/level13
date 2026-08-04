@@ -30,6 +30,14 @@ body.sunlit {
 	--l13-mobile-badge-fg: #ffffff;
 }
 
+// UIOutHeaderSystem measures #mobile-chrome and writes this on the root - the
+// chrome is built at runtime, so there is nothing here that could measure it.
+// The declaration is the value used before the first measurement, and the
+// value that stands in every layout that has no chrome to measure.
+:root {
+	--l13-chrome-height: 0px;
+}
+
 // ---------------------------------------------------------------------------
 // PORTRAIT ONLY, EXCEPT FOR THE MAP
 // The manifest asks for a portrait lock. Android honours it; iOS Safari does
