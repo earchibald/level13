@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m48",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Buttons that a tab change faded out can no longer stay hidden for the rest of the session"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m46",
             "requiredVersion": "0.6.1",
             "phase": "beta",

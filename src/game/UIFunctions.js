@@ -1792,7 +1792,20 @@ define(['ash',
 				if (!show)
 					show = false;
 
-				if (this.isElementToggled($element) === show) {
+				// data-visible on its own is not proof that the element is in the
+				// state it claims. showTab fades .tabelement and .tabbutton in and
+				// out with jQuery, which writes an inline display and never touches
+				// data-visible, so a transition that does not finish its pass -
+				// tabs tapped quickly, an action landing mid-fade - leaves an
+				// element marked visible and displaying none. This early-out would
+				// then keep it that way for the rest of the session, because every
+				// later toggle(true) agrees with the flag and returns. Reading
+				// style.display is a property access, not a layout read, so it is
+				// cheap enough for a function called a few hundred times a second.
+				let rawElement = $element[0];
+				let isInlineHidden = rawElement && rawElement.style && rawElement.style.display === "none";
+
+				if (this.isElementToggled($element) === show && !(show && isInlineHidden)) {
 					// The element is already right, but its callout wrappers may
 					// not be: hiding cascades up to them, and a later show that
 					// no-ops here would leave them hidden for good (camp storage
