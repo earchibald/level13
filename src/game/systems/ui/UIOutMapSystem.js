@@ -46,6 +46,8 @@ define([
 		MAP_STYLE_CANVAS: "canvas",
 		MAP_STYLE_ASCII: "ascii",
 
+		wasLandscape: null, // null until the first resize, so a load is not a rotation
+
 		constructor: function () {
 			this.initElements();
 			this.updateHeight();
@@ -215,10 +217,18 @@ define([
 		},
 		
 		updateHeight: function () {
-			// small layout has less chrome around the map, so give the map more room
-			let isSmallLayout = $("body").hasClass("layout-small");
-			let chromeOffset = isSmallLayout ? 260 : 380;
-			var maxHeight = Math.max(198, $(window).height() - chromeOffset);
+			// On the small layout the map tab is the whole column - the stylesheet
+			// gives the map whatever is left of it, in portrait and in the
+			// landscape map mode alike. A height measured here would only fight
+			// that, and it would win: it is written inline. Landscape is where it
+			// showed, because a sideways phone is 393pt tall and the chrome
+			// allowance left the map its 198pt floor.
+			if ($("body").hasClass("layout-small")) {
+				$("#mainmap-container").css("maxHeight", "");
+				return;
+			}
+
+			var maxHeight = Math.max(198, $(window).height() - 380);
 			$("#mainmap-container").css("maxHeight", maxHeight + "px");
 		},
 
@@ -341,8 +351,13 @@ define([
 			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
 			
 			let sys = this;
-			
-			let sector = this.playerLocationNodes.head.entity;
+
+			// No read of the player's current sector here - the map is drawn from
+			// getCurrentMapPosition, which asks the player's position. There was a
+			// `playerLocationNodes.head.entity` on this line and nothing used it,
+			// and the node is empty until PlayerPositionSystem has run once: on a
+			// save whose last tab was the map, the first draw came before that and
+			// took the game down to the "you've found a bug" popup on every load.
 			let mapPosition = this.getCurrentMapPosition();
 			
 			let levelEntity = GameGlobals.levelHelper.getLevelEntityForPosition(mapPosition.level);
@@ -389,8 +404,13 @@ define([
 			let hasPath = hasSector && path && path.length > 0;
 			
 			let position = hasSector ? this.selectedSector.get(PositionComponent).getPosition() : null;
-			let playerPosition = this.playerLocationNodes.head.position.getPosition();
-			let levelDiff = hasSector ? Math.abs(position.level - playerPosition.level) : 0;
+			// The player's own position, not the position of the sector entity they
+			// are standing on. The two agree, but the sector node is empty until
+			// PlayerPositionSystem has run once - and with the map as the tab the
+			// game opens on, this runs before that and took the game down. It is
+			// also only needed when a sector is selected, which it never is here.
+			let hasPlayerPosition = this.playerPositionNodes && this.playerPositionNodes.head;
+			let levelDiff = hasSector && hasPlayerPosition ? Math.abs(position.level - this.playerPositionNodes.head.position.level) : 0;
 			
 			GameGlobals.uiFunctions.toggle($("#mainmap-sector-details-content-empty"), !hasSector);
 			GameGlobals.uiFunctions.toggle($("#mainmap-sector-details-content"), hasSector);
@@ -1205,6 +1225,24 @@ define([
 			// the pane is positioned against the old viewport, so drop it rather than let it clip
 			this.hideSectorTooltip();
 			this.updateHeight();
+
+			// A rotation changes the shape of the map's box, not just its size,
+			// and leaves the view pointing at whatever the old geometry put
+			// there. Only a rotation: an iOS URL bar sliding away is a resize too,
+			// and moving the map out from under a player who just panned it would
+			// be worse than the offset.
+			let isLandscape = $(window).width() > $(window).height();
+			let didRotate = this.wasLandscape !== null && this.wasLandscape !== isLandscape;
+			this.wasLandscape = isLandscape;
+			if (!didRotate) return;
+
+			// next turn, because the layout that decides the new box is another
+			// listener on this same signal and may not have run yet
+			let sys = this;
+			setTimeout(function () {
+				if (GameGlobals.gameState.uiStatus.currentTab !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
+				sys.centerMap();
+			}, 0);
 		},
 
 		onTabChanged: function (tabID, tabProps) {

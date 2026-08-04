@@ -71,6 +71,8 @@ define([
 		currentThemeTransitionID: null,
 		currentThemeTransitionTargetValue: null,
 
+		tabBeforeLandscapeMap: null, // the tab to go back to when the phone comes upright
+
 		pendingResourceUpdateTime: null, // if not null, a resource update has been queued (can be used to trigger update immediately or after a delay)
 		pendingResourceBarUpdateTime: null, 
 		
@@ -1183,18 +1185,86 @@ define([
 			this.updateLayout();
 		},
 
+		// A sideways phone used to get a "turn me upright" notice, because the
+		// portrait column does not fold: it is a stack of full-width bands and
+		// there is no room for them in 393px of height. One screen does want the
+		// width though - the map - so landscape hands the whole viewport to it.
+		//
+		// Held to phones. A short window on a desktop is just a small window, and
+		// a tablet in landscape has the height for the ordinary layout.
+		isLandscapeMapLayout: function () {
+			if (!UIConstants.isTouchScreen()) return false;
+
+			let width = $(window).width();
+			let height = $(window).height();
+			if (width <= height) return false;
+			if (height > UIConstants.LANDSCAPE_MAP_MAX_HEIGHT) return false;
+
+			// nothing to turn the phone for until the map exists. Read the toggle
+			// state rather than :visible - landscape hides the whole tab bar, so
+			// the button's computed display says nothing about whether the player
+			// has a map, and reading it would flip the mode back off every resize
+			return GameGlobals.uiFunctions.isElementToggled($("#switch-map")) === true;
+		},
+
+		// Landscape is the map tab and nothing else, so it switches to that tab
+		// rather than reproducing the map somewhere new. Everything the portrait
+		// map tab already does - the whole-column map, the details, the map
+		// system's own setup in onTabChanged - comes along with it. The tab the
+		// player was on comes back when the phone does.
+		updateLandscapeMapMode: function (isLandscapeMap) {
+			let mapTabID = GameGlobals.uiFunctions.elementIDs.tabs.map;
+			let currentTabID = GameGlobals.gameState.uiStatus.currentTab;
+			// No tab yet means the game is still starting up. Setting the class now
+			// would leave the mode on with the map tab never opened and no tab to
+			// come back to; updateLayout asks again once there is one.
+			if (!currentTabID) return;
+
+			let wasLandscapeMap = this.elements.body.hasClass("landscape-map");
+			if (wasLandscapeMap === isLandscapeMap) return;
+
+			this.elements.body.toggleClass("landscape-map", isLandscapeMap);
+
+			if (isLandscapeMap) {
+				this.tabBeforeLandscapeMap = currentTabID === mapTabID ? null : currentTabID;
+				if (currentTabID !== mapTabID) GameGlobals.uiFunctions.showTab(mapTabID);
+				return;
+			}
+
+			let previousTabID = this.tabBeforeLandscapeMap;
+			this.tabBeforeLandscapeMap = null;
+			// if something else moved the player off the map while sideways, that
+			// is where they meant to be - leave them there
+			if (previousTabID && currentTabID === mapTabID) GameGlobals.uiFunctions.showTab(previousTabID);
+		},
+
 		updateLayoutMode: function () {
 			let wasSmallLayout = this.elements.body.hasClass("layout-small");
-			let isSmallLayout =  $(window).width() <= UIConstants.SMALL_LAYOUT_THRESHOLD;
+			// the map layout is a small-layout thing, and a phone is wider than
+			// the threshold when it is on its side (an iPhone 16 is 852pt), so it
+			// has to say so itself
+			let isLandscapeMap = this.isLandscapeMapLayout();
+			let isSmallLayout = isLandscapeMap || $(window).width() <= UIConstants.SMALL_LAYOUT_THRESHOLD;
 			this.elements.body.toggleClass("layout-small", isSmallLayout);
 			this.elements.body.toggleClass("layout-regular", !isSmallLayout);
 			GameGlobals.uiFunctions.toggle(".debug-info", GameConstants.isDebugVersion);
+			this.updateLandscapeMapMode(isLandscapeMap);
 			if (wasSmallLayout == isSmallLayout) return;
 			GlobalSignals.layoutChangedSignal.dispatch();
 			this.updateResources(true);
 		},
 
 		updateLayout: function () {
+			// The landscape map mode also asks whether the player has a map, and no
+			// resize announces that. A phone that opens the game already sideways
+			// asked once, before the tab bar had a map button on it, and nothing
+			// asked again - so the rotate notice stayed up for the session. This
+			// runs on the tab bar's own resize among other things, which is exactly
+			// when the button appears.
+			if (this.isLandscapeMapLayout() !== this.elements.body.hasClass("landscape-map")) {
+				this.updateLayoutMode();
+			}
+
 			let isSmallLayout = this.elements.body.hasClass("layout-small");
 			let isInCamp = GameGlobals.playerHelper.isInCamp();
 			let isInCampTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.camp;

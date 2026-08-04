@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m51",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "A phone turned sideways now shows the map full screen: map on the left, its controls and the selected sector on the right"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The map fills the space it is given instead of a measured height, so it no longer opens at 198px on a sideways phone"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Opening the game on the map tab no longer ends in the \"you've found a bug\" popup"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m50",
             "requiredVersion": "0.6.1",
             "phase": "beta",

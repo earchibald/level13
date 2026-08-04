@@ -28,6 +28,11 @@ define(['ash',
 
 		SMALL_LAYOUT_THRESHOLD: 850,  // make sure this corresponds to something in gridism.css
 
+		// A landscape touch screen no taller than this is a phone on its side, and
+		// gets the fullscreen map (see isLandscapeMapLayout and LANDSCAPE MAP in
+		// mobile.less). Keep in step with the max-height in that stylesheet.
+		LANDSCAPE_MAP_MAX_HEIGHT: 480,
+
 		// True when the PRIMARY pointer is a touch screen. Touchscreen laptops with
 		// a mouse/trackpad report a fine pointer and keep the desktop hover UI.
 		// Overridable with ?touch=1 / ?touch=0 for testing.

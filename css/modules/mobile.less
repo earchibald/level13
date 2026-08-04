@@ -31,18 +31,23 @@ body.sunlit {
 }
 
 // ---------------------------------------------------------------------------
-// PORTRAIT ONLY
+// PORTRAIT ONLY, EXCEPT FOR THE MAP
 // The manifest asks for a portrait lock. Android honours it; iOS Safari does
 // not, and neither does screen.orientation.lock(), so a sideways phone gets
 // this notice rather than the landscape layout. `pointer: coarse` keeps it off
 // desktop, where a short window is just a small window.
+//
+// The one exception is the map, which is the screen that wants width more than
+// it wants the chrome around it: a sideways phone with a map gets LANDSCAPE MAP
+// at the end of this file, and .landscape-map says so. The notice is what is
+// left over - a phone turned sideways before the map is unlocked.
 
 #rotate-notice {
 	display: none;
 }
 
 @media (orientation: landscape) and (max-height: 480px) and (pointer: coarse) {
-	#rotate-notice {
+	body:not(.landscape-map) #rotate-notice {
 		display: flex;
 		position: fixed;
 		inset: 0;
@@ -2232,12 +2237,39 @@ body.layout-small.tab-switch-map #mainmap-container-container {
 	min-height: 0;
 }
 
-// the container is the pannable viewport onto the canvas, so it takes the room
-// and the canvas keeps its own size underneath
+// uiMapHelper.enableScrollingForMap wraps the viewport in a
+// .scroll-position-container at runtime, so the map is a grandchild here, not a
+// child - and that wrapper is what a percentage height on the viewport resolves
+// against. The wrapper's own height is `auto`, so `height: 100%` below fell
+// back to the content: a 580px map viewport inside a 389px box, hanging over
+// the controls under it. It only ever looked right because updateHeight wrote
+// an inline max-height, which is exactly the measuring this layout is meant to
+// be free of.
+//
+// Absolute placement is what gives the wrapper a definite height: it is
+// measured against the used padding box of #mainmap-container-container, which
+// is a real number by the time it is needed - unlike that box's own `height`,
+// which stays `auto` however tall its parent stretches it.
+body.layout-small.tab-switch-map #mainmap-container-container > .scroll-position-container {
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	margin: 0;
+}
+
+// the viewport onto the canvas: it takes the room the wrapper now has, and the
+// canvas keeps its own size underneath, scrolling inside it
 body.layout-small.tab-switch-map #mainmap-container {
 	width: 100%;
 	height: 100%;
-	max-height: none;
+	// !important because updateHeight runs once from the map system's
+	// constructor, before the body has been told which layout this is, and
+	// writes an inline max-height for the desktop one - 198px, its floor. A
+	// resize clears it again, so a phone that turned sideways looked right and a
+	// phone that opened the game sideways got a 198px map in a 389px box. This
+	// rule is scoped to the small layout's map tab, which is exactly where that
+	// inline value must not win, so nothing else loses its cap.
+	max-height: none !important;
 	margin: 0;
 }
 
@@ -2811,6 +2843,192 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
 
 #out-sector-bar .collector-chip {
 	gap: 6px;
+}
+
+// ---------------------------------------------------------------------------
+// LANDSCAPE MAP
+//
+// A phone on its side is the map and nothing else. UIOutHeaderSystem sets
+// .landscape-map (see isLandscapeMapLayout) and switches to the map tab, so
+// everything the portrait map tab does is already in force here - this section
+// only turns the one column into two and takes the chrome away.
+//
+// Not scoped to an @media block. The mode is a decision, not a viewport: it
+// also asks whether this is a touch screen and whether the player has a map at
+// all, and a phone turned sideways before the map exists still gets the rotate
+// notice at the top of this file.
+//
+// .landscape-map without .layout-small never happens - the same pass sets both
+// - but the sizing rules the map needs are repeated here rather than left to
+// the portrait ones, because a fullscreen map that quietly falls back to a
+// 198px canvas is a worse failure than a few duplicated lines.
+
+// The shell locks the document again. The `max-height: 480px` block in APP
+// SHELL hands landscape back to the ordinary page scroll, which is right for a
+// stack of bands and wrong for a map that has to fit the viewport exactly.
+html:has(> body.landscape-map),
+body.landscape-map {
+	height: 100%;
+	overflow: hidden;
+}
+
+body.landscape-map {
+	--l13-shell: 1;
+}
+
+body.landscape-map > .sticky-footer-wrapper,
+body.landscape-map #grid-main,
+body.landscape-map #unit-main {
+	height: 100% !important;
+	min-height: 0;
+}
+
+// what goes away: the tab bar, the level banner and the stats block (all three
+// are #mobile-chrome), the footer, the log pill and its drawer
+body.landscape-map #mobile-chrome,
+body.landscape-map #footer,
+body.landscape-map #btn-log-toggle,
+body.landscape-map #log-container {
+	display: none !important;
+}
+
+// A tab left mid-fade would otherwise land in the grid beside the map for the
+// length of the animation, and any later tab change would put it there for
+// good. The map tab is the only one that exists in this mode.
+body.landscape-map #grid-switch-content > .tabcontainer:not(#container-tab-two-map) {
+	display: none !important;
+}
+
+// ---------------------------------------------------------------------------
+// The two columns.
+//
+// The map and the controls that belong with it are not siblings: the selects
+// are in #grid-tab-header, and the map and its details are two levels down
+// inside the tab container. `display: contents` drops those two wrappers out
+// of the box tree so all three become items of one grid, which is cheaper and
+// steadier than moving them in the DOM and putting them back.
+//
+// !important because the tab system writes an inline `display` on the
+// container as it shows the tab.
+//
+// .tab-switch-map is carried on these selectors for weight, not for meaning -
+// landscape is always the map tab. The MAP TAB rules above are written
+// `body.layout-small.tab-switch-map`, and without the third class these lose to
+// them and the column never becomes two.
+body.landscape-map.tab-switch-map #grid-switch-content {
+	display: grid;
+	grid-template-columns: 70fr 30fr;
+	// the controls take what they need at the top of the right column and the
+	// details get the rest; minmax(0, 1fr) is what lets that row scroll rather
+	// than push the grid past the viewport
+	grid-template-rows: auto minmax(0, 1fr);
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+	padding: 0;
+	padding-left: env(safe-area-inset-left);
+	padding-right: env(safe-area-inset-right);
+	padding-bottom: env(safe-area-inset-bottom);
+	margin-bottom: 0 !important;
+}
+
+body.landscape-map.tab-switch-map #container-tab-two-map,
+body.landscape-map.tab-switch-map #container-tab-two-map > .unit {
+	display: contents !important;
+}
+
+// the map takes the left column whole, in either style
+body.landscape-map.tab-switch-map #mainmap-container-container,
+body.landscape-map.tab-switch-map #mainmap-container-ascii {
+	grid-column: 1;
+	grid-row: 1 / span 2;
+	// a grid item will not shrink below its content either, and the content is
+	// a 500px canvas
+	min-width: 0;
+	min-height: 0;
+	margin: 0;
+}
+
+// The viewport inside the map box is not repeated here. It is sized by the MAP
+// TAB rules above, which land in landscape too - .layout-small and
+// .tab-switch-map are both set in this mode - and the sizing is a chain of
+// three boxes that must not be stated twice and drift.
+
+body.landscape-map.tab-switch-map #mainmap-container-ascii {
+	overflow: auto;
+}
+
+// ---------------------------------------------------------------------------
+// The right column: the map's own controls, then the sector.
+//
+// The description sits in this column rather than over the map, unlike
+// portrait. The column is there for the controls whether a sector is selected
+// or not, so the description costs the map nothing here - and it is the one
+// place on a phone where it can be read without covering the thing it
+// describes.
+
+body.landscape-map.tab-switch-map #grid-tab-header {
+	grid-column: 2;
+	grid-row: 1;
+	min-width: 0;
+	margin: 0;
+}
+
+body.landscape-map #tab-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 4px 6px;
+}
+
+body.landscape-map #tab-header h2 {
+	display: none;
+}
+
+// the selects are sized for a full-width header row; in a 30% column they
+// share what there is and wrap when they cannot
+body.landscape-map #tab-header .tabelement {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+}
+
+body.landscape-map #tab-header .tab-options {
+	float: none;
+	flex: 1 1 auto;
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+}
+
+body.landscape-map.tab-switch-map #mainmap-sector-details {
+	grid-column: 2;
+	grid-row: 2;
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+	// the jump-to buttons keep flowing in rows at the top of the column
+	align-content: flex-start;
+	justify-content: flex-start;
+	// portrait makes this the anchor for the panel over the map; here the
+	// description is in the flow and needs no anchor
+	position: static;
+}
+
+// back into the flow, on a row of its own under the buttons
+body.landscape-map.tab-switch-map #mainmap-sector-details-content {
+	position: relative;
+	order: 1;
+	flex: 1 0 100%;
+	left: auto;
+	right: auto;
+	bottom: auto;
+	max-height: none;
+	margin: 4px 0 0 0;
 }
 
 // ---------------------------------------------------------------------------
