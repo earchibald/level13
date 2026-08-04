@@ -70,6 +70,11 @@ let latestMessages = newItems.map(li => li.data).filter(m => !m.markedAsSeen && 
 exactly "arrived since the last pass, and not yet read". One call to the stack
 is added after that line.
 
+`updateLogListItem` renders a message through `Text.compose`,
+`LogConstants.cleanupMessage` and `TextConstants.sentencify`. That sequence
+moves into a `getMessageText(data)` method, which both the list item and the
+toast call, so the two can never drift.
+
 Do not reuse `#log-latest` as the toast container. `UIList.update` replaces
 that list on every pass, so a second batch arriving inside the 3500 ms window
 would wipe the first. The stack needs its own DOM and its own lifetimes.
@@ -155,17 +160,37 @@ close button, as the map sector panel does. `body.room-panel-open` drives it.
 
 ### When it opens by itself
 
-`updateSectorDescription` hashes the description text it has just built, with a
-cheap 32-bit string hash, and compares it against the hash held for the current
-position. The store is a plain `Map` keyed `level.x.y`, held in memory by the
-system.
+`updateSectorDescription` builds an intro key for the current sector, hashes it
+with a cheap 32-bit string hash, and compares the hash against the one held for
+the current position. The store is a plain `Map` keyed `level.x.y`, held in
+memory by the system.
+
+The key is not the rendered description. That text carries volatile fragments —
+the glowstick countdown, whether enemies are present — and hashing it would
+re-open the panel on almost every tick. The key is the room's identity instead:
+
+```js
+let introKey = [
+	TextConstants.getSectorHeader(hasVision, features),
+	TextConstants.getSectorDescription(hasVision, features),
+	isScouted ? 1 : 0,
+	hasCampHere ? 1 : 0
+].join("|");
+```
 
 - No entry means a first visit. Open, and store the hash.
 - A different hash means the description changed. Open, and store the new hash.
 - The same hash means nothing new. Stay closed.
 
-The hash covers every cause of a change at once — scouting, a vision change, a
-camp built here — without enumerating them.
+The key covers every cause the player would notice — scouting, a vision change,
+a camp built here — and ignores the ones they would not.
+
+The panel also stays closed when the player is in camp, when the layout is not
+small, when a popup is open, and when the player is down (`vision-step-0`).
+
+The open and close mechanics live in `UIFunctions`, beside the log drawer and
+adventurer toggles, which are the same kind of control. `UIOutLevelSystem` only
+decides when to ask for the panel.
 
 The map is not saved. The save format uses two-letter keys and drops falsy
 values to stay small, and a per-sector hash across a whole world would cost
