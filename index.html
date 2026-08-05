@@ -844,6 +844,16 @@
 
 	<button id="btn-log-toggle" class="hidden-by-popups hidden-when-down" aria-label="Toggle message log">log</button>
 
+	<!-- new log messages, shown for a few seconds each (small layout only).
+	     Body level so no scroll container can clip it, and the same two
+	     classes as the pill so popups and being "down" reach it too.
+
+	     aria-hidden on purpose: #log ul carries role="log" and already
+	     announces these messages. A second live region would read every
+	     message twice. -->
+
+	<div id="log-toasts" class="hidden-by-popups hidden-when-down" aria-hidden="true"></div>
+
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>

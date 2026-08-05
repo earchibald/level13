@@ -1,17 +1,18 @@
 define([
-	'ash', 
-	'text/Text', 
-	'utils/UIList', 
+	'ash',
+	'text/Text',
+	'utils/UIList',
+	'utils/UIToastStack',
 	'utils/MathUtils',
-	'game/GameGlobals', 
-	'game/GlobalSignals', 
+	'game/GameGlobals',
+	'game/GlobalSignals',
 	'game/constants/LogConstants',
 	'game/constants/TextConstants',
-	'game/nodes/LogNode', 
-	'game/nodes/PlayerPositionNode', 
-	'game/constants/UIConstants', 
+	'game/nodes/LogNode',
+	'game/nodes/PlayerPositionNode',
+	'game/constants/UIConstants',
 	'game/vos/PositionVO'],
-function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants, TextConstants, LogNode, PlayerPositionNode, UIConstants, PositionVO) {
+function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals, LogConstants, TextConstants, LogNode, PlayerPositionNode, UIConstants, PositionVO) {
 
 	let UIOutLogSystem = Ash.System.extend({
 	
@@ -54,6 +55,7 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 		initElements: function () {
 			this.logList = UIList.create(this, $("#log ul"), this.createLogListItem, this.updateLogListItem, this.isLogListItemDataSame);
 			this.logListLatest = UIList.create(this, $("#log-latest ul"), this.createLogListItem, this.updateLogListItem, this.isLogListItemDataSame);
+			this.toastStack = UIToastStack.create($("#log-toasts"));
 		},
 		
 		initAmbientMessages: function () {
@@ -117,6 +119,8 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 			
 			UIList.update(this.logListLatest, latestMessages);
 
+			this.updateToasts(latestMessages);
+
 			let hasNewMessages = false;
 
 			for (let i = 0; i < shownMessages.length; i++) {
@@ -144,6 +148,31 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 				this.markLogMessagesSeen();
 			} else {
 				this.updateLogBadge();
+			}
+		},
+
+		// A message that arrives while the drawer is closed is invisible until
+		// the player thinks to look at the badge, which only says that
+		// something happened. Each new one also gets a few seconds on screen.
+		//
+		// Nothing here touches markedAsSeen. A glance is not a read, so the
+		// badge keeps counting a toasted message until the drawer opens.
+		updateToasts: function (messages) {
+			if (!this.toastStack) return;
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			// the regular layout has the log column on screen already
+			if (!$("body").hasClass("layout-small")) return;
+			// so does an open drawer
+			if ($("body").hasClass("log-drawer-open")) return;
+
+			// Backwards, because this list is newest-first: updateMessages hands
+			// updateMessageList a reversed list so the drawer reads newest at
+			// the top. Cards read the other way - oldest at the top, each new
+			// one arriving below it - and, more importantly, the cap evicts by
+			// push order. Pushed newest-first, a burst of five would evict the
+			// newest four and leave the three oldest on screen.
+			for (let i = messages.length - 1; i >= 0; i--) {
+				UIToastStack.push(this.toastStack, this.getMessageText(messages[i]));
 			}
 		},
 
@@ -178,14 +207,7 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 				positionText += ")"
 			}
 
-			let message = "";
-			
-			if (data.text) message = data.text; // backwards compatibility
-			
-			if (data.messageTextVO) message = Text.compose(data.messageTextVO);
-
-			message = LogConstants.cleanupMessage(message);
-			message = TextConstants.sentencify(message);
+			let message = this.getMessageText(data);
 
 			let timestamp = data.timestamp;
 
@@ -199,6 +221,19 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 			li.$spanTime.text(UIConstants.getTimeSinceText(timestamp) + " ago");
 			li.$spanLevel.toggle(hasPosition);
 			if (hasPosition) li.$spanLevel.text(positionText);
+		},
+
+		// One rendering of a message, so the entry in the drawer and the card
+		// that flashes up cannot drift apart.
+		getMessageText: function (data) {
+			let message = "";
+
+			if (data.text) message = data.text; // backwards compatibility
+
+			if (data.messageTextVO) message = Text.compose(data.messageTextVO);
+
+			message = LogConstants.cleanupMessage(message);
+			return TextConstants.sentencify(message);
 		},
 
 		isLogListItemDataSame: function (d1, d2) {
@@ -395,10 +430,14 @@ function (Ash, Text, UIList, MathUtils, GameGlobals, GlobalSignals, LogConstants
 
 		onGameReset: function () {
 			this.lastUpdateTimeStamp = 0;
+			UIToastStack.clear(this.toastStack);
 		},
 
 		onMarkLogMessagesSeen: function () {
 			this.markLogMessagesSeen();
+			// the drawer is opening, so the cards would be repeating what is
+			// now on screen underneath them
+			UIToastStack.clear(this.toastStack);
 		},
 
 		onPlayerPositionChanged: function (position) {

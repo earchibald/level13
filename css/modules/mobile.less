@@ -1789,6 +1789,74 @@ body.layout-small.log-drawer-open #log {
 }
 
 // ---------------------------------------------------------------------------
+// LOG TOASTS
+// The drawer, the pill and the badge all work, but a message that arrives
+// while the drawer is closed is invisible: the badge only says that something
+// happened, not what. Each new message also gets a card under the chrome for a
+// few seconds - see UIOutLogSystem.updateToasts, which does not mark anything
+// as read, so the badge is unaffected.
+//
+// Under the chrome and not above the action bar: this is the corner furthest
+// from the thumb, so a card can never land under a finger already on its way
+// to a direction or to Scavenge.
+
+#log-toasts {
+	display: none;
+}
+
+body.layout-small #log-toasts {
+	display: block;
+	position: fixed;
+	top: var(--l13-chrome-height);
+	left: 10px;
+	right: 10px;
+	// under the drawer (8) and the pill (9), over the page
+	z-index: 7;
+	// the container spans the width whether or not it holds anything, so the
+	// gaps between cards must not eat taps meant for the page underneath
+	pointer-events: none;
+}
+
+body.layout-small #log-toasts .log-toast {
+	pointer-events: auto;
+	margin-top: 6px;
+	padding: 8px 10px;
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+	font-size: 0.9rem;
+	line-height: 1.25;
+	opacity: 1;
+	// must match UIToastStack.DEFAULT_FADE_MS, which is how long the widget
+	// waits before it removes the element
+	transition: opacity 400ms ease-out;
+}
+
+body.layout-small #log-toasts .log-toast-leaving {
+	opacity: 0;
+}
+
+// invisible chrome must not stay tappable while the player is "down".
+// .hidden-when-down on the container takes the opacity to 0; this takes the
+// taps, and it goes on the cards because the container has none to give.
+body.vision-step-0 #log-toasts .log-toast {
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body.layout-small #log-toasts .log-toast {
+		transition: none;
+	}
+}
+
+// landscape is the map and nothing else
+body.landscape-map #log-toasts {
+	display: none;
+}
+
+// ---------------------------------------------------------------------------
 // TABLES AND ACTION ROWS AT PHONE WIDTHS
 
 @media screen and (max-width: 568px) {

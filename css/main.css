@@ -7055,6 +7055,46 @@ body.layout-small.log-drawer-open #log {
   width: 100%;
   overflow-y: auto !important;
 }
+#log-toasts {
+  display: none;
+}
+body.layout-small #log-toasts {
+  display: block;
+  position: fixed;
+  top: var(--l13-chrome-height);
+  left: 10px;
+  right: 10px;
+  z-index: 7;
+  pointer-events: none;
+}
+body.layout-small #log-toasts .log-toast {
+  pointer-events: auto;
+  margin-top: 6px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  background: var(--l13-mobile-bg);
+  border: 1px solid var(--l13-mobile-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+  font-size: 0.9rem;
+  line-height: 1.25;
+  opacity: 1;
+  transition: opacity 400ms ease-out;
+}
+body.layout-small #log-toasts .log-toast-leaving {
+  opacity: 0;
+}
+body.vision-step-0 #log-toasts .log-toast {
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.layout-small #log-toasts .log-toast {
+    transition: none;
+  }
+}
+body.landscape-map #log-toasts {
+  display: none;
+}
 @media screen and (max-width: 568px) {
   body.layout-small button.action {
     width: auto;
