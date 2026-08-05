@@ -1246,6 +1246,10 @@ define([
 
 		updateSectorDescription: function () {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			// every line below dereferences it, and four signal handlers call
+			// this without checking first - updateLocales and updateCharacters
+			// beside them already guard the same way
+			if (!this.playerLocationNodes.head) return;
 			var featuresComponent = this.playerLocationNodes.head.entity.get(SectorFeaturesComponent);
 			var sectorStatus = this.playerLocationNodes.head.entity.get(SectorStatusComponent);
 
