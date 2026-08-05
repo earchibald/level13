@@ -90,6 +90,7 @@ define([
 
 			this.elements = {};
 			this.elements.sectorHeader = $("#header-sector");
+			this.elements.roomName = $("#btn-room span");
 			this.elements.description = $("#out-desc");
 			this.elements.descriptionStats = $("#out-desc-stats");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
@@ -1255,9 +1256,13 @@ define([
 			var hasCampHere = this.playerLocationNodes.head.entity.has(CampComponent);
 			var isScouted = sectorStatus.scouted;
 
-			// Header
+			// Header. Written twice on purpose: the h2 is what the regular
+			// layout reads, and the banner chip is what a phone reads. The
+			// stylesheet hides whichever one this layout does not use.
 			var features = GameGlobals.sectorHelper.getTextFeatures(sector);
-			this.elements.sectorHeader.text(TextConstants.getSectorHeader(hasVision, features));
+			var sectorHeaderText = TextConstants.getSectorHeader(hasVision, features);
+			this.elements.sectorHeader.text(sectorHeaderText);
+			this.elements.roomName.text(sectorHeaderText);
 
 			// Description
 			this.elements.description.html(this.getDescription(

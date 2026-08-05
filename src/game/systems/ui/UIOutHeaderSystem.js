@@ -1285,6 +1285,11 @@ define([
 			GameGlobals.uiFunctions.toggle("#btn-adventurer", isSmallLayout);
 			if (!isSmallLayout) this.elements.body.removeClass("adventurer-open");
 
+			// The room is where you are, not which tab you are looking at, so
+			// the chip stays put across tabs rather than reflowing the banner
+			// on every switch. In camp the banner already names the camp.
+			GameGlobals.uiFunctions.toggle("#btn-room", isSmallLayout && !isInCamp);
+
 			this.updateChromeGrouping(isSmallLayout);
 
 			// The shell layout - chrome, scrolling pane and map panel as one flex

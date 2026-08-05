@@ -6458,6 +6458,44 @@ body.touch #grid-location-header > #btn-adventurer::after {
 body.vision-step-0 #btn-adventurer {
   pointer-events: none;
 }
+body.layout-small #grid-location-header > #btn-room {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 2px 8px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  min-height: 0;
+  border: 1px solid var(--l13-mobile-border);
+  border-radius: 11px !important;
+  background: var(--l13-mobile-bg);
+}
+body.layout-small #grid-location-header > #btn-room > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.layout-small.room-panel-open #grid-location-header > #btn-room {
+  background: var(--l13-mobile-badge-bg);
+  color: var(--l13-mobile-badge-fg);
+  border-color: var(--l13-mobile-badge-bg);
+}
+body.touch #grid-location-header > #btn-room::after {
+  content: "";
+  position: absolute;
+  inset: -9px 0 0 0;
+}
+body.vision-step-0 #btn-room {
+  pointer-events: none;
+}
+body.layout-small #header-sector {
+  display: none;
+}
 body.layout-small #mobile-header .stat-indicator {
   display: block;
   text-align: center;

@@ -810,6 +810,66 @@ body.vision-step-0 #btn-adventurer {
 	pointer-events: none;
 }
 
+// THE ROOM CHIP
+// The room name was an h2 in the scrolling page, where it left the screen as
+// soon as the player read anything below it. In the banner it is on screen on
+// every tab, and it is the control that opens the description.
+//
+// It takes what the title and the adventurer chip leave, and ellipsises. A
+// sector header runs as long as "A narrow dark alley with camp", and the
+// alternative - a second banner row - costs a band of fixed chrome on every
+// screen, which the small layout has spent several commits reclaiming.
+body.layout-small #grid-location-header > #btn-room {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+	padding: 2px 8px;
+	overflow: hidden;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8rem;
+	line-height: 1.4;
+	min-height: 0;
+	border: 1px solid var(--l13-mobile-border);
+	// btn-meta squares its own corners with an !important of its own
+	border-radius: 11px !important;
+	background: var(--l13-mobile-bg);
+}
+
+body.layout-small #grid-location-header > #btn-room > span {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+// open: the chip inverts, the same way the adventurer chip does. It is a
+// control with a state, and underlining it would say "link" instead.
+body.layout-small.room-panel-open #grid-location-header > #btn-room {
+	background: var(--l13-mobile-badge-bg);
+	color: var(--l13-mobile-badge-fg);
+	border-color: var(--l13-mobile-badge-bg);
+}
+
+// the chip is small; the tap target is not. Up is the safe-area padding above
+// the chrome. Not down - the stats row below is a callout target of its own.
+body.touch #grid-location-header > #btn-room::after {
+	content: "";
+	position: absolute;
+	inset: -9px 0 0 0;
+}
+
+// invisible chrome must not stay tappable while the player is "down"
+body.vision-step-0 #btn-room {
+	pointer-events: none;
+}
+
+// the name is in the banner now, so the copy in the page is a repeat
+body.layout-small #header-sector {
+	display: none;
+}
+
 // a cell: the label sits over its value, both centred. Two lines per cell
 // is the point of the layout, so the type is tightened to pay for it.
 body.layout-small #mobile-header .stat-indicator {

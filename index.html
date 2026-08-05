@@ -203,6 +203,11 @@
 					<div id="grid-location-header" class="unit whole vision-container">
 						<div class='info-callout-target info-callout-target-side'><img id="level-icon" /></div>
 						<h1>Camp</h1>
+						<!-- the room you are standing in, outside camp. It was an h2
+						     in the scrolling page; up here it is on screen while the
+						     page scrolls, and it opens the room description. Hidden
+						     until UIOutHeaderSystem has decided the layout. -->
+						<button id="btn-room" class="btn-meta hidden-when-down" aria-expanded="false" style="display:none"><span></span></button>
 						<!-- reveals the adventurer's own stats, which the small-layout
 						     header otherwise leaves off (see mobile.less). It rides in
 						     the banner because the banner is on screen on every tab, in
