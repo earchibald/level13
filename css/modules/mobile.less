@@ -673,7 +673,8 @@ body.layout-small #mobile-header {
 	grid-template-columns: repeat(2, 1fr);
 	align-items: stretch;
 	gap: 1px;
-	padding: ~"calc(2px + env(safe-area-inset-top))" 0 0 0;
+	// the inset is reserved once, by #mobile-chrome (see APP SHELL)
+	padding: 2px 0 0 0;
 	box-sizing: border-box;
 	max-width: 100%;
 	background: var(--l13-mobile-border);
@@ -1787,8 +1788,31 @@ body.layout-small .sticky-footer {
 // where iOS lays the web view out BELOW the status bar rather than under it,
 // the inset reads 0 and there is nothing to clear - so the floor was just an
 // empty band of chrome above the stats, on every screen, in camp and outside.
-body.layout-small.standalone #mobile-chrome {
+// The inset the chrome reserves, in one place. It used to be added here and
+// again on #mobile-header, which is a child of this element in the shell
+// layout - two reserves for one status bar on any device that reported a real
+// inset. It never showed, because this device reports 0.
+//
+// var() rather than env(), because the value is measured (see
+// updateSafeAreaTop): rotation can leave iOS laying the view out fullscreen
+// while env() still reads 0, and the chrome ended up behind the clock until a
+// reload. The env() fallback covers the frames before the first measurement.
+body.layout-small #mobile-chrome {
+	padding-top: ~"var(--l13-safe-top, env(safe-area-inset-top))";
+}
+
+// what updateSafeAreaTop measures. It has to be a real box with real padding,
+// and it must not take a tap or paint anything.
+#safe-area-probe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
 	padding-top: ~"env(safe-area-inset-top)";
+	visibility: hidden;
+	pointer-events: none;
+	z-index: -1;
 }
 
 // no rubber-band bounce revealing white behind the page (body propagates to

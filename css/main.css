@@ -6380,7 +6380,7 @@ body.layout-small #mobile-header {
   grid-template-columns: repeat(2, 1fr);
   align-items: stretch;
   gap: 1px;
-  padding: calc(2px + env(safe-area-inset-top)) 0 0 0;
+  padding: 2px 0 0 0;
   box-sizing: border-box;
   max-width: 100%;
   background: var(--l13-mobile-border);
@@ -7035,8 +7035,19 @@ body.layout-small #footer {
 body.layout-small .sticky-footer {
   padding-bottom: calc(10px + env(safe-area-inset-bottom));
 }
-body.layout-small.standalone #mobile-chrome {
+body.layout-small #mobile-chrome {
+  padding-top: var(--l13-safe-top, env(safe-area-inset-top));
+}
+#safe-area-probe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   padding-top: env(safe-area-inset-top);
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
 }
 body.standalone {
   overscroll-behavior-y: none;

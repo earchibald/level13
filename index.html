@@ -880,6 +880,10 @@
 		     Hidden on purpose: #log ul carries role="log" and already announces
 		     these messages. A second reading of the same text is noise. -->
 
+		<!-- A custom property that holds env(...) reads back as the literal
+		     text, not a resolved length, so the inset has to be measured off a
+		     real box. See updateSafeAreaTop in UIOutHeaderSystem. -->
+		<div id="safe-area-probe" aria-hidden="true"></div>
 		<div id="log-toasts" class="hidden-by-popups hidden-when-down">
 			<div id="log-toasts-list" aria-hidden="true"></div>
 		</div>

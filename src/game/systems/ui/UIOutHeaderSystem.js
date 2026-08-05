@@ -62,6 +62,7 @@ define([
 		deityNodes: null,
 		tribeNodes: null,
 		currentLocationNodes: null,
+		baselinePortraitHeight: null,
 		engine: null,
 		
 		previousShownCampResAmount: {},
@@ -1238,6 +1239,45 @@ define([
 			if (previousTabID && currentTabID === mapTabID) GameGlobals.uiFunctions.showTab(previousTabID);
 		},
 
+		// The reserve for the status bar, measured rather than read.
+		//
+		// This device reports env(safe-area-inset-top) as 0 and iOS lays the
+		// web view out below the status bar instead. A rotation can leave the
+		// view laid out fullscreen without the inset ever changing, and the
+		// chrome comes to rest behind the clock until the page is reloaded.
+		//
+		// So take the larger of two numbers: what env() says, and how much the
+		// portrait viewport has grown since the session's first portrait
+		// frame. Growth in portrait is the band iOS used to leave for the
+		// status bar and has stopped leaving, which is exactly what has to be
+		// reserved.
+		updateSafeAreaTop: function () {
+			let probe = document.getElementById("safe-area-probe");
+			let measured = 0;
+			if (probe) {
+				measured = parseFloat(window.getComputedStyle(probe).paddingTop) || 0;
+			}
+
+			let isPortrait = window.innerHeight >= window.innerWidth;
+
+			// taken before any rotation, and never revised: a later portrait
+			// height is the thing being measured, not a new baseline
+			if (isPortrait && this.baselinePortraitHeight === null) {
+				this.baselinePortraitHeight = window.innerHeight;
+			}
+
+			// Held to the installed app. In a browser tab the address bar
+			// collapsing also grows the viewport, and that must not be read as
+			// a lost status bar.
+			let growth = 0;
+			let isStandalone = this.elements.body.hasClass("standalone");
+			if (isStandalone && isPortrait && this.baselinePortraitHeight !== null) {
+				growth = Math.max(0, window.innerHeight - this.baselinePortraitHeight);
+			}
+
+			document.documentElement.style.setProperty("--l13-safe-top", Math.max(measured, growth) + "px");
+		},
+
 		updateLayoutMode: function () {
 			let wasSmallLayout = this.elements.body.hasClass("layout-small");
 			// the map layout is a small-layout thing, and a phone is wider than
@@ -1255,6 +1295,9 @@ define([
 		},
 
 		updateLayout: function () {
+			// a rotation arrives here, and the reserve has to be right before
+			// the placement passes below read any geometry
+			this.updateSafeAreaTop();
 			// The landscape map mode also asks whether the player has a map, and no
 			// resize announces that. A phone that opens the game already sideways
 			// asked once, before the tab bar had a map button on it, and nothing
@@ -1402,6 +1445,9 @@ define([
 		// the measuring half of updateLayout, without any of the DOM moves, so it
 		// is safe to run again from a frame callback
 		updateMeasurements: function () {
+			// before anything measures the chrome: the chrome's height depends
+			// on the padding this sets
+			this.updateSafeAreaTop();
 			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
 			this.updateBottomChromeState(isShell);
 			this.updateTopChromeState(isShell);
