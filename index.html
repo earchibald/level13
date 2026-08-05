@@ -870,6 +870,15 @@
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 
+	<!-- the room description, on a phone (see mobile.less). UIOutHeaderSystem
+	     moves #out-desc in here in the small layout and puts it back on the way
+	     out - the same element, not a copy, so every existing write into it
+	     still lands. -->
+
+	<div id="room-panel" class="hidden-by-popups">
+		<button id="btn-room-panel-close" class="context btn-glyph" aria-label="Close room description">&times;</button>
+	</div>
+
 	<!-- popups -->
 
 	<div id="popup-overlay" style="display: none;" aria-hidden="false">

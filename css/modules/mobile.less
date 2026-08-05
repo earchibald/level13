@@ -870,6 +870,76 @@ body.layout-small #header-sector {
 	display: none;
 }
 
+// THE ROOM PANEL
+// The description was several paragraphs in the middle of the scrolling page,
+// above the compass and the buttons the player reaches for between moves. It
+// hangs under the chrome instead, and it is capped so it never reaches the
+// bottom chrome - so the tap that closes it can be the tap that does the next
+// thing. See UIFunctions.toggleRoomPanel.
+
+#room-panel {
+	display: none;
+}
+
+body.layout-small.room-panel-open #room-panel {
+	display: block;
+	position: fixed;
+	top: var(--l13-chrome-height);
+	left: 10px;
+	right: 10px;
+	// over the toasts (7), under the drawer (8) and the pill (9)
+	z-index: 7;
+	margin-top: 6px;
+	padding: 8px 10px 10px 10px;
+	box-sizing: border-box;
+	// what is left of the screen once both bands of chrome have taken theirs
+	max-height: ~"calc(100dvh - var(--l13-chrome-height) - var(--l13-out-bottom-height) - 26px)";
+	overflow-y: auto;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+}
+
+// the right margin is the room the close button needs
+body.layout-small #room-panel #out-desc {
+	margin: 0 20px 0 0;
+}
+
+body.layout-small #room-panel #out-desc p {
+	margin: 0 0 6px 0;
+}
+
+body.layout-small #room-panel #out-desc p:last-child {
+	margin-bottom: 0;
+}
+
+#btn-room-panel-close {
+	display: none;
+}
+
+body.layout-small.room-panel-open #btn-room-panel-close {
+	display: block;
+	position: absolute;
+	top: 2px;
+	right: 4px;
+	margin: 0;
+	padding: 0 6px;
+	font-size: 1.1rem;
+	line-height: 1.2;
+}
+
+body.touch #btn-room-panel-close::after {
+	content: "";
+	position: absolute;
+	inset: -10px;
+}
+
+// landscape is the map and nothing else
+body.landscape-map #room-panel {
+	display: none !important;
+}
+
 // a cell: the label sits over its value, both centred. Two lines per cell
 // is the point of the layout, so the type is tightened to pay for it.
 body.layout-small #mobile-header .stat-indicator {

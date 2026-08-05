@@ -1314,6 +1314,7 @@ define([
 			$("#unit-main").css("padding-top", isShell ? "0px" : "15px");
 			$("#log-container").css("padding-top", isShell ? "25px" : "25px");
 			this.updateLocationHeaderPlacement(isShell);
+			this.updateRoomPanelPlacement(isShell);
 			this.updateOutControlsPlacement(isShell);
 			this.updateSectorBarPlacement(isShell);
 			this.updateOutActionsPlacement(isShell);
@@ -1438,6 +1439,39 @@ define([
 			// same as putting it back.
 			if ($header[0].nextSibling === this.locationHeaderMarker) return;
 			$(this.locationHeaderMarker).before($header);
+		},
+
+		// The room description is a panel over the top of the page on a phone,
+		// not a block in the middle of the scroll. The element itself moves, and
+		// is not copied, so every existing write from UIOutLevelSystem still
+		// lands and nothing there has to know about the panel.
+		updateRoomPanelPlacement: function (shouldDock) {
+			let $desc = $("#out-desc");
+			if ($desc.length === 0) return;
+
+			if (shouldDock) {
+				let $panel = $("#room-panel");
+				if ($panel.length === 0) return;
+				if ($desc.parent().is($panel)) return;
+
+				// a marker where it came from, so the regular layout gets it
+				// back in its own place in the order rather than at the front
+				if (!this.roomPanelMarker) {
+					this.roomPanelMarker = document.createComment("out-desc");
+					$desc.after(this.roomPanelMarker);
+				}
+				$panel.append($desc);
+				return;
+			}
+
+			if (!this.roomPanelMarker) return;
+			if ($desc[0].nextSibling === this.roomPanelMarker) return;
+			$(this.roomPanelMarker).before($desc);
+			// through toggleRoomPanel, not by clearing the class here: the chip's
+			// aria-expanded is the other half of "the panel is open", and a
+			// resize with it open would otherwise leave the chip claiming a
+			// panel that is no longer on screen
+			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 
 		// The action bar is the top half of the bottom chrome. Like the map panel

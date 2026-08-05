@@ -6496,6 +6496,56 @@ body.vision-step-0 #btn-room {
 body.layout-small #header-sector {
   display: none;
 }
+#room-panel {
+  display: none;
+}
+body.layout-small.room-panel-open #room-panel {
+  display: block;
+  position: fixed;
+  top: var(--l13-chrome-height);
+  left: 10px;
+  right: 10px;
+  z-index: 7;
+  margin-top: 6px;
+  padding: 8px 10px 10px 10px;
+  box-sizing: border-box;
+  max-height: calc(100dvh - var(--l13-chrome-height) - var(--l13-out-bottom-height) - 26px);
+  overflow-y: auto;
+  background: var(--l13-mobile-bg);
+  border: 1px solid var(--l13-mobile-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+}
+body.layout-small #room-panel #out-desc {
+  margin: 0 20px 0 0;
+}
+body.layout-small #room-panel #out-desc p {
+  margin: 0 0 6px 0;
+}
+body.layout-small #room-panel #out-desc p:last-child {
+  margin-bottom: 0;
+}
+#btn-room-panel-close {
+  display: none;
+}
+body.layout-small.room-panel-open #btn-room-panel-close {
+  display: block;
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  margin: 0;
+  padding: 0 6px;
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+body.touch #btn-room-panel-close::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+}
+body.landscape-map #room-panel {
+  display: none !important;
+}
 body.layout-small #mobile-header .stat-indicator {
   display: block;
   text-align: center;

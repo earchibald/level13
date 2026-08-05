@@ -223,6 +223,35 @@ define(['ash',
 					$(this).attr("aria-expanded", isOpen);
 				});
 
+				// The room description, on a phone. It opens by itself when the
+				// room is new - see UIOutLevelSystem - and this is the way back to
+				// it, and the way out of it.
+				//
+				// Any tap closes it. Every sector is a first visit, so a panel that
+				// waited to be dismissed would cost a tap on almost every move; and
+				// because it never covers the action bar, the tap that closes it is
+				// usually the tap that does the next thing anyway.
+				$("#btn-room").click(function (e) {
+					// without this the document handler below closes the panel and
+					// this handler opens it again, on every tap
+					e.stopPropagation();
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					uiFunctions.toggleRoomPanel(!$("body").hasClass("room-panel-open"));
+				});
+
+				$("#btn-room-panel-close").click(function (e) {
+					e.stopPropagation();
+					uiFunctions.toggleRoomPanel(false);
+				});
+
+				// This is the whole of the dismiss rule. A tab switch, a direction,
+				// Scavenge and the panel itself are all clicks in the document, so
+				// none of them needs a rule of its own.
+				$(document).on("click", function () {
+					if (!$("body").hasClass("room-panel-open")) return;
+					uiFunctions.toggleRoomPanel(false);
+				});
+
 				// keep popups centered within the VISIBLE viewport (the software
 				// keyboard shrinks it on phones)
 				if (window.visualViewport) {
@@ -1762,6 +1791,15 @@ define(['ash',
 				$element.toggleClass("collapsible-open", show);
 				this.slideToggleIf($element.next(".collapsible-content"), null, show, 300, 200);
 				GlobalSignals.elementToggledSignal.dispatch($element, show);
+			},
+
+			// One place decides whether the panel is on screen: the class drives
+			// the stylesheet, and the chip says so for anything reading the
+			// accessibility tree.
+			toggleRoomPanel: function (show) {
+				let isOpen = show === true;
+				$("body").toggleClass("room-panel-open", isOpen);
+				$("#btn-room").attr("aria-expanded", isOpen);
 			},
 
 			toggle: function (element, show, signalParams, delay) {
