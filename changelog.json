@@ -1,6 +1,31 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m52",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "New log messages now appear as cards under the header for a few seconds, so a message can be read as it arrives instead of only counted by the badge"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room you are standing in is named in the top bar, and tapping it shows the description"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room description opens by itself the first time you stand somewhere, and closes again on the next thing you do"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The floating log button no longer covers the save button in the footer"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m51",
             "requiredVersion": "0.6.1",
             "phase": "beta",
