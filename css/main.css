@@ -7891,7 +7891,8 @@ body.landscape-map #grid-switch-content > .tabcontainer:not(#container-tab-two-m
 }
 body.landscape-map.tab-switch-map #grid-switch-content {
   display: grid;
-  grid-template-columns: 70fr 30fr;
+  grid-template-columns: minmax(0, 1fr) 152px;
+  position: relative;
   grid-template-rows: auto minmax(0, 1fr);
   flex: 1 1 auto;
   min-height: 0;
@@ -7959,14 +7960,17 @@ body.landscape-map.tab-switch-map #mainmap-sector-details {
   position: static;
 }
 body.landscape-map.tab-switch-map #mainmap-sector-details-content {
-  position: relative;
-  order: 1;
-  flex: 1 0 100%;
-  left: auto;
+  position: absolute;
+  order: 0;
+  flex: none;
+  top: auto;
   right: auto;
-  bottom: auto;
-  max-height: none;
-  margin: 4px 0 0 0;
+  left: calc(env(safe-area-inset-left) + 10px);
+  bottom: calc(env(safe-area-inset-bottom) + 10px);
+  width: min(56%, 460px);
+  max-height: calc(100% - 20px);
+  margin: 0;
+  overflow-y: auto;
 }
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],

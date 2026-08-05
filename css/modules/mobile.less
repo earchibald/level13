@@ -3181,7 +3181,14 @@ body.landscape-map #grid-switch-content > .tabcontainer:not(#container-tab-two-m
 // them and the column never becomes two.
 body.landscape-map.tab-switch-map #grid-switch-content {
 	display: grid;
-	grid-template-columns: 70fr 30fr;
+	// The rail holds two selects and up to seven glyph buttons and nothing
+	// else, so it takes a width rather than a share. It used to take 30% of
+	// the screen for a description that has moved over the map.
+	grid-template-columns: minmax(0, 1fr) 152px;
+	// the containing block for the description panel below: the panel has to
+	// reach across into the map's column, which it cannot do while its only
+	// positioned ancestor is inside the rail
+	position: relative;
 	// the controls take what they need at the top of the right column and the
 	// details get the rest; minmax(0, 1fr) is what lets that row scroll rather
 	// than push the grid past the viewport
@@ -3223,13 +3230,13 @@ body.landscape-map.tab-switch-map #mainmap-container-ascii {
 }
 
 // ---------------------------------------------------------------------------
-// The right column: the map's own controls, then the sector.
+// The right column: the map's own controls, and nothing else.
 //
-// The description sits in this column rather than over the map, unlike
-// portrait. The column is there for the controls whether a sector is selected
-// or not, so the description costs the map nothing here - and it is the one
-// place on a phone where it can be read without covering the thing it
-// describes.
+// The description used to sit in this column. At 30% of a phone on its side
+// that is about 250px for prose with a heading and a nine-row table, and it
+// was unreadable. It floats over the map now, as it already did in portrait,
+// and the column keeps only the controls - which is why it can be a narrow
+// rail instead of a third of the screen.
 
 body.landscape-map.tab-switch-map #grid-tab-header {
 	grid-column: 2;
@@ -3283,16 +3290,28 @@ body.landscape-map.tab-switch-map #mainmap-sector-details {
 	position: static;
 }
 
-// back into the flow, on a row of its own under the buttons
+// Over the map, in the bottom left of its column.
+//
+// Absolute, not fixed. Safari clips a fixed box that lives inside a scrolling
+// container, and #mainmap-sector-details is one. An absolutely positioned box
+// whose containing block sits outside that scroller is not clipped by it,
+// which is why Step 1 put `position: relative` on the grid and why the details
+// box must stay `position: static` here.
+//
+// The card itself - background, border, radius, shadow, padding, and the close
+// button - comes from the portrait rules above and is not repeated.
 body.landscape-map.tab-switch-map #mainmap-sector-details-content {
-	position: relative;
-	order: 1;
-	flex: 1 0 100%;
-	left: auto;
+	position: absolute;
+	order: 0;
+	flex: none;
+	top: auto;
 	right: auto;
-	bottom: auto;
-	max-height: none;
-	margin: 4px 0 0 0;
+	left: ~"calc(env(safe-area-inset-left) + 10px)";
+	bottom: ~"calc(env(safe-area-inset-bottom) + 10px)";
+	width: ~"min(56%, 460px)";
+	max-height: ~"calc(100% - 20px)";
+	margin: 0;
+	overflow-y: auto;
 }
 
 // ---------------------------------------------------------------------------
