@@ -157,8 +157,9 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 		// the player thinks to look at the badge, which only says that
 		// something happened. Each new one also gets a few seconds on screen.
 		//
-		// Nothing here touches markedAsSeen. A glance is not a read, so the
-		// badge keeps counting a toasted message until the drawer opens.
+		// Arriving here does not mark a message seen: a glance is not a read,
+		// so the badge keeps counting a toasted message. Tapping one is a
+		// read, and the callback passed to push below is where that happens.
 		updateToasts: function (messages) {
 			if (!this.toastStack) return;
 			// the regular layout has the log column on screen already
