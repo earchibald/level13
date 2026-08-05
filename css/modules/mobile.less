@@ -984,9 +984,8 @@ body.layout-small.room-panel-open.vision-step-0 #room-panel {
 	display: none;
 }
 
-// the right margin is the room the close button needs
 body.layout-small #room-panel #out-desc {
-	margin: 0 20px 0 0;
+	margin: 0;
 }
 
 body.layout-small #room-panel #out-desc p {
@@ -1001,22 +1000,10 @@ body.layout-small #room-panel #out-desc p:last-child {
 	display: none;
 }
 
-body.layout-small.room-panel-open #btn-room-panel-close {
-	display: block;
-	position: absolute;
-	top: 2px;
-	right: 4px;
-	margin: 0;
-	padding: 0 6px;
-	font-size: 1.1rem;
-	line-height: 1.2;
-}
-
-body.touch #btn-room-panel-close::after {
-	content: "";
-	position: absolute;
-	inset: -10px;
-}
+// No close button on a phone. Any tap already closes this panel, so the button
+// only duplicated the gesture and cost a box in the corner of the text. The
+// element stays in the markup for the regular layout, where the base rule
+// keeps it hidden anyway.
 
 // landscape is the map and nothing else
 body.landscape-map #room-panel {
@@ -2638,7 +2625,7 @@ body.layout-small #mainmap-sector-details-content {
 }
 
 body.layout-small #mainmap-sector-details-content h3 {
-	margin: 0 24px 4px 0;
+	margin: 0 0 4px 0;
 	font-size: 1rem;
 }
 
@@ -2657,22 +2644,8 @@ body.layout-small #mainmap-sector-details-content td.textwidth {
 
 #btn-mainmap-sector-details-close { display: none; }
 
-body.layout-small #btn-mainmap-sector-details-close {
-	display: block;
-	position: absolute;
-	top: 2px;
-	right: 4px;
-	margin: 0;
-	padding: 0 6px;
-	font-size: 1.1rem;
-	line-height: 1.2;
-}
-
-body.touch #btn-mainmap-sector-details-close::after {
-	content: "";
-	position: absolute;
-	inset: -10px;
-}
+// As with the room panel: a tap anywhere closes this, so the button is a
+// duplicate gesture sitting on top of the text it is describing.
 
 // map header controls: stacked flex row instead of floats at phone widths
 @media screen and (max-width: 568px) {

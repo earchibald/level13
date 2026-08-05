@@ -112,6 +112,9 @@ define([
 				$("#minimap-background-overlay").off("click", ".map-hint-cell", this._onSectorTapTooltip);
 				$(document).off("click", this._onDocumentTapHideTooltip);
 			}
+			if (this._onDocumentTapDeselectSector) {
+				$(document).off("click", this._onDocumentTapDeselectSector);
+			}
 			this.playerPositionNodes = null;
 			this.playerLocationNodes = null;
 		},
@@ -136,6 +139,18 @@ define([
 			
 			$("#btn-mainmap-sector-path").click($.proxy(this.showSectorPath, this));
 			$("#btn-mainmap-sector-details-close").click($.proxy(this.deselectSector, this));
+
+			// A tap anywhere closes the sector panel, the way the minimap's
+			// tooltip already behaves. Delegated on the document rather than
+			// bound to the map, so a tap on any other part of the screen
+			// closes it too.
+			//
+			// Two exceptions, both by containment rather than by
+			// stopPropagation on the cells: the cells' own handler is shared
+			// with the minimap and must not change, and a tap inside the panel
+			// is for the "(directions)" link or to scroll, not to close.
+			this._onDocumentTapDeselectSector = $.proxy(this.onDocumentTapDeselectSector, this);
+			$(document).on("click", this._onDocumentTapDeselectSector);
 
 			$("#btn-mainmap-zoom-in").click($.proxy(function () {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
@@ -479,6 +494,18 @@ define([
 		onSectorHoverMove: function (e) {
 			this.tooltipCursor = { x: e.clientX, y: e.clientY };
 			// once shown the pane stays put, so it does not jitter under the cursor
+		},
+
+		onDocumentTapDeselectSector: function (e) {
+			if (!this.selectedSector) return;
+			let $target = $(e.target);
+			// a tap on a sector selects that one instead - its own handler has
+			// already run by the time this does
+			if ($target.closest(".map-overlay-cell").length > 0) return;
+			// and a tap inside the panel or on the jump buttons is not a
+			// request to close them
+			if ($target.closest("#mainmap-sector-details").length > 0) return;
+			this.deselectSector();
 		},
 
 		onSectorTapTooltip: function (e) {
