@@ -29,14 +29,19 @@ define([], function () {
 			};
 		},
 
-		push: function (stack, text) {
+		// onTap is optional and fires only for a real tap, never for the
+		// lifetime timer. A glance is not a read; reaching for the card is.
+		push: function (stack, text, onTap) {
 			if (!stack) return null;
 			if (!stack.$container || stack.$container.length === 0) return null;
 
 			let sys = this;
 			let card = { $root: $("<div class='log-toast'></div>"), timeoutID: null, fadeTimeoutID: null, isLeaving: false };
 			card.$root.text(text);
-			card.$root.on("click", function () { sys.dismiss(stack, card); });
+			card.$root.on("click", function () {
+				if (onTap) onTap();
+				sys.dismiss(stack, card);
+			});
 
 			stack.$container.append(card.$root);
 			stack.cards.push(card);

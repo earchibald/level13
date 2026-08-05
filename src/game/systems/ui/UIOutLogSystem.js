@@ -177,7 +177,9 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 			// small layout there is no stack to put it in.
 			if (GameGlobals.gameState.uiStatus.isHidden) {
 				for (let i = messages.length - 1; i >= 0; i--) {
-					this.pendingToasts.push(this.getMessageText(messages[i]));
+					// the message travels with its text: a card flushed later
+					// still has to be able to mark the right one as read
+					this.pendingToasts.push({ text: this.getMessageText(messages[i]), message: messages[i] });
 				}
 				// the flush must not undo the cap the stack exists to enforce
 				while (this.pendingToasts.length > this.toastStack.max) {
@@ -192,9 +194,23 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 			// one arriving below it - and, more importantly, the cap evicts by
 			// push order. Pushed newest-first, a burst of five would evict the
 			// newest four and leave the three oldest on screen.
+			let sys = this;
 			for (let i = messages.length - 1; i >= 0; i--) {
-				UIToastStack.push(this.toastStack, this.getMessageText(messages[i]));
+				let message = messages[i];
+				UIToastStack.push(this.toastStack, this.getMessageText(message), function () {
+					sys.markOneMessageSeen(message);
+				});
 			}
+		},
+
+		// One message, not the whole log. markLogMessagesSeen exists for
+		// opening the drawer, which really does mean "I have read all of
+		// this"; a tap on one card says nothing about the rest.
+		markOneMessageSeen: function (message) {
+			if (!message) return;
+			if (message.markedAsSeen) return;
+			message.markedAsSeen = true;
+			this.updateLogBadge();
 		},
 
 		flushPendingToasts: function () {
@@ -219,8 +235,12 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 
 			// oldest first, which is the order they were held in and the order
 			// the cap evicts by
+			let sys = this;
 			for (let i = 0; i < pending.length; i++) {
-				UIToastStack.push(this.toastStack, pending[i]);
+				let held = pending[i];
+				UIToastStack.push(this.toastStack, held.text, function () {
+					sys.markOneMessageSeen(held.message);
+				});
 			}
 		},
 
