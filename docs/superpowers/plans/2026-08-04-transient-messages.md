@@ -727,11 +727,18 @@ with:
 	     Body level so no scroll container can clip it, and the same two
 	     classes as the pill so popups and being "down" reach it too.
 
-	     aria-hidden on purpose: #log ul carries role="log" and already
-	     announces these messages. A second live region would read every
-	     message twice. -->
+	     The cards go in an inner div, and that is what carries aria-hidden.
+	     UIPopupManager stamps aria-hidden onto every .hidden-by-popups
+	     element on each popup open AND close, so a static one on the outer
+	     div would be rewritten to "false" the first time a popup closed.
+	     Nothing writes to the inner div, so its hiding holds.
 
-	<div id="log-toasts" class="hidden-by-popups hidden-when-down" aria-hidden="true"></div>
+	     Hidden on purpose: #log ul carries role="log" and already announces
+	     these messages. A second reading of the same text is noise. -->
+
+	<div id="log-toasts" class="hidden-by-popups hidden-when-down">
+		<div id="log-toasts-list" aria-hidden="true"></div>
+	</div>
 ```
 
 - [ ] **Step 2: Add the module dependency**
@@ -792,7 +799,7 @@ with:
 		initElements: function () {
 			this.logList = UIList.create(this, $("#log ul"), this.createLogListItem, this.updateLogListItem, this.isLogListItemDataSame);
 			this.logListLatest = UIList.create(this, $("#log-latest ul"), this.createLogListItem, this.updateLogListItem, this.isLogListItemDataSame);
-			this.toastStack = UIToastStack.create($("#log-toasts"));
+			this.toastStack = UIToastStack.create($("#log-toasts-list"));
 		},
 ```
 
