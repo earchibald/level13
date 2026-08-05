@@ -14,9 +14,9 @@ define([], function () {
 
 	let UIToastStack = {
 
-		DEFAULT_LIFETIME_MS: 3500,
+		DEFAULT_LIFETIME_MS: 4250,
 		DEFAULT_FADE_MS: 400,
-		DEFAULT_MAX: 3,
+		DEFAULT_MAX: 4,
 
 		create: function ($container, options) {
 			options = options || {};

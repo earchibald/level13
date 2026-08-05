@@ -29,10 +29,10 @@ new elements, as it suppresses the rest of the chrome.
 ### Behaviour
 
 A new log message appears as a card below the fixed chrome. The card stays for
-3500 ms, then fades over about 400 ms and is removed. Cards stack downward in
+4250 ms, then fades over about 400 ms and is removed. Cards stack downward in
 arrival order.
 
-At most three cards are on screen. A fourth arrival starts the oldest card's
+At most four cards are on screen. A fifth arrival starts the oldest card's
 fade at once. The newest message is therefore always visible, the stack never
 grows past about a third of the screen, and a player who is moving fast never
 watches a lagging feed of old news.
@@ -49,7 +49,7 @@ A DOM-and-timers widget with no game knowledge, in the same spirit as
 `UIList.js`. It can be reasoned about and exercised on its own.
 
 ```
-UIToastStack.create($container, { lifetimeMs: 3500, max: 3 })
+UIToastStack.create($container, { lifetimeMs: 4250, max: 4 })
 UIToastStack.push(stack, text)
 UIToastStack.clear(stack)
 ```
@@ -76,7 +76,7 @@ moves into a `getMessageText(data)` method, which both the list item and the
 toast call, so the two can never drift.
 
 Do not reuse `#log-latest` as the toast container. `UIList.update` replaces
-that list on every pass, so a second batch arriving inside the 3500 ms window
+that list on every pass, so a second batch arriving inside the 4250 ms window
 would wipe the first. The stack needs its own DOM and its own lifetimes.
 `#log-latest` stays as it is.
 
@@ -149,14 +149,27 @@ already uses.
 It is the same element, not a copy. Every existing
 `this.elements.description.html(...)` write still lands and needs no change.
 
-Geometry:
+Geometry — the panel and the toast stack share one fixed column,
+`#mobile-overlays`, and stack inside it: description first, cards under it.
 
 - fixed, `top: var(--l13-chrome-height)`, 10 px in from each side
-- `max-height: calc(100dvh - var(--l13-chrome-height) - var(--l13-out-bottom-height) - 20px)`
-- `overflow-y: auto`
+- `z-index: 10` — over the action bar and the map panel, which are fixed bands
+  at 8 and 9, and under the popup overlay at 15
+- panel `max-height: calc(100dvh - var(--l13-chrome-height) - 100px)`,
+  `overflow-y: auto`
 
-It therefore never covers the compass or the pinned action bar. It carries a
-close button, as the map sector panel does. `body.room-panel-open` drives it.
+**Revised after play.** It first hung *above* the bottom chrome so the tap that
+dismissed it could also be the tap that did the next thing. On the exploration
+tab the action bar and the map panel take most of the screen, so that left the
+description scrolling inside a sliver, and it was unreadable. It floats over
+everything below the chrome now and sizes to its text; the cap only bites on an
+unusually long description, and leaves room for a card or two beneath.
+
+The cost, accepted: while the panel covers a control, a tap there dismisses the
+panel without pressing the control. A tap outside it still does both.
+
+It carries a close button, as the map sector panel does. `body.room-panel-open`
+drives it.
 
 ### When it opens by itself
 
@@ -270,12 +283,12 @@ harness at small layout, and by the iPhone Simulator for anything that needs a
 real frame time.
 
 1. Toast timing. Add one message. Assert one card, and assert it is gone
-   between 3500 ms and 4200 ms.
-2. Toast stacking. Add three messages 500 ms apart. Assert three cards, and
+   between 4250 ms and 5000 ms.
+2. Toast stacking. Add four messages 500 ms apart. Assert four cards, and
    assert they disappear one at a time in arrival order.
-3. Toast cap. Add five messages in one tick. Assert at most three cards are
+3. Toast cap. Add six messages in one tick. Assert at most four cards are
    settled at any point, counting a card that is fading out as already gone,
-   and assert the last message is one of the three.
+   and assert the last message is one of the four.
 4. Badge unchanged. Add a message, let the toast expire, and assert
    `#btn-log-toggle[data-unread]` still counts it. Open the drawer and assert
    it clears.
@@ -298,7 +311,7 @@ real frame time.
 | --- | --- |
 | A toast does not mark a message read | A glance is not a read. The badge stays honest. |
 | Toasts sit under the chrome, at the top | Furthest from the thumb, so directions and Scavenge stay clear. |
-| Cap 3, oldest yields early | Bounds the height, and never shows stale news to a fast player. |
+| Cap 4, oldest yields early | Bounds the height, and never shows stale news to a fast player. Raised from 3 after play. |
 | One banner line, room name truncates | The mobile work has spent commits reducing chrome height. |
 | Any action dismisses the intro | Every sector is a first visit, so a strict tap-to-dismiss would tax every move. |
 | Prose in the panel, stats in the page | The stats change while the player scavenges. |

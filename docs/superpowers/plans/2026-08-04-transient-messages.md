@@ -415,7 +415,7 @@ A stack of short-lived cards, with no game knowledge, so it can be exercised on 
 **Interfaces:**
 - Consumes: nothing. jQuery as a global `$`.
 - Produces:
-  - `UIToastStack.create($container, options)` → a stack object. `options` may carry `lifetimeMs` (default 3500), `fadeMs` (default 400) and `max` (default 3).
+  - `UIToastStack.create($container, options)` → a stack object. `options` may carry `lifetimeMs` (default 4250), `fadeMs` (default 400) and `max` (default 4).
   - `UIToastStack.push(stack, text)` → the card object, or `null` if the container is missing.
   - `UIToastStack.dismiss(stack, card)` → starts a card's exit.
   - `UIToastStack.clear(stack)` → removes every card at once.
@@ -443,9 +443,9 @@ define([], function () {
 
 	let UIToastStack = {
 
-		DEFAULT_LIFETIME_MS: 3500,
+		DEFAULT_LIFETIME_MS: 4250,
 		DEFAULT_FADE_MS: 400,
-		DEFAULT_MAX: 3,
+		DEFAULT_MAX: 4,
 
 		create: function ($container, options) {
 			options = options || {};
@@ -1050,7 +1050,7 @@ w.setTimeout(function () {
 }, 6000);
 ```
 
-Expected: `TOAST_EXPIRED 0`. Run this within a second or two of Step 9, so the 3500ms lifetime and the fade have both elapsed.
+Expected: `TOAST_EXPIRED 0`. Run this within a second or two of Step 9, so the 4250ms lifetime and the fade have both elapsed.
 
 - [ ] **Step 11: Verify the cap**
 

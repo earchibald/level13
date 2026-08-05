@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m53",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The room description now floats over the whole screen instead of being squeezed above the action bar, so long descriptions are readable without scrolling inside a small box"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Log message cards stay a little longer, and up to four can be on screen at once"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m52",
             "requiredVersion": "0.6.1",
             "phase": "beta",

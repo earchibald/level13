@@ -896,11 +896,15 @@ body.layout-small #mobile-overlays {
 	top: var(--l13-chrome-height, 0px);
 	left: 10px;
 	right: 10px;
-	// under the drawer (8) and the pill (9)
-	z-index: 7;
-	// never reaches the bottom chrome, so the tap that dismisses the panel can
-	// be the tap that does the next thing
-	max-height: ~"calc(100dvh - var(--l13-chrome-height, 0px) - var(--l13-out-bottom-height, 0px) - 20px)";
+	// Over the bottom chrome, not squeezed above it. The action bar and the map
+	// panel are fixed bands at 8 and 9, so anything below that is trapped in
+	// whatever gap they leave - and on the exploration tab that gap is small,
+	// which left the description scrolling inside a sliver. 10 clears them and
+	// still passes under the popup overlay at 15.
+	z-index: 10;
+	// the whole screen below the chrome is available; the panel takes what its
+	// text needs and no more
+	max-height: ~"calc(100dvh - var(--l13-chrome-height, 0px) - 20px)";
 	pointer-events: none;
 }
 
@@ -927,10 +931,12 @@ body.layout-small.room-panel-open #room-panel {
 	margin-top: 6px;
 	padding: 8px 10px 10px 10px;
 	box-sizing: border-box;
-	// The panel alone is capped at half of what the overlay column has, so a
-	// long description cannot push the cards off the bottom of it. The column
-	// itself is already inside both bands of chrome.
-	max-height: ~"calc((100dvh - var(--l13-chrome-height, 0px) - var(--l13-out-bottom-height, 0px) - 26px) * 0.6)";
+	// It sizes to its text. The cap only bites on an unusually long
+	// description, and leaves ~100px so a card or two still shows beneath even
+	// then. It is NOT held above the bottom chrome any more: doing that left
+	// the description scrolling inside a sliver on the exploration tab, where
+	// the action bar and the map panel take most of the screen.
+	max-height: ~"calc(100dvh - var(--l13-chrome-height, 0px) - 100px)";
 	overflow-y: auto;
 	// it is the one thing here that takes taps
 	pointer-events: auto;
