@@ -55,7 +55,7 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 		initElements: function () {
 			this.logList = UIList.create(this, $("#log ul"), this.createLogListItem, this.updateLogListItem, this.isLogListItemDataSame);
 			this.logListLatest = UIList.create(this, $("#log-latest ul"), this.createLogListItem, this.updateLogListItem, this.isLogListItemDataSame);
-			this.toastStack = UIToastStack.create($("#log-toasts"));
+			this.toastStack = UIToastStack.create($("#log-toasts-list"));
 		},
 		
 		initAmbientMessages: function () {
