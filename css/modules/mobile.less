@@ -3392,6 +3392,12 @@ body.landscape-map.tab-switch-map #mainmap-sector-details-content {
 // So match the inline hide itself. The attribute selector raises specificity
 // over each forced rule, so this wins wherever that rule sits, in a media
 // query or not. Keep this list in step with the forced `display` rules above.
+//
+// One pair lives away from this list rather than in it: the tab strip's
+// `display: inline-block !important` and its guard sit together in the TAB BAR
+// rules, because the reason for that !important is a defect report and the
+// explanation has to be next to the rule it justifies. If you are auditing
+// this list for completeness, that is the one it does not name.
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
 body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],
 body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display: none"],
