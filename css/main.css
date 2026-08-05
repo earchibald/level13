@@ -6497,9 +6497,6 @@ body.layout-small #grid-location-header > #btn-room > #btn-room-scavenged {
   white-space: nowrap;
   opacity: 0.75;
 }
-body.layout-small #grid-location-header > #btn-room > span:empty {
-  display: none;
-}
 body.layout-small.room-panel-open #grid-location-header > #btn-room {
   background: var(--l13-mobile-badge-bg);
   color: var(--l13-mobile-badge-fg);
