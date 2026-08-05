@@ -859,18 +859,13 @@ body.layout-small #grid-location-header > #btn-room {
 	background: var(--l13-mobile-bg);
 }
 
-// The chip is a row of two: the name, which gives up its width first, and the
-// percentage, which never does.
+// The chip holds the room name and nothing else. It carried the scavenged
+// percentage for one release; that figure now reads from the finds row at the
+// bottom of the screen, next to the thumb that is doing the scavenging.
 body.layout-small #grid-location-header > #btn-room {
 	display: flex;
 	align-items: baseline;
 	gap: 4px;
-	// Room for the percentage and a character or two of name, whatever else
-	// wants the row. Without it the chip can shrink below its own content on a
-	// 320px screen, and since the percentage is the LAST child it is the part
-	// that leaves through the chip's `overflow: hidden` - unellipsised, which
-	// is the one thing this arrangement exists to prevent.
-	min-width: 5.5em;
 }
 
 // Caps, as the default client sets its headers.
@@ -881,14 +876,6 @@ body.layout-small #grid-location-header > #btn-room > #btn-room-name {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	text-transform: uppercase;
-}
-
-// A truncated number is a wrong number, so this one is never allowed to
-// shrink. It is the room name that gives way.
-body.layout-small #grid-location-header > #btn-room > #btn-room-scavenged {
-	flex: 0 0 auto;
-	white-space: nowrap;
-	opacity: 0.75;
 }
 
 // open: the chip inverts, the same way the adventurer chip does. It is a
@@ -1377,13 +1364,13 @@ body.layout-small.tab-switch-out #out-container-compass {
 	// again whatever writes the attribute.
 	display: grid !important;
 	grid-template-columns: 126px minmax(0, 1fr);
-	// The resources row spans both columns above the map and the controls.
+	// The finds row spans both columns above the map and the controls.
 	// Named, like every other child here: this panel is a grid precisely so
 	// that document order decides nothing, and a child without an area of its
 	// own auto-places into an implicit row at the BOTTOM - which is where this
 	// one first landed, under the minimap instead of above it.
 	grid-template-areas:
-		"resources resources"
+		"finds finds"
 		"map controls"
 		"meta meta";
 	// a last-resort bound: if the panel ever fails again it scrolls its own
@@ -2852,25 +2839,55 @@ body.layout-small #grid-switch-content {
 	box-sizing: border-box;
 }
 
-// The resources row, at the top of the band that holds the minimap and the
-// direction buttons. One line, and it stays one line: the list is short and
-// wrapping it would push the buttons down the screen.
-body.layout-small #out-container-compass > #out-resources-row {
-	grid-area: resources;
+// What the room holds, at the top of the band that holds the minimap and the
+// direction buttons: how far it is scavenged, what resources are in it, what
+// items are in it.
+//
+// Exactly two lines, always. Each line stays one line and truncates rather
+// than wrapping, and the items line is present even when it has nothing to
+// say - the whole point of the row is that the direction buttons under the
+// player's thumb do not move as finds come in.
+body.layout-small #out-container-compass > #out-finds-row {
+	grid-area: finds;
 	display: block;
 	padding: 4px 10px 2px 10px;
 	font-size: 0.85rem;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
-body.layout-small #out-container-compass > #out-resources-row > .label {
+body.layout-small #out-finds-row > .finds-line {
+	display: flex;
+	gap: 10px;
+	line-height: 1.35;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+body.layout-small #out-finds-row .finds-part {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+// The percentage is short and exact, so it keeps its width and the lists give
+// theirs up. A truncated number is a wrong number; a truncated list still
+// reads as a list. Nothing else on a phone shows the whole of it - the room
+// panel carries the description and not this table - so if the lists start
+// running past the edge in play, that is the thing to fix, not this order.
+body.layout-small #out-finds-row .finds-part-scavenged {
+	flex: 0 0 auto;
+}
+
+body.layout-small #out-finds-row .finds-part-resources,
+body.layout-small #out-finds-row .finds-part-items {
+	flex: 0 1 auto;
+	min-width: 0;
+}
+
+body.layout-small #out-finds-row .label {
 	opacity: 0.75;
 }
 
-// the regular layout keeps the list in the page, where it already was
-body.layout-regular #out-resources-row {
+// the regular layout keeps all three in the page, where they already were
+body.layout-regular #out-finds-row {
 	display: none;
 }
 

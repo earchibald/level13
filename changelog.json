@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m57",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-05",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The scavenged percentage and the items list join the resources list in one row above the minimap, next to the thumb that does the scavenging"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room name in the top bar is now just the room name"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The installed app no longer comes to rest with its top bar behind the status bar after the view moves without a resize"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m56",
             "requiredVersion": "0.6.1",
             "phase": "beta",

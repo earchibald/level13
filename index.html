@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m56" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m56" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m56" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m57" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m57" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m57" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -207,9 +207,10 @@
 						     in the scrolling page; up here it is on screen while the
 						     page scrolls, and it opens the room description. Hidden
 						     until UIOutHeaderSystem has decided the layout. -->
-						<!-- two spans: the name ellipsises, the percentage never
-						     does. A number cut in half is a wrong number. -->
-						<button id="btn-room" class="btn-meta hidden-when-down" aria-expanded="false" style="display:none"><span id="btn-room-name"></span><span id="btn-room-scavenged"></span></button>
+						<!-- the room name and nothing else. It carried the scavenged
+						     percentage for one release; that reads from the finds row
+						     at the bottom of the screen now. -->
+						<button id="btn-room" class="btn-meta hidden-when-down" aria-expanded="false" style="display:none"><span id="btn-room-name"></span></button>
 						<!-- reveals the adventurer's own stats, which the small-layout
 						     header otherwise leaves off (see mobile.less). It rides in
 						     the banner because the banner is on screen on every tab, in
@@ -381,12 +382,20 @@
 					<!-- level: minimap and header -->
 					<div class="grid tabcontainer" id="container-tab-two-out" data-tab="switch-out">
 						<div class="unit unit-compass" id="out-container-compass">
-							<!-- Out of the scrolling page and into the band that
-							     already holds the minimap. Always present, even
-							     with nothing to say: a row that appears and
-							     disappears moves the direction buttons under the
-							     player's thumb between one scavenge and the next. -->
-							<div id="out-resources-row"><span class="label">Resources</span>: <span id="out-resources-value">?</span></div>
+							<!-- What this room has, out of the scrolling page and into
+							     the band that already holds the minimap - beside the
+							     thumb that does the scavenging, rather than at the far
+							     top of the screen.
+
+							     Two fixed lines, and every value always present even
+							     with nothing to say. A line that appears and disappears
+							     moves the direction buttons under the player's thumb
+							     between one scavenge and the next, which is the moment
+							     they are tapping fastest. -->
+							<div id="out-finds-row">
+								<div class="finds-line"><span class="finds-part finds-part-scavenged"><span class="label">Scavenged</span>: <span id="out-scavenged-value">?</span></span><span class="finds-part finds-part-resources"><span class="label">Resources</span>: <span id="out-resources-value">?</span></span></div>
+								<div class="finds-line"><span class="finds-part finds-part-items"><span class="label">Items</span>: <span id="out-items-value">?</span></span></div>
+							</div>
 							<div id="minimap-background-container" class="canvas-container">
 								<canvas id="minimap-background" width="224" height="224"></canvas>
 								<div id="minimap-container" class="canvas-container" style="width: 198px; height: 198px">

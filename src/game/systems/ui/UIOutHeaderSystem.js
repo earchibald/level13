@@ -63,6 +63,8 @@ define([
 		tribeNodes: null,
 		currentLocationNodes: null,
 		baselinePortraitHeight: null,
+		lastViewportHeight: null,
+		lastViewportWidth: null,
 
 		// one status bar, and never more - see updateSafeAreaTop
 		MAX_SAFE_TOP: 60,
@@ -372,6 +374,10 @@ define([
 		},
 
 		update: function (time) {
+			// Before the guards below, and not behind a signal: see
+			// pollViewportGeometry for why nothing else asks.
+			this.pollViewportGeometry();
+
 			if (!this.currentLocationNodes.head) return;
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
 
@@ -1272,18 +1278,26 @@ define([
 			}
 
 			let isPortrait = window.innerHeight >= window.innerWidth;
+			let screenHeight = window.screen ? window.screen.height : 0;
 
-			// The SMALLEST portrait height seen, not the first.
+			// There are exactly two states, and the screen height tells them
+			// apart outright: either iOS is keeping a band at the top for the
+			// status bar, and the viewport is shorter than the screen, or it
+			// has stopped and the viewport is the whole screen.
 			//
-			// Measured in the simulator: the first portrait frame reported the
-			// whole screen, 852, and the viewport settled to 695 only once the
-			// browser chrome was laid out. A baseline taken from that first
-			// frame is too big for the rest of the session, growth can never
-			// be positive, and the compensation below silently never fires.
-			// The smallest height seen is the one with all the chrome in it,
-			// which is what "normal" means here.
-			if (isPortrait) {
-				if (this.baselinePortraitHeight === null || window.innerHeight < this.baselinePortraitHeight) {
+			// The baseline is the TALLEST portrait viewport seen that was
+			// still shorter than the screen - the normal layout, with the band
+			// in it. Measured in the simulator: the first portrait frame
+			// reports the whole screen, 852, and the viewport settles to its
+			// real value only once the chrome is laid out. Reading a baseline
+			// from that frame is what the screen-height test rejects.
+			//
+			// It was "smallest seen" before, which needed no screen height but
+			// took any transient short frame as normal for the rest of the
+			// session - and this is now polled every tick, so transient frames
+			// are seen where they used to be missed.
+			if (isPortrait && screenHeight > 0 && window.innerHeight < screenHeight) {
+				if (this.baselinePortraitHeight === null || window.innerHeight > this.baselinePortraitHeight) {
 					this.baselinePortraitHeight = window.innerHeight;
 				}
 			}
@@ -1293,8 +1307,9 @@ define([
 			// a lost status bar.
 			let growth = 0;
 			let isStandalone = this.elements.body.hasClass("standalone");
-			if (isStandalone && isPortrait && this.baselinePortraitHeight !== null) {
-				growth = Math.max(0, window.innerHeight - this.baselinePortraitHeight);
+			let coversWholeScreen = screenHeight > 0 && window.innerHeight >= screenHeight;
+			if (isStandalone && isPortrait && coversWholeScreen && this.baselinePortraitHeight !== null) {
+				growth = screenHeight - this.baselinePortraitHeight;
 			}
 
 			// A status bar is about 60px and never more, so nothing this is
@@ -1470,6 +1485,26 @@ define([
 				}
 			}
 			document.documentElement.style.setProperty("--l13-chrome-height", height + "px");
+		},
+
+		// iOS moves the standalone viewport without always firing a resize.
+		// Coming back from the app switcher, or settling after a rotation, the
+		// view is simply laid out over the status bar on some later frame and
+		// window.innerHeight is different - with no event. The chrome then
+		// sits behind the clock for the rest of the session, which is why
+		// opening settings and closing it again put it right by hand: that
+		// path happens to re-measure.
+		//
+		// Two integer reads per tick, and the measuring pass only runs when
+		// one of them has changed. This is the only signal that arrives in
+		// every one of those cases.
+		pollViewportGeometry: function () {
+			let height = window.innerHeight;
+			let width = window.innerWidth;
+			if (height === this.lastViewportHeight && width === this.lastViewportWidth) return;
+			this.lastViewportHeight = height;
+			this.lastViewportWidth = width;
+			this.updateMeasurements();
 		},
 
 		// the measuring half of updateLayout, without any of the DOM moves, so it

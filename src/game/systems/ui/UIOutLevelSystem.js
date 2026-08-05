@@ -91,10 +91,11 @@ define([
 			this.elements = {};
 			this.elements.sectorHeader = $("#header-sector");
 			this.elements.roomName = $("#btn-room-name");
-			this.elements.roomScavenged = $("#btn-room-scavenged");
 			this.elements.description = $("#out-desc");
 			this.elements.descriptionStats = $("#out-desc-stats");
+			this.elements.scavengedValue = $("#out-scavenged-value");
 			this.elements.resourcesValue = $("#out-resources-value");
+			this.elements.itemsValue = $("#out-items-value");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
 			this.elements.btnClearWorkshop = $("#out-action-clear-workshop");
 			this.elements.btnNap = $("#out-action-nap");
@@ -751,6 +752,16 @@ define([
 			return "<tr><td class='sector-stats-label'>" + label + "</td><td class='sector-stats-value'>" + value + "</td></tr>";
 		},
 
+		// How far the room is scavenged. It reads "?" until the room is
+		// scouted, rather than "0%", because those are different facts: one is
+		// "nobody has looked" and the other is "there is nothing here yet".
+		getScavengedText: function (isScouted, statusComponent) {
+			if (!statusComponent) return Text.t("ui.common.value_unknown");
+			if (!isScouted) return Text.t("ui.common.value_unknown");
+			if (!GameGlobals.gameState.unlockedFeatures.scavenge) return Text.t("ui.common.value_unknown");
+			return Math.floor(statusComponent.getScavengedPercent()) + "%";
+		},
+
 		// The resources list, in one place. It used to be built inline in
 		// getSectorStatsFields; it is its own row in the action band now, and
 		// the rule for what to show when nothing is known belongs with it
@@ -773,6 +784,30 @@ define([
 			return Text.t("ui.common.value_unknown");
 		},
 
+		// The items list, on the same three-state rule as the resources list
+		// above and deliberately not a simpler one. "There are no items here"
+		// is knowledge the player has to earn: reading it off an empty list
+		// before the room is scavenged would say, for free, that this room is
+		// not worth the stamina. So it stays "?" until the same threshold that
+		// reveals an empty resources list.
+		getItemsFoundText: function (featuresComponent, statusComponent) {
+			if (!featuresComponent || !statusComponent) return Text.t("ui.common.value_unknown");
+
+			if (GameGlobals.sectorHelper.hasSectorVisibleIngredients()) {
+				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
+				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
+				return TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable);
+			}
+
+			let scavengedPercent = statusComponent.getScavengedPercent();
+			if (scavengedPercent >= ExplorationConstants.THRESHOLD_SCAVENGED_PERCENT_REVEAL_NO_RESOURCES) {
+				if (featuresComponent.itemsScavengeable.length > 0) return Text.t("ui.common.value_unknown");
+				return Text.t("ui.common.list_template_zero");
+			}
+
+			return Text.t("ui.common.value_unknown");
+		},
+
 		getSectorStatsFields: function (isScouted, featuresComponent, statusComponent) {
 			if (!featuresComponent) return [];
 			let fields = [];
@@ -787,19 +822,23 @@ define([
 				}
 			}
 
-			// The phone reads this from its own row above the minimap, so the
-			// table would be saying it twice. The regular layout has no such
-			// band, and this table is where it has always read it - taking the
-			// line out for everyone would have quietly cost desktop the
-			// resources list altogether.
+			// The phone reads these from its own row above the minimap, so the
+			// table would be saying them twice. The regular layout has no such
+			// band, and this table is where it has always read them - taking
+			// the lines out for everyone would have quietly cost desktop the
+			// resources and items lists altogether.
 			// The phone's row lives in the map panel, and that panel does not
 			// exist until scouting unlocks (see updateUnlockedFeatures) - so
-			// until it does, the table is the only place the list can go.
-			let hasResourcesRow = $("body").hasClass("layout-small") && GameGlobals.gameState.unlockedFeatures.scout;
-			if (!hasResourcesRow) {
-				fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
-			}
+			// until it does, the table is the only place they can go.
+			let hasFindsRow = $("body").hasClass("layout-small") && GameGlobals.gameState.unlockedFeatures.scout;
+			if (hasFindsRow) return fields;
 
+			fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
+
+			// The table shows this line only when there is something to say,
+			// which is how it has always read. The finds row cannot do that -
+			// a line that comes and goes moves the buttons under the thumb -
+			// so the row carries the "nothing known" reading instead.
 			if (featuresComponent.itemsScavengeable.length > 0) {
 				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
 				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
@@ -1284,16 +1323,6 @@ define([
 			this.elements.sectorHeader.text(sectorHeaderText);
 			this.elements.roomName.text(sectorHeaderText);
 
-			// Scavenged, in the banner rather than in the scrolling page. It
-			// reads "(?)" until the room is scouted so the banner keeps its
-			// shape - nothing shifts under the thumb at the moment of
-			// scouting, which is exactly when the player is tapping.
-			let scavengedText = "(?)";
-			if (isScouted && GameGlobals.gameState.unlockedFeatures.scavenge) {
-				scavengedText = "(" + Math.floor(sectorStatus.getScavengedPercent()) + "%)";
-			}
-			this.elements.roomScavenged.text(scavengedText);
-
 			// Description
 			this.elements.description.html(this.getDescription(
 				sector,
@@ -1303,9 +1332,17 @@ define([
 				isScouted
 			));
 
-			// Scavenged / investigated / found, as a table of its own
+			// Investigated, as a table of its own
 			this.elements.descriptionStats.html(this.getSectorStatsTable(isScouted, featuresComponent, sectorStatus));
+
+			// The finds row, at the bottom of the phone's screen. Every value
+			// is written on every pass, and each has a reading for "nothing
+			// known yet", so the row keeps its shape - nothing shifts under the
+			// thumb at the moment of scouting or scavenging, which is exactly
+			// when the player is tapping.
+			this.elements.scavengedValue.text(this.getScavengedText(isScouted, sectorStatus));
 			this.elements.resourcesValue.text(this.getResourcesFoundText(featuresComponent, sectorStatus));
+			this.elements.itemsValue.text(this.getItemsFoundText(featuresComponent, sectorStatus));
 
 			this.updateRoomIntro(sectorHeaderText, hasVision, features, isScouted, hasCampHere);
 		},
