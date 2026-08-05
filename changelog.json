@@ -1,6 +1,31 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m56",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The room name now sits in the top bar in capitals with the scavenged percentage beside it, and the resources list has its own row above the minimap"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Tapping a log card marks that message as read, so the unread count stops counting it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room description and the map's sector details close on a tap anywhere instead of a close button, and tapping another sector shows that one"
+                },
+                {
+                    "type": "Bugfix",
+                    "summary": "A tab can no longer end up on a full-width row of its own"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m55",
             "requiredVersion": "0.6.1",
             "phase": "beta",
