@@ -1285,6 +1285,14 @@ define([
 				growth = Math.max(0, window.innerHeight - this.baselinePortraitHeight);
 			}
 
+			// The on-screen keyboard shrinks the viewport below the baseline,
+			// and a lost status bar makes it bigger, never smaller - so this is
+			// not the state being compensated for. Recomputing anyway would
+			// publish 0 and drop the chrome back under the clock for as long as
+			// the keyboard is up. Keep whatever was last published instead.
+			let isShrunk = this.baselinePortraitHeight !== null && window.innerHeight < this.baselinePortraitHeight;
+			if (isStandalone && isPortrait && isShrunk) return;
+
 			document.documentElement.style.setProperty("--l13-safe-top", Math.max(measured, growth) + "px");
 		},
 
