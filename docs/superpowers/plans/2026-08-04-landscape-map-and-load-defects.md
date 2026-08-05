@@ -545,16 +545,20 @@ Find the `updateToasts` method. It currently reads:
 		updateToasts: function (messages) {
 			if (!this.toastStack) return;
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			// the regular layout has the log column on screen already
 			if (!$("body").hasClass("layout-small")) return;
+			// so does an open drawer
 			if ($("body").hasClass("log-drawer-open")) return;
 ```
 
-Replace those five lines with:
+Replace those seven lines with:
 
 ```js
 		updateToasts: function (messages) {
 			if (!this.toastStack) return;
+			// the regular layout has the log column on screen already
 			if (!$("body").hasClass("layout-small")) return;
+			// so does an open drawer
 			if ($("body").hasClass("log-drawer-open")) return;
 
 			// Held rather than dropped. latestMessages comes from
