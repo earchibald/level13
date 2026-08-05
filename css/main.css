@@ -7706,6 +7706,20 @@ body.layout-small #grid-switch-content {
   overscroll-behavior: contain;
   box-sizing: border-box;
 }
+body.layout-small #out-container-compass > #out-resources-row {
+  display: block;
+  padding: 4px 10px 2px 10px;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.layout-small #out-container-compass > #out-resources-row > .label {
+  opacity: 0.75;
+}
+body.layout-regular #out-resources-row {
+  display: none;
+}
 body.layout-small #unit-main > #out-container-compass {
   position: static;
   flex: 0 0 auto;

@@ -2842,6 +2842,27 @@ body.layout-small #grid-switch-content {
 	box-sizing: border-box;
 }
 
+// The resources row, at the top of the band that holds the minimap and the
+// direction buttons. One line, and it stays one line: the list is short and
+// wrapping it would push the buttons down the screen.
+body.layout-small #out-container-compass > #out-resources-row {
+	display: block;
+	padding: 4px 10px 2px 10px;
+	font-size: 0.85rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+body.layout-small #out-container-compass > #out-resources-row > .label {
+	opacity: 0.75;
+}
+
+// the regular layout keeps the list in the page, where it already was
+body.layout-regular #out-resources-row {
+	display: none;
+}
+
 body.layout-small #unit-main > #out-container-compass {
 	position: static;
 	flex: 0 0 auto;

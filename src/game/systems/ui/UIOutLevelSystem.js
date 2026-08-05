@@ -94,6 +94,7 @@ define([
 			this.elements.roomScavenged = $("#btn-room-scavenged");
 			this.elements.description = $("#out-desc");
 			this.elements.descriptionStats = $("#out-desc-stats");
+			this.elements.resourcesValue = $("#out-resources-value");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
 			this.elements.btnClearWorkshop = $("#out-action-clear-workshop");
 			this.elements.btnNap = $("#out-action-nap");
@@ -750,6 +751,28 @@ define([
 			return "<tr><td class='sector-stats-label'>" + label + "</td><td class='sector-stats-value'>" + value + "</td></tr>";
 		},
 
+		// The resources list, in one place. It used to be built inline in
+		// getSectorStatsFields; it is its own row in the action band now, and
+		// the rule for what to show when nothing is known belongs with it
+		// rather than with the table it left.
+		getResourcesFoundText: function (featuresComponent, statusComponent) {
+			if (!featuresComponent || !statusComponent) return Text.t("ui.common.value_unknown");
+
+			let knownResources = GameGlobals.sectorHelper.getLocationKnownResources();
+			if (knownResources.length > 0) {
+				let discoveredResources = GameGlobals.sectorHelper.getLocationDiscoveredResources();
+				return TextConstants.getScaResourcesString(discoveredResources, knownResources, featuresComponent.resourcesScavengable);
+			}
+
+			let scavengedPercent = statusComponent.getScavengedPercent();
+			if (scavengedPercent >= ExplorationConstants.THRESHOLD_SCAVENGED_PERCENT_REVEAL_NO_RESOURCES) {
+				if (featuresComponent.resourcesScavengable.getTotal() > 0) return Text.t("ui.common.value_unknown");
+				return Text.t("ui.common.list_template_zero");
+			}
+
+			return Text.t("ui.common.value_unknown");
+		},
+
 		getSectorStatsFields: function (isScouted, featuresComponent, statusComponent) {
 			if (!featuresComponent) return [];
 			let fields = [];
@@ -763,24 +786,6 @@ define([
 					fields.push(Text.t("ui.exploration.sector_status_investigated_percent_field_default", Math.floor(investigatedPercent)));
 				}
 			}
-
-			let scavengedPercent = statusComponent.getScavengedPercent();
-			let discoveredResources = GameGlobals.sectorHelper.getLocationDiscoveredResources();
-			let knownResources = GameGlobals.sectorHelper.getLocationKnownResources();
-			
-			let resourcesFoundValueText = "";
-			if (knownResources.length > 0) {
-				resourcesFoundValueText = TextConstants.getScaResourcesString(discoveredResources, knownResources, featuresComponent.resourcesScavengable);
-			} else if (scavengedPercent >= ExplorationConstants.THRESHOLD_SCAVENGED_PERCENT_REVEAL_NO_RESOURCES) {
-				if (featuresComponent.resourcesScavengable.getTotal() > 0) {
-					resourcesFoundValueText = Text.t("ui.common.value_unknown");
-				} else {
-					resourcesFoundValueText = Text.t("ui.common.list_template_zero");
-				}
-			} else {
-				resourcesFoundValueText = Text.t("ui.common.value_unknown");
-			}
-			fields.push(Text.t("ui.exploration.sector_status_resources_found_field", resourcesFoundValueText));
 
 			if (featuresComponent.itemsScavengeable.length > 0) {
 				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
@@ -1287,6 +1292,7 @@ define([
 
 			// Scavenged / investigated / found, as a table of its own
 			this.elements.descriptionStats.html(this.getSectorStatsTable(isScouted, featuresComponent, sectorStatus));
+			this.elements.resourcesValue.text(this.getResourcesFoundText(featuresComponent, sectorStatus));
 
 			this.updateRoomIntro(sectorHeaderText, hasVision, features, isScouted, hasCampHere);
 		},

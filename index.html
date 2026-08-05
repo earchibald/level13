@@ -381,6 +381,12 @@
 					<!-- level: minimap and header -->
 					<div class="grid tabcontainer" id="container-tab-two-out" data-tab="switch-out">
 						<div class="unit unit-compass" id="out-container-compass">
+							<!-- Out of the scrolling page and into the band that
+							     already holds the minimap. Always present, even
+							     with nothing to say: a row that appears and
+							     disappears moves the direction buttons under the
+							     player's thumb between one scavenge and the next. -->
+							<div id="out-resources-row"><span class="label text-key" data-text-key="ui.exploration.sector_status_resources_found_field_label">Resources</span>: <span id="out-resources-value">?</span></div>
 							<div id="minimap-background-container" class="canvas-container">
 								<canvas id="minimap-background" width="224" height="224"></canvas>
 								<div id="minimap-container" class="canvas-container" style="width: 198px; height: 198px">
