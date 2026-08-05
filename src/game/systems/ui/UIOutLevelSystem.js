@@ -787,6 +787,15 @@ define([
 				}
 			}
 
+			// The phone reads this from its own row above the minimap, so the
+			// table would be saying it twice. The regular layout has no such
+			// band, and this table is where it has always read it - taking the
+			// line out for everyone would have quietly cost desktop the
+			// resources list altogether.
+			if (!$("body").hasClass("layout-small")) {
+				fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
+			}
+
 			if (featuresComponent.itemsScavengeable.length > 0) {
 				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
 				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
