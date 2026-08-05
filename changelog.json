@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m55",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "Bugfix",
+                    "summary": "The status bar reserve now measures from the smallest portrait viewport of the session, so a first frame that reports the whole screen cannot quietly switch it off"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m54",
             "requiredVersion": "0.6.1",
             "phase": "beta",
