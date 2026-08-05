@@ -1275,6 +1275,70 @@ define([
 
 			// Scavenged / investigated / found, as a table of its own
 			this.elements.descriptionStats.html(this.getSectorStatsTable(isScouted, featuresComponent, sectorStatus));
+
+			this.updateRoomIntro(sectorHeaderText, hasVision, features, isScouted, hasCampHere);
+		},
+
+		// The description used to be on screen simply because it was in the
+		// page. Now that it is a panel, something has to decide when a player
+		// who has not asked for it should see it: the first time they stand
+		// here, and any time the room itself has changed since.
+		//
+		// The key is the room's identity, NOT the rendered description. That
+		// text carries the glowstick countdown and whether there are enemies
+		// about, so hashing it would re-open the panel on almost every tick.
+		//
+		// Held in memory and not saved. The save format uses two-letter keys
+		// and drops falsy values to stay small, and a hash per sector across a
+		// whole world would cost real bytes for a cosmetic memory. The only
+		// visible effect is that reloading re-shows the intro for the one room
+		// you load into.
+		updateRoomIntro: function (sectorHeaderText, hasVision, features, isScouted, hasCampHere) {
+			if (!this.shownRoomIntros) this.shownRoomIntros = {};
+
+			let position = this.playerPosNodes.head.position;
+			let positionKey = position.level + "." + position.sectorX + "." + position.sectorY;
+
+			let introKey = [
+				sectorHeaderText,
+				TextConstants.getSectorDescription(hasVision, features),
+				isScouted ? 1 : 0,
+				hasCampHere ? 1 : 0
+			].join("|");
+
+			let hash = this.getStringHash(introKey);
+
+			if (this.shownRoomIntros[positionKey] === hash) return;
+
+			// the panel is a small-layout thing, and it has nothing to say
+			// about a camp, about a player who cannot see, or about a screen
+			// that already has a popup on it
+			if (!$("body").hasClass("layout-small")) return;
+			if (position.inCamp) return;
+			if ($("body").hasClass("vision-step-0")) return;
+			// isPaused covers the popups too: UIPopupManager sets it from
+			// hasOpenPopup() every time a popup opens or closes
+			if (GameGlobals.gameState.isPaused) return;
+
+			// Stored only once it is actually shown. Arriving somewhere while a
+			// popup is up is common - a fight, a story beat - and marking the
+			// room seen there would spend its one intro on a screen the player
+			// never saw. updateSectorDescription runs again on popupClosed, on
+			// leaving camp and on vision changing, so the intro arrives when
+			// whatever was in the way clears.
+			this.shownRoomIntros[positionKey] = hash;
+
+			GameGlobals.uiFunctions.toggleRoomPanel(true);
+		},
+
+		// djb2. Short keys, thousands of sectors, and only ever compared with
+		// itself - a collision costs one intro that is not shown.
+		getStringHash: function (s) {
+			let hash = 5381;
+			for (let i = 0; i < s.length; i++) {
+				hash = ((hash << 5) + hash + s.charCodeAt(i)) | 0;
+			}
+			return hash;
 		},
 
 		updateLocationDetails: function () {
