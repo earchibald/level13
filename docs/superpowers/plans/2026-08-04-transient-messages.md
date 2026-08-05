@@ -1889,14 +1889,35 @@ with:
 			// Stored only once it is actually shown. Arriving somewhere while a
 			// popup is up is common - a fight, a story beat - and marking the
 			// room seen there would spend its one intro on a screen the player
-			// never saw. updateSectorDescription runs again on popupClosed, on
-			// leaving camp and on vision changing, so the intro arrives when
-			// whatever was in the way clears.
+			// never saw. updateSectorDescription runs again on leaving camp and
+			// on vision changing, and onPopupClosed calls it for the popup case,
+			// so the intro arrives when whatever was in the way clears.
 			this.shownRoomIntros[positionKey] = hash;
 
 			GameGlobals.uiFunctions.toggleRoomPanel(true);
 		},
 
+Then make the deferral real. `onPopupClosed` currently refreshes only the
+locales and the characters, so a room whose intro was held back by a popup
+would wait for some unrelated update that may never come. Add the description
+pass to it:
+
+```js
+		onPopupClosed: function () {
+			this.updateLocales();
+			this.updateCharacters();
+			// A room first described behind a popup - a fight, a story beat -
+			// has had its intro held back rather than spent (see
+			// updateRoomIntro). This is the pass that lets it through, and
+			// without it the intro would wait for some unrelated update that
+			// may never come while the player is still standing there.
+			this.updateSectorDescription();
+		},
+```
+
+And the hash helper:
+
+```js
 		// djb2. Short keys, thousands of sectors, and only ever compared with
 		// itself - a collision costs one intro that is not shown.
 		getStringHash: function (s) {
