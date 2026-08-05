@@ -77,6 +77,11 @@ action buttons:
 Resources: metal (common), food (scarce)
 ```
 
+The label is plain text in the markup, not a `text-key`. The key it would have
+needed does not exist in either language file, and `UIOutTextSystem` overwrites
+a `.text-key` element with the key itself when the lookup fails - so the row
+rendered its own selector name on every phone until this was caught.
+
 It goes at the top of `#out-container-compass`, which is the band that already
 holds the minimap and the movement controls in the small layout — so "above the
 minimap" and "below the other actions" are the same place.
@@ -85,9 +90,18 @@ The row is always present, reading `Resources: ?` before anything is known.
 A row that appears and disappears would move the direction buttons under the
 player's thumb between one scavenge and the next.
 
-The field leaves the stats table. What remains there is the investigated
-percentage and the items list, both of which are conditional and neither of
-which is on screen often enough to justify its own band yet.
+The field leaves the stats table **on the phone, and only once the row exists
+to replace it**. The regular layout has no such band and keeps reading the list
+from the table; so does a phone before scouting unlocks, because the row lives
+in the map panel and that panel does not exist yet. Both read the same
+extracted `getResourcesFoundText`, so the two renderings cannot disagree.
+
+Taking the field out for everyone was the first attempt and it silently cost
+the desktop layout the resources list altogether.
+
+What remains in the table besides it is the investigated percentage and the
+items list, both conditional, neither on screen often enough to justify its own
+band yet.
 
 ## 6. A tap dismisses a map tooltip
 
@@ -196,7 +210,9 @@ project memory before trusting any load-time claim.
    assert it reads a percentage.
 6. Assert the resources row is present with `?` before anything is known, and
    that its bounding rect sits above the minimap's and below the action bar's.
-7. Assert the stats table no longer contains the scavenged or resources fields.
+7. Assert the stats table no longer contains the scavenged field. Assert it
+   still contains the resources field in the regular layout, and on a phone
+   before scouting unlocks, and does not once the row is on screen.
 8. On the main map, select a sector, tap the map background, and assert the
    panel closed. Tap a sector, and assert its panel opened. Repeat in
    landscape.

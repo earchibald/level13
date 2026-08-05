@@ -792,7 +792,11 @@ define([
 			// band, and this table is where it has always read it - taking the
 			// line out for everyone would have quietly cost desktop the
 			// resources list altogether.
-			if (!$("body").hasClass("layout-small")) {
+			// The phone's row lives in the map panel, and that panel does not
+			// exist until scouting unlocks (see updateUnlockedFeatures) - so
+			// until it does, the table is the only place the list can go.
+			let hasResourcesRow = $("body").hasClass("layout-small") && GameGlobals.gameState.unlockedFeatures.scout;
+			if (!hasResourcesRow) {
 				fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
 			}
 

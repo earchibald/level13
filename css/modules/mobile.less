@@ -865,6 +865,12 @@ body.layout-small #grid-location-header > #btn-room {
 	display: flex;
 	align-items: baseline;
 	gap: 4px;
+	// Room for the percentage and a character or two of name, whatever else
+	// wants the row. Without it the chip can shrink below its own content on a
+	// 320px screen, and since the percentage is the LAST child it is the part
+	// that leaves through the chip's `overflow: hidden` - unellipsised, which
+	// is the one thing this arrangement exists to prevent.
+	min-width: 5.5em;
 }
 
 // Caps, as the default client sets its headers.

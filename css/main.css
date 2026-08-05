@@ -6483,6 +6483,7 @@ body.layout-small #grid-location-header > #btn-room {
   display: flex;
   align-items: baseline;
   gap: 4px;
+  min-width: 5.5em;
 }
 body.layout-small #grid-location-header > #btn-room > #btn-room-name {
   flex: 0 1 auto;

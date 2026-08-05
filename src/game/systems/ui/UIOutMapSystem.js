@@ -498,6 +498,11 @@ define([
 
 		onDocumentTapDeselectSector: function (e) {
 			if (!this.selectedSector) return;
+			// Only while the map is the tab being looked at. deselectSector
+			// redraws the whole canvas and its overlay, and without this the
+			// tap that LEAVES the map would land that rebuild inside the first
+			// frame of the tab transition - work for a screen nobody is on.
+			if (GameGlobals.gameState.uiStatus.currentTab !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
 			let $target = $(e.target);
 			// a tap on a sector selects that one instead - its own handler has
 			// already run by the time this does
