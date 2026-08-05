@@ -1713,6 +1713,18 @@ body.layout-small #grid-location-header h1 {
 	white-space: nowrap;
 }
 
+// Outside, this heading is "LEVEL 11" and the chip beside it holds a room name
+// that can be any length - so the heading is not the thing that should give
+// way. It did: at 393px the banner read "LEVE..." and the level number, which
+// is the one number always on screen, was the part that got cut.
+//
+// In camp there is no chip, the heading is a camp name of any length, and the
+// ellipsis above is exactly right. So this is scoped to being outside.
+body.layout-small.location-outside #grid-location-header h1 {
+	flex: 0 0 auto;
+	overflow: visible;
+}
+
 body.layout-small #mobile-chrome #grid-location-header h1 {
 	font-size: 1rem;
 	line-height: 1.2;

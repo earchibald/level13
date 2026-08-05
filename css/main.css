@@ -6973,6 +6973,10 @@ body.layout-small #grid-location-header h1 {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+body.layout-small.location-outside #grid-location-header h1 {
+  flex: 0 0 auto;
+  overflow: visible;
+}
 body.layout-small #mobile-chrome #grid-location-header h1 {
   font-size: 1rem;
   line-height: 1.2;
