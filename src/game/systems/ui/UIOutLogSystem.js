@@ -24,6 +24,7 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 		updateFrequency: 1000 * 15,
 
 		currentMessages: [],
+		pendingToasts: [],
 
 		ambientMessagesByTrigger: {}, // trigger -> list of ids
 
@@ -40,7 +41,7 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 			GlobalSignals.add(this, GlobalSignals.playerPositionChangedSignal, function (position) { this.onPlayerPositionChanged(position); });
 			GlobalSignals.add(this, GlobalSignals.windowResizedSignal, this.onWindowResized);
 			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
-			GlobalSignals.add(this, GlobalSignals.gameShownSignal, this.onWindowResized);
+			GlobalSignals.add(this, GlobalSignals.gameShownSignal, this.onGameShown);
 			GlobalSignals.add(this, GlobalSignals.triggerSignal, this.onTrigger);
 
 			this.updateMessages();
@@ -159,11 +160,30 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 		// badge keeps counting a toasted message until the drawer opens.
 		updateToasts: function (messages) {
 			if (!this.toastStack) return;
-			if (GameGlobals.gameState.uiStatus.isHidden) return;
 			// the regular layout has the log column on screen already
 			if (!$("body").hasClass("layout-small")) return;
 			// so does an open drawer
 			if ($("body").hasClass("log-drawer-open")) return;
+
+			// Held rather than dropped. latestMessages comes from
+			// UIList.update, which returns only the items it created, so a
+			// message skipped here has no second chance - which is how the
+			// opening message of the game, logged while the game is still
+			// hidden, never got a card at all.
+			//
+			// The other two guards above still drop, and should: with the
+			// drawer open the message is already on screen, and outside the
+			// small layout there is no stack to put it in.
+			if (GameGlobals.gameState.uiStatus.isHidden) {
+				for (let i = messages.length - 1; i >= 0; i--) {
+					this.pendingToasts.push(this.getMessageText(messages[i]));
+				}
+				// the flush must not undo the cap the stack exists to enforce
+				while (this.pendingToasts.length > this.toastStack.max) {
+					this.pendingToasts.shift();
+				}
+				return;
+			}
 
 			// Backwards, because this list is newest-first: updateMessages hands
 			// updateMessageList a reversed list so the drawer reads newest at
@@ -173,6 +193,26 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 			// newest four and leave the three oldest on screen.
 			for (let i = messages.length - 1; i >= 0; i--) {
 				UIToastStack.push(this.toastStack, this.getMessageText(messages[i]));
+			}
+		},
+
+		flushPendingToasts: function () {
+			let pending = this.pendingToasts;
+			this.pendingToasts = [];
+
+			if (!this.toastStack) return;
+			if (pending.length === 0) return;
+			// Asked again here rather than trusted from the hold: the game can
+			// be hidden and shown across a resize or a layout change, and a
+			// message held on a phone must not land on a desktop stack that
+			// was never on screen.
+			if (!$("body").hasClass("layout-small")) return;
+			if ($("body").hasClass("log-drawer-open")) return;
+
+			// oldest first, which is the order they were held in and the order
+			// the cap evicts by
+			for (let i = 0; i < pending.length; i++) {
+				UIToastStack.push(this.toastStack, pending[i]);
 			}
 		},
 
@@ -428,9 +468,22 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 			this.triggerAmbientMessages(triggerID, param);
 		},
 
+		onGameShown: function () {
+			// onWindowResized is only updateOpacity, and it was what this
+			// signal already ran. Keep it, and flush after it.
+			//
+			// The list itself is rebuilt on the next update() tick, which is
+			// after this. That order is fine and matters: the held messages
+			// carry their own rendered text, and by the time UIList sees them
+			// they already have list items, so nothing is toasted twice.
+			this.onWindowResized();
+			this.flushPendingToasts();
+		},
+
 		onGameReset: function () {
 			this.lastUpdateTimeStamp = 0;
 			UIToastStack.clear(this.toastStack);
+			this.pendingToasts = [];
 		},
 
 		onMarkLogMessagesSeen: function () {

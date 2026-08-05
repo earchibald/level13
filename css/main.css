@@ -7192,9 +7192,6 @@ body.layout-small #log-toasts .log-toast-leaving {
   opacity: 0;
   pointer-events: none;
 }
-body.vision-step-0 #log-toasts .log-toast {
-  pointer-events: none;
-}
 @media (prefers-reduced-motion: reduce) {
   body.layout-small #log-toasts .log-toast {
     transition: none;

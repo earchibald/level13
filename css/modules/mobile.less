@@ -2039,13 +2039,6 @@ body.layout-small #log-toasts .log-toast-leaving {
 	pointer-events: none;
 }
 
-// invisible chrome must not stay tappable while the player is "down".
-// .hidden-when-down on the container takes the opacity to 0; this takes the
-// taps, and it goes on the cards because the container has none to give.
-body.vision-step-0 #log-toasts .log-toast {
-	pointer-events: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
 	body.layout-small #log-toasts .log-toast {
 		transition: none;
