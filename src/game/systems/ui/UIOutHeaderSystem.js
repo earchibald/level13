@@ -63,6 +63,7 @@ define([
 		tribeNodes: null,
 		currentLocationNodes: null,
 		baselinePortraitHeight: null,
+		pendingGameShownRefresh: false,
 		engine: null,
 		
 		previousShownCampResAmount: {},
@@ -370,7 +371,16 @@ define([
 		update: function (time) {
 			if (!this.currentLocationNodes.head) return;
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			
+
+			// Both guards above have passed, so the world is there and the
+			// game is showing - which is the state onGameShown wanted and did
+			// not get. Cleared first, so the re-run cannot set it again and
+			// loop.
+			if (this.pendingGameShownRefresh) {
+				this.pendingGameShownRefresh = false;
+				this.onGameShown();
+			}
+
 			if (GameGlobals.gameState.isLaunchCompleted) {
 				this.updateEndingView();
 				return;
@@ -2264,6 +2274,15 @@ define([
 		},
 		
 		onGameShown: function () {
+			// A batch of one-shot passes, several of which bail while the
+			// player's location node does not exist yet - and on a load from a
+			// save it does not. The banner is the one that shows: it kept the
+			// placeholder from index.html until the player changed tab. Ask
+			// update() to run the batch again once the world is there.
+			if (!this.currentLocationNodes.head) {
+				this.pendingGameShownRefresh = true;
+			}
+
 			this.updateTabVisibility();
 			this.queueResourceBarUpdate();
 			this.updateStaminaWarningLimit();
