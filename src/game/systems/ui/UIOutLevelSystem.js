@@ -1404,6 +1404,12 @@ define([
 		onPopupClosed: function () {
 			this.updateLocales();
 			this.updateCharacters();
+			// A room first described behind a popup - a fight, a story beat -
+			// has had its intro held back rather than spent (see
+			// updateRoomIntro). This is the pass that lets it through, and
+			// without it the intro would wait for some unrelated update that
+			// may never come while the player is still standing there.
+			this.updateSectorDescription();
 		},
 		
 		onButtonStateChanged: function (action, isEnabled) {
