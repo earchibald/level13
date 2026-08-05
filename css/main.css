@@ -6474,11 +6474,26 @@ body.layout-small #grid-location-header > #btn-room {
   border-radius: 11px !important;
   background: var(--l13-mobile-bg);
 }
-body.layout-small #grid-location-header > #btn-room > span {
-  display: block;
+body.layout-small #grid-location-header > #btn-room {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+body.layout-small #grid-location-header > #btn-room > #btn-room-name {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: uppercase;
+}
+body.layout-small #grid-location-header > #btn-room > #btn-room-scavenged {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+body.layout-small #grid-location-header > #btn-room > span:empty {
+  display: none;
 }
 body.layout-small.room-panel-open #grid-location-header > #btn-room {
   background: var(--l13-mobile-badge-bg);

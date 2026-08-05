@@ -841,11 +841,35 @@ body.layout-small #grid-location-header > #btn-room {
 	background: var(--l13-mobile-bg);
 }
 
-body.layout-small #grid-location-header > #btn-room > span {
-	display: block;
+// The chip is a row of two: the name, which gives up its width first, and the
+// percentage, which never does.
+body.layout-small #grid-location-header > #btn-room {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+}
+
+// Caps, as the default client sets its headers.
+body.layout-small #grid-location-header > #btn-room > #btn-room-name {
+	flex: 0 1 auto;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	text-transform: uppercase;
+}
+
+// A truncated number is a wrong number, so this one is never allowed to
+// shrink. It is the room name that gives way.
+body.layout-small #grid-location-header > #btn-room > #btn-room-scavenged {
+	flex: 0 0 auto;
+	white-space: nowrap;
+	opacity: 0.75;
+}
+
+// empty in camp, where there is no room and no percentage
+body.layout-small #grid-location-header > #btn-room > span:empty {
+	display: none;
 }
 
 // open: the chip inverts, the same way the adventurer chip does. It is a

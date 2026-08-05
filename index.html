@@ -207,7 +207,9 @@
 						     in the scrolling page; up here it is on screen while the
 						     page scrolls, and it opens the room description. Hidden
 						     until UIOutHeaderSystem has decided the layout. -->
-						<button id="btn-room" class="btn-meta hidden-when-down" aria-expanded="false" style="display:none"><span></span></button>
+						<!-- two spans: the name ellipsises, the percentage never
+						     does. A number cut in half is a wrong number. -->
+						<button id="btn-room" class="btn-meta hidden-when-down" aria-expanded="false" style="display:none"><span id="btn-room-name"></span><span id="btn-room-scavenged"></span></button>
 						<!-- reveals the adventurer's own stats, which the small-layout
 						     header otherwise leaves off (see mobile.less). It rides in
 						     the banner because the banner is on screen on every tab, in

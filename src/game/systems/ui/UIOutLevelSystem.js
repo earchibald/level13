@@ -90,7 +90,8 @@ define([
 
 			this.elements = {};
 			this.elements.sectorHeader = $("#header-sector");
-			this.elements.roomName = $("#btn-room span");
+			this.elements.roomName = $("#btn-room-name");
+			this.elements.roomScavenged = $("#btn-room-scavenged");
 			this.elements.description = $("#out-desc");
 			this.elements.descriptionStats = $("#out-desc-stats");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
@@ -753,10 +754,6 @@ define([
 			if (!featuresComponent) return [];
 			let fields = [];
 
-			if (isScouted && GameGlobals.gameState.unlockedFeatures.scavenge) {
-				fields.push(Text.t("ui.exploration.sector_status_scavenged_percent_field", UIConstants.roundValue(Math.floor(statusComponent.getScavengedPercent()))));
-			}
-
 			if (this.showInvestigate()) {
 				let investigatedPercent = statusComponent.getInvestigatedPercent();
 				let investigationComplete = investigatedPercent >= 100;
@@ -1268,6 +1265,16 @@ define([
 			var sectorHeaderText = TextConstants.getSectorHeader(hasVision, features);
 			this.elements.sectorHeader.text(sectorHeaderText);
 			this.elements.roomName.text(sectorHeaderText);
+
+			// Scavenged, in the banner rather than in the scrolling page. It
+			// reads "(?)" until the room is scouted so the banner keeps its
+			// shape - nothing shifts under the thumb at the moment of
+			// scouting, which is exactly when the player is tapping.
+			let scavengedText = "(?)";
+			if (isScouted && GameGlobals.gameState.unlockedFeatures.scavenge) {
+				scavengedText = "(" + Math.floor(sectorStatus.getScavengedPercent()) + "%)";
+			}
+			this.elements.roomScavenged.text(scavengedText);
 
 			// Description
 			this.elements.description.html(this.getDescription(
