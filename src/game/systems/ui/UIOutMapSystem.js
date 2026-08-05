@@ -505,6 +505,12 @@ define([
 			// and a tap inside the panel or on the jump buttons is not a
 			// request to close them
 			if ($target.closest("#mainmap-sector-details").length > 0) return;
+			// Nor is a tap on any of the map's other controls. The zoom
+			// buttons and the level and style selects are SIBLINGS of the
+			// panel rather than children of it, so containment in the panel
+			// does not cover them - and zooming in to look at the sector you
+			// just selected is exactly the moment the panel must survive.
+			if ($target.closest("#mainmap-zoom-controls, #grid-tab-header").length > 0) return;
 			this.deselectSector();
 		},
 
