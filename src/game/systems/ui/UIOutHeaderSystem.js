@@ -63,6 +63,9 @@ define([
 		tribeNodes: null,
 		currentLocationNodes: null,
 		baselinePortraitHeight: null,
+
+		// one status bar, and never more - see updateSafeAreaTop
+		MAX_SAFE_TOP: 60,
 		pendingGameShownRefresh: false,
 		engine: null,
 		
@@ -1270,10 +1273,19 @@ define([
 
 			let isPortrait = window.innerHeight >= window.innerWidth;
 
-			// taken before any rotation, and never revised: a later portrait
-			// height is the thing being measured, not a new baseline
-			if (isPortrait && this.baselinePortraitHeight === null) {
-				this.baselinePortraitHeight = window.innerHeight;
+			// The SMALLEST portrait height seen, not the first.
+			//
+			// Measured in the simulator: the first portrait frame reported the
+			// whole screen, 852, and the viewport settled to 695 only once the
+			// browser chrome was laid out. A baseline taken from that first
+			// frame is too big for the rest of the session, growth can never
+			// be positive, and the compensation below silently never fires.
+			// The smallest height seen is the one with all the chrome in it,
+			// which is what "normal" means here.
+			if (isPortrait) {
+				if (this.baselinePortraitHeight === null || window.innerHeight < this.baselinePortraitHeight) {
+					this.baselinePortraitHeight = window.innerHeight;
+				}
 			}
 
 			// Held to the installed app. In a browser tab the address bar
@@ -1285,13 +1297,13 @@ define([
 				growth = Math.max(0, window.innerHeight - this.baselinePortraitHeight);
 			}
 
-			// The on-screen keyboard shrinks the viewport below the baseline,
-			// and a lost status bar makes it bigger, never smaller - so this is
-			// not the state being compensated for. Recomputing anyway would
-			// publish 0 and drop the chrome back under the clock for as long as
-			// the keyboard is up. Keep whatever was last published instead.
-			let isShrunk = this.baselinePortraitHeight !== null && window.innerHeight < this.baselinePortraitHeight;
-			if (isStandalone && isPortrait && isShrunk) return;
+			// A status bar is about 60px and never more, so nothing this is
+			// compensating for can need more than that. The cap is what makes
+			// a moving baseline safe: whatever else grows or shrinks the
+			// viewport - a keyboard, a toolbar, something not thought of - the
+			// worst this can do is reserve one status bar of empty space,
+			// never a screenful.
+			growth = Math.min(growth, this.MAX_SAFE_TOP);
 
 			document.documentElement.style.setProperty("--l13-safe-top", Math.max(measured, growth) + "px");
 		},
