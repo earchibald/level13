@@ -42,6 +42,8 @@ var GlobalSignals = w.require('game/GlobalSignals');
 5. **Never return a string containing a URL query.** A `?` in a returned value blocks the whole tool result. Strip `href` and `src` from anything you return.
 6. **`getComputedStyle` lies about any property that has a CSS transition** in this tab — the computed value stays pinned to the pre-change value forever. Set `element.style.transition = 'none'` before reading a transitioned property, or take a screenshot.
 7. **Verify tap targets with `document.elementFromPoint`**, never by dispatching a synthetic click. A dispatched click bypasses hit-testing and hides "something invisible is on top" bugs.
+
+7a. **`setTimeout` is clamped to about a second in this tab.** `mtest2.html` patches `requestAnimationFrame` with a MessageChannel pump and leaves `setTimeout` alone, and a hidden tab throttles it. Any timing assertion must allow for that: a nested 50ms or 400ms timer takes ~1s here. Widen the wait rather than concluding the code is slow. This is a property of the automation tab — on a visible phone the stated durations hold.
 8. **A recompiled `main.css` is not picked up by reloading the iframe.** The `<link href>` carries `?v=0.6.3.m51` and is unchanged, so the browser serves the cached file. Bust it in place:
 
 ```js
@@ -461,7 +463,7 @@ define([], function () {
 			if (!stack.$container || stack.$container.length === 0) return null;
 
 			let sys = this;
-			let card = { $root: $("<div class='log-toast'></div>"), timeoutID: null, isLeaving: false };
+			let card = { $root: $("<div class='log-toast'></div>"), timeoutID: null, fadeTimeoutID: null, isLeaving: false };
 			card.$root.text(text);
 			card.$root.on("click", function () { sys.dismiss(stack, card); });
 
@@ -474,7 +476,7 @@ define([], function () {
 			// out gives up the rest of its time
 			let settled = stack.cards.filter(function (c) { return !c.isLeaving; });
 			while (settled.length > stack.max) {
-				this.dismiss(stack, settled.shift());
+				sys.dismiss(stack, settled.shift());
 			}
 
 			return card;
@@ -498,11 +500,26 @@ define([], function () {
 			}
 
 			card.$root.addClass("log-toast-leaving");
-			window.setTimeout(function () { sys.remove(stack, card); }, stack.fadeMs);
+			card.fadeTimeoutID = window.setTimeout(function () { sys.remove(stack, card); }, stack.fadeMs);
 		},
 
 		remove: function (stack, card) {
 			if (!stack || !card) return;
+
+			// Both timers, here rather than in dismiss, because remove is
+			// reached from three directions - the lifetime timer, the fade
+			// timer, and clear() - and whichever arrives first has to stop
+			// the others firing against a card that is already gone.
+			if (card.timeoutID) {
+				window.clearTimeout(card.timeoutID);
+				card.timeoutID = null;
+			}
+
+			if (card.fadeTimeoutID) {
+				window.clearTimeout(card.fadeTimeoutID);
+				card.fadeTimeoutID = null;
+			}
+
 			card.$root.remove();
 			let index = stack.cards.indexOf(card);
 			if (index >= 0) stack.cards.splice(index, 1);
@@ -568,11 +585,17 @@ w.require(['utils/UIToastStack'], function (S) {
 	out.oldestIsLeaving = stack.cards[0].isLeaving;
 	out.newestText = $box.children().last().text();
 
+	// 2500ms, not 350ms-plus-a-margin: the harness tab is hidden, and a hidden
+	// tab clamps setTimeout to about a second. mtest2.html patches
+	// requestAnimationFrame and leaves setTimeout alone, so the widget's
+	// nested fade timer takes ~1s here however small fadeMs is. That is a
+	// property of the tab, not of the widget - on a visible phone the fade
+	// runs at its stated 400ms.
 	w.setTimeout(function () {
 		out.afterLifetime = S.getSettledCount(stack);
 		out.domCount = $box.children().length;
 		w.console.log('TOAST_TEST ' + JSON.stringify(out));
-	}, 900);
+	}, 2500);
 });
 ```
 
@@ -605,7 +628,53 @@ w.require(['utils/UIToastStack'], function (S) {
 
 Expected exactly: `TOAST_TAP {"before":1,"after":0,"dom":0}`.
 
-- [ ] **Step 5: Revert the temporary urlArgs bump and commit**
+- [ ] **Step 5: Exercise clear(), and prove it cancels the pending timers**
+
+`clear` is reached from the drawer opening and from a game reset, both of which
+Task 4 wires up. A cleared card whose timer still fires would mutate a card
+that is already detached — flipping `isLeaving`, adding a class to an orphaned
+node — so the cancellation is the thing to check, not just the emptying.
+
+```js
+var f = document.getElementById('frame');
+var w = f.contentWindow;
+w.require(['utils/UIToastStack'], function (S) {
+	var $ = w.$;
+	var $box = $("<div></div>");
+	var stack = S.create($box, { lifetimeMs: 200, fadeMs: 50, max: 3 });
+
+	var settled = S.push(stack, "settled card");
+	var leaving = S.push(stack, "leaving card");
+	S.dismiss(stack, leaving);
+
+	S.clear(stack);
+
+	var out = {
+		cardsAfterClear: stack.cards.length,
+		domAfterClear: $box.children().length,
+		settledTimerCleared: settled.timeoutID === null,
+		leavingFadeTimerCleared: leaving.fadeTimeoutID === null
+	};
+
+	// long enough for both original timers to have fired, had they survived
+	w.setTimeout(function () {
+		out.settledStillNotLeaving = settled.isLeaving === false;
+		out.domStillEmpty = $box.children().length === 0;
+		w.console.log('TOAST_CLEAR ' + JSON.stringify(out));
+	}, 600);
+});
+```
+
+Expected exactly:
+
+```
+TOAST_CLEAR {"cardsAfterClear":0,"domAfterClear":0,"settledTimerCleared":true,"leavingFadeTimerCleared":true,"settledStillNotLeaving":true,"domStillEmpty":true}
+```
+
+`settledStillNotLeaving` is the load-bearing assertion: it is false if the
+lifetime timer survived `clear` and later called `dismiss` on a dead card.
+
+- [ ] **Step 6: Revert the temporary urlArgs bump and commit**
 
 Set `urlArgs` in `src/config.js` back to `v=0.6.3.m51`.
 
@@ -802,7 +871,13 @@ Then insert this method immediately after `updateMessageList` ends (after its cl
 			// so does an open drawer
 			if ($("body").hasClass("log-drawer-open")) return;
 
-			for (let i = 0; i < messages.length; i++) {
+			// Backwards, because this list is newest-first: updateMessages hands
+			// updateMessageList a reversed list so the drawer reads newest at
+			// the top. Cards read the other way - oldest at the top, each new
+			// one arriving below it - and, more importantly, the cap evicts by
+			// push order. Pushed newest-first, a burst of five would evict the
+			// newest four and leave the three oldest on screen.
+			for (let i = messages.length - 1; i >= 0; i--) {
 				UIToastStack.push(this.toastStack, this.getMessageText(messages[i]));
 			}
 		},
@@ -960,12 +1035,15 @@ Expected: `count` 1, `text` the message, `cardTop` within 8px of `chromeBottom`,
 ```js
 var f = document.getElementById('frame');
 var w = f.contentWindow, d = w.document;
+// 6000ms and not 3900ms: the harness tab is hidden, and a hidden tab clamps
+// setTimeout to about a second, so the widget's nested fade timer takes ~1s
+// here rather than its stated 400ms. A property of the tab, not of the widget.
 w.setTimeout(function () {
 	w.console.log('TOAST_EXPIRED ' + d.querySelectorAll('#log-toasts .log-toast').length);
-}, 4500);
+}, 6000);
 ```
 
-Expected: `TOAST_EXPIRED 0`. Run this within a few seconds of Step 9, so the 3500ms lifetime and the 400ms fade have both elapsed.
+Expected: `TOAST_EXPIRED 0`. Run this within a second or two of Step 9, so the 3500ms lifetime and the fade have both elapsed.
 
 - [ ] **Step 11: Verify the cap**
 
@@ -986,7 +1064,9 @@ w.setTimeout(function () {
 }, 300);
 ```
 
-Expected: `settled` is 3, and `lastText` ends with `number 5.` — the newest message is always one of the three.
+Expected: `settled` is 3, and `lastText` ends with `number 5.` — the newest message is always one of the three, and it is the bottom card.
+
+This is the assertion that catches a push in the wrong direction. `latestMessages` is newest-first, so a naive forward loop pushes the newest card first and the cap then evicts it, leaving the three oldest messages on screen and silently dropping the newest.
 
 Note: the game batches log messages, so five `addLogMessage` calls in one tick may arrive as one batch. If `settled` is 3 and `lastText` is message 5, the cap works regardless of how the batch was split.
 
