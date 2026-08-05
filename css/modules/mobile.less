@@ -793,15 +793,18 @@ body.layout-small.adventurer-open #grid-location-header > #btn-adventurer {
 	border-color: var(--l13-mobile-badge-bg);
 }
 
-// The chip is small on purpose; the tap target is not. It is the only control
-// in the banner, so the free space up and to the left belongs to it - up is
-// the safe-area padding above the chrome, left is the gap after the title.
-// Not down: the stats start immediately below and their first row is a callout
-// target of its own. Measured 82x31 tappable, and the banner does not grow.
+// The chip is small on purpose; the tap target is not. Up is the safe-area
+// padding above the chrome, and right is the screen edge. Not down: the stats
+// start immediately below and their first row is a callout target of its own.
+//
+// Not left either, any more. The room chip sits immediately to the left and
+// takes all the slack, so there is no gap to claim - a 9px reach would land on
+// the chip's ellipsis, and this button is later in the DOM so it would win.
+// Tapping the end of the room name would have opened the adventurer.
 body.touch #grid-location-header > #btn-adventurer::after {
 	content: "";
 	position: absolute;
-	inset: -9px -9px 0 -9px;
+	inset: -9px -9px 0 0;
 	border-radius: 20px 20px 0 0;
 }
 
@@ -1966,6 +1969,11 @@ body.layout-small #log-toasts .log-toast {
 
 body.layout-small #log-toasts .log-toast-leaving {
 	opacity: 0;
+	// A fading card is invisible but was still catching taps for the whole
+	// 400ms, and the tap did nothing except bubble to the document handler and
+	// close the room panel. In a burst the evicted cards stack up, so the dead
+	// band could reach well down the screen.
+	pointer-events: none;
 }
 
 // invisible chrome must not stay tappable while the player is "down".

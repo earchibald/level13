@@ -197,6 +197,7 @@ define([
 			GlobalSignals.add(this, GlobalSignals.movementBlockerClearedSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
+			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
 			GlobalSignals.add(this, GlobalSignals.buttonStateChangedSignal, this.onButtonStateChanged);
 			GlobalSignals.add(this, GlobalSignals.localeScoutedSignal, this.scheduleMapUpdate);
 			GlobalSignals.add(this, GlobalSignals.inventoryChangedSignal, this.scheduleMapUpdate);
@@ -1403,6 +1404,15 @@ define([
 			let $btn = $(e.currentTarget);
 			let direction = $btn.data("direction");
 			this.showTollGatePopup(direction);
+		},
+
+		// The shown-intro map lives on the system, not in the save, so a restart
+		// in the same page would otherwise inherit it - same starting position,
+		// same identity hash - and the new game's first room would open with no
+		// intro at all.
+		onGameReset: function () {
+			this.shownRoomIntros = {};
+			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 
 		onPopupClosed: function () {

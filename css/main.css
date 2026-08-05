@@ -6452,7 +6452,7 @@ body.layout-small.adventurer-open #grid-location-header > #btn-adventurer {
 body.touch #grid-location-header > #btn-adventurer::after {
   content: "";
   position: absolute;
-  inset: -9px -9px 0 -9px;
+  inset: -9px -9px 0 0;
   border-radius: 20px 20px 0 0;
 }
 body.vision-step-0 #btn-adventurer {
@@ -7171,6 +7171,7 @@ body.layout-small #log-toasts .log-toast {
 }
 body.layout-small #log-toasts .log-toast-leaving {
   opacity: 0;
+  pointer-events: none;
 }
 body.vision-step-0 #log-toasts .log-toast {
   pointer-events: none;
