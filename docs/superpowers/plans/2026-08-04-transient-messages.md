@@ -1876,8 +1876,6 @@ with:
 
 			if (this.shownRoomIntros[positionKey] === hash) return;
 
-			this.shownRoomIntros[positionKey] = hash;
-
 			// the panel is a small-layout thing, and it has nothing to say
 			// about a camp, about a player who cannot see, or about a screen
 			// that already has a popup on it
@@ -1887,6 +1885,14 @@ with:
 			// isPaused covers the popups too: UIPopupManager sets it from
 			// hasOpenPopup() every time a popup opens or closes
 			if (GameGlobals.gameState.isPaused) return;
+
+			// Stored only once it is actually shown. Arriving somewhere while a
+			// popup is up is common - a fight, a story beat - and marking the
+			// room seen there would spend its one intro on a screen the player
+			// never saw. updateSectorDescription runs again on popupClosed, on
+			// leaving camp and on vision changing, so the intro arrives when
+			// whatever was in the way clears.
+			this.shownRoomIntros[positionKey] = hash;
 
 			GameGlobals.uiFunctions.toggleRoomPanel(true);
 		},
