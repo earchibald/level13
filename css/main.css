@@ -6496,21 +6496,34 @@ body.vision-step-0 #btn-room {
 body.layout-small #header-sector {
   display: none;
 }
+#mobile-overlays {
+  display: none;
+}
+body.layout-small #mobile-overlays {
+  display: block;
+  position: fixed;
+  top: var(--l13-chrome-height, 0px);
+  left: 10px;
+  right: 10px;
+  z-index: 7;
+  max-height: calc(100dvh - var(--l13-chrome-height, 0px) - var(--l13-out-bottom-height, 0px) - 20px);
+  pointer-events: none;
+}
+body.landscape-map #mobile-overlays {
+  display: none;
+}
 #room-panel {
   display: none;
 }
 body.layout-small.room-panel-open #room-panel {
   display: block;
-  position: fixed;
-  top: var(--l13-chrome-height);
-  left: 10px;
-  right: 10px;
-  z-index: 7;
+  position: relative;
   margin-top: 6px;
   padding: 8px 10px 10px 10px;
   box-sizing: border-box;
-  max-height: calc(100dvh - var(--l13-chrome-height) - var(--l13-out-bottom-height) - 26px);
+  max-height: calc((100dvh - var(--l13-chrome-height, 0px) - var(--l13-out-bottom-height, 0px) - 26px) * 0.6);
   overflow-y: auto;
+  pointer-events: auto;
   background: var(--l13-mobile-bg);
   border: 1px solid var(--l13-mobile-border);
   border-radius: 6px;
@@ -7148,11 +7161,6 @@ body.layout-small.log-drawer-open #log {
 }
 body.layout-small #log-toasts {
   display: block;
-  position: fixed;
-  top: var(--l13-chrome-height);
-  left: 10px;
-  right: 10px;
-  z-index: 7;
   pointer-events: none;
 }
 body.layout-small #log-toasts .log-toast {

@@ -849,34 +849,41 @@
 
 	<button id="btn-log-toggle" class="hidden-by-popups hidden-when-down" aria-label="Toggle message log">log</button>
 
-	<!-- new log messages, shown for a few seconds each (small layout only).
-	     Body level so no scroll container can clip it, and the same two
-	     classes as the pill so popups and being "down" reach it too.
-
-	     The cards go in an inner div, and that is what carries aria-hidden.
-	     UIPopupManager stamps aria-hidden onto every .hidden-by-popups
-	     element on each popup open AND close, so a static one on the outer
-	     div would be rewritten to "false" the first time a popup closed.
-	     Nothing writes to the inner div, so its hiding holds.
-
-	     Hidden on purpose: #log ul carries role="log" and already announces
-	     these messages. A second reading of the same text is noise. -->
-
-	<div id="log-toasts" class="hidden-by-popups hidden-when-down">
-		<div id="log-toasts-list" aria-hidden="true"></div>
-	</div>
-
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 
-	<!-- the room description, on a phone (see mobile.less). UIOutHeaderSystem
-	     moves #out-desc in here in the small layout and puts it back on the way
-	     out - the same element, not a copy, so every existing write into it
-	     still lands. -->
+	<!-- The two things that hang under the fixed chrome on a phone. They share
+	     one column so they stack instead of covering each other - the room
+	     description first, then any new log messages under it. Body level, so
+	     no scroll container can clip them. See mobile.less. -->
 
-	<div id="room-panel" class="hidden-by-popups hidden-when-down">
-		<button id="btn-room-panel-close" class="context btn-glyph" aria-label="Close room description">&times;</button>
+	<div id="mobile-overlays">
+
+		<!-- UIOutHeaderSystem moves #out-desc in here in the small layout and
+		     puts it back on the way out - the same element, not a copy, so
+		     every existing write into it still lands. -->
+
+		<div id="room-panel" class="hidden-by-popups hidden-when-down">
+			<button id="btn-room-panel-close" class="context btn-glyph" aria-label="Close room description">&times;</button>
+		</div>
+
+		<!-- new log messages, shown for a few seconds each. Same two classes
+		     as the pill so popups and being "down" reach them too.
+
+		     The cards go in an inner div, and that is what carries aria-hidden.
+		     UIPopupManager stamps aria-hidden onto every .hidden-by-popups
+		     element on each popup open AND close, so a static one on the outer
+		     div would be rewritten to "false" the first time a popup closed.
+		     Nothing writes to the inner div, so its hiding holds.
+
+		     Hidden on purpose: #log ul carries role="log" and already announces
+		     these messages. A second reading of the same text is noise. -->
+
+		<div id="log-toasts" class="hidden-by-popups hidden-when-down">
+			<div id="log-toasts-list" aria-hidden="true"></div>
+		</div>
+
 	</div>
 
 	<!-- popups -->

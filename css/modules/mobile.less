@@ -873,12 +873,47 @@ body.layout-small #header-sector {
 	display: none;
 }
 
+// THE OVERLAY COLUMN
+// The room panel and the log toasts both belong under the chrome, and both had
+// the same fixed box - same top, same sides, same z-index - so whichever came
+// later in the document simply covered the other. Arriving somewhere new is
+// exactly when the panel opens AND when the game fires an ambient log message,
+// so in normal exploration every card spent its life behind the panel.
+//
+// One fixed column holds them both instead, and they stack in ordinary flow:
+// panel first, cards under it. No z-index between them to get wrong, and no
+// measuring - the panel's height is whatever it is, and the cards follow.
+//
+// The column takes no taps; the panel and the cards each take their own, so
+// the gaps stay transparent to the page underneath.
+#mobile-overlays {
+	display: none;
+}
+
+body.layout-small #mobile-overlays {
+	display: block;
+	position: fixed;
+	top: var(--l13-chrome-height, 0px);
+	left: 10px;
+	right: 10px;
+	// under the drawer (8) and the pill (9)
+	z-index: 7;
+	// never reaches the bottom chrome, so the tap that dismisses the panel can
+	// be the tap that does the next thing
+	max-height: ~"calc(100dvh - var(--l13-chrome-height, 0px) - var(--l13-out-bottom-height, 0px) - 20px)";
+	pointer-events: none;
+}
+
+// landscape is the map and nothing else
+body.landscape-map #mobile-overlays {
+	display: none;
+}
+
 // THE ROOM PANEL
 // The description was several paragraphs in the middle of the scrolling page,
 // above the compass and the buttons the player reaches for between moves. It
-// hangs under the chrome instead, and it is capped so it never reaches the
-// bottom chrome - so the tap that closes it can be the tap that does the next
-// thing. See UIFunctions.toggleRoomPanel.
+// rides at the top of the overlay column instead. See
+// UIFunctions.toggleRoomPanel.
 
 #room-panel {
 	display: none;
@@ -886,18 +921,19 @@ body.layout-small #header-sector {
 
 body.layout-small.room-panel-open #room-panel {
 	display: block;
-	position: fixed;
-	top: var(--l13-chrome-height);
-	left: 10px;
-	right: 10px;
-	// over the toasts (7), under the drawer (8) and the pill (9)
-	z-index: 7;
+	// positioned by #mobile-overlays, which stacks it above the toasts.
+	// relative because the close button is absolute against it.
+	position: relative;
 	margin-top: 6px;
 	padding: 8px 10px 10px 10px;
 	box-sizing: border-box;
-	// what is left of the screen once both bands of chrome have taken theirs
-	max-height: ~"calc(100dvh - var(--l13-chrome-height) - var(--l13-out-bottom-height) - 26px)";
+	// The panel alone is capped at half of what the overlay column has, so a
+	// long description cannot push the cards off the bottom of it. The column
+	// itself is already inside both bands of chrome.
+	max-height: ~"calc((100dvh - var(--l13-chrome-height, 0px) - var(--l13-out-bottom-height, 0px) - 26px) * 0.6)";
 	overflow-y: auto;
+	// it is the one thing here that takes taps
+	pointer-events: auto;
 	background: var(--l13-mobile-bg);
 	border: 1px solid var(--l13-mobile-border);
 	border-radius: 6px;
@@ -1937,14 +1973,11 @@ body.layout-small.log-drawer-open #log {
 	display: none;
 }
 
+// positioned by #mobile-overlays, which puts it under the room panel rather
+// than on top of it. Static, so it takes only the height of the cards it holds
+// and sits at the column's top when the panel is closed.
 body.layout-small #log-toasts {
 	display: block;
-	position: fixed;
-	top: var(--l13-chrome-height);
-	left: 10px;
-	right: 10px;
-	// under the drawer (8) and the pill (9), over the page
-	z-index: 7;
 	// the container spans the width whether or not it holds anything, so the
 	// gaps between cards must not eat taps meant for the page underneath
 	pointer-events: none;
