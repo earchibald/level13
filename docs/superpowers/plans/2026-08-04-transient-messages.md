@@ -1540,7 +1540,11 @@ Then insert this method immediately after `updateLocationHeaderPlacement` ends (
 			if (!this.roomPanelMarker) return;
 			if ($desc[0].nextSibling === this.roomPanelMarker) return;
 			$(this.roomPanelMarker).before($desc);
-			this.elements.body.removeClass("room-panel-open");
+			// through toggleRoomPanel, not by clearing the class here: the chip's
+			// aria-expanded is the other half of "the panel is open", and a
+			// resize with it open would otherwise leave the chip claiming a
+			// panel that is no longer on screen
+			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 ```
 
