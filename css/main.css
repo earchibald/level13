@@ -6529,6 +6529,9 @@ body.layout-small.room-panel-open #room-panel {
   border-radius: 6px;
   box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
 }
+body.layout-small.room-panel-open.vision-step-0 #room-panel {
+  display: none;
+}
 body.layout-small #room-panel #out-desc {
   margin: 0 20px 0 0;
 }

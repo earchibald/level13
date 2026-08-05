@@ -947,6 +947,19 @@ body.layout-small.room-panel-open #room-panel {
 	box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
 }
 
+// Invisible chrome takes no room and no taps.
+//
+// .hidden-when-down only takes the opacity to 0, so while the player was down
+// this panel still held its height and its taps at the top of the overlay
+// column. That cost nothing while the toasts below it were invisible too. They
+// are not any more - the opening of the game is entirely vision-step-0 - so an
+// invisible box would push the cards down the screen and put an invisible
+// tap-eating band above them, whose only effect is to close a panel nobody can
+// see.
+body.layout-small.room-panel-open.vision-step-0 #room-panel {
+	display: none;
+}
+
 // the right margin is the room the close button needs
 body.layout-small #room-panel #out-desc {
 	margin: 0 20px 0 0;
@@ -3302,8 +3315,10 @@ body.landscape-map.tab-switch-map #mainmap-sector-details {
 	// the jump-to buttons keep flowing in rows at the top of the column
 	align-content: flex-start;
 	justify-content: flex-start;
-	// portrait makes this the anchor for the panel over the map; here the
-	// description is in the flow and needs no anchor
+	// Portrait makes this the anchor for the panel over the map. Here it must
+	// NOT be one: the panel has to reach across into the map's column, so its
+	// containing block is #grid-switch-content, and a position other than
+	// static here would capture it back into this rail.
 	position: static;
 }
 

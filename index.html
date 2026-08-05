@@ -858,6 +858,12 @@
 	     description first, then any new log messages under it. Body level, so
 	     no scroll container can clip them. See mobile.less. -->
 
+	<!-- A custom property that holds env(...) reads back as the literal text,
+	     not a resolved length, so the inset has to be measured off a real box.
+	     See updateSafeAreaTop in UIOutHeaderSystem. At body level, not inside
+	     #mobile-overlays: that column is display:none by default and in
+	     landscape, which is the rotation this measurement exists for. -->
+	<div id="safe-area-probe" aria-hidden="true"></div>
 	<div id="mobile-overlays">
 
 		<!-- UIOutHeaderSystem moves #out-desc in here in the small layout and
@@ -880,10 +886,6 @@
 		     Hidden on purpose: #log ul carries role="log" and already announces
 		     these messages. A second reading of the same text is noise. -->
 
-		<!-- A custom property that holds env(...) reads back as the literal
-		     text, not a resolved length, so the inset has to be measured off a
-		     real box. See updateSafeAreaTop in UIOutHeaderSystem. -->
-		<div id="safe-area-probe" aria-hidden="true"></div>
 		<!-- not hidden-when-down. The opening of the game is vision-step-0
 		     from the first frame until the player finds light, and that is the
 		     stretch where a message most needs to be seen. The log pill keeps

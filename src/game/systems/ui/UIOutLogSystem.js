@@ -42,6 +42,7 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 			GlobalSignals.add(this, GlobalSignals.windowResizedSignal, this.onWindowResized);
 			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
 			GlobalSignals.add(this, GlobalSignals.gameShownSignal, this.onGameShown);
+			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.flushPendingToasts);
 			GlobalSignals.add(this, GlobalSignals.triggerSignal, this.onTrigger);
 
 			this.updateMessages();
@@ -197,11 +198,18 @@ function (Ash, Text, UIList, UIToastStack, MathUtils, GameGlobals, GlobalSignals
 		},
 
 		flushPendingToasts: function () {
+			if (!this.toastStack) return;
+			if (this.pendingToasts.length === 0) return;
+
+			// Still held, not discarded. A popup pauses the game and its
+			// overlay paints over the toast column, so a card pushed now would
+			// spend its whole 4250ms behind the scrim. The opening of the game
+			// is exactly a popup, which is the sequence this feature exists
+			// for. popupClosedSignal brings us back here.
+			if (GameGlobals.gameState.isPaused) return;
+
 			let pending = this.pendingToasts;
 			this.pendingToasts = [];
-
-			if (!this.toastStack) return;
-			if (pending.length === 0) return;
 			// Asked again here rather than trusted from the hold: the game can
 			// be hidden and shown across a resize or a layout change, and a
 			// message held on a phone must not land on a desktop stack that
