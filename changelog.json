@@ -1,6 +1,31 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m54",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "On a phone held sideways, the sector description now floats over the map instead of being squeezed into a narrow column beside it, and the map controls take only the width they need"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The first message of the game now gets a card, like every other message, and cards stay visible while you are in the dark"
+                },
+                {
+                    "type": "Bugfix",
+                    "summary": "The level banner no longer keeps its placeholder text after you load a save"
+                },
+                {
+                    "type": "Bugfix",
+                    "summary": "The top of the screen no longer slides under the status bar after you turn the phone"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m53",
             "requiredVersion": "0.6.1",
             "phase": "beta",

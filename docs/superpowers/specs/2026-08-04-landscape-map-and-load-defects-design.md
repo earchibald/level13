@@ -250,6 +250,40 @@ test framework exists in this repository.
 10. **No wall of cards.** Load a save with many unread messages and assert no
     toast appears — they are `loadedFromSave` and must stay filtered.
 
+## What verification actually found
+
+Two things worth recording, because they change how this repository should be
+tested.
+
+**The automation tab freezes the engine.** Chrome reports the automated tab as
+`visibilityState: hidden`, so `requestAnimationFrame` never fires and the game
+engine never ticks. Every symptom of a frozen engine looks exactly like a
+stale-UI defect: placeholder text everywhere, missing body classes, a page that
+never finishes settling. The first "reproduction" of item 3 was this artifact,
+not the defect. The engine has to be pumped by hand —
+`GameGlobals.engine.update(1/60)` in a loop — before anything about load-time
+state means anything.
+
+**The banner defect is real, and was isolated by an A/B.** With the fix's flag
+neutralised at runtime, `h1` stayed on the placeholder `Camp` through 25 ticks
+and six seconds while `#header-sector` and the room chip both read
+`Dark boulevard` — so the world was there and every other pass had run. With
+the flag live, `h1` became `Level 13`. The flag was observed being set, so the
+trigger is right as well as the effect.
+
+**A follow-up the review found.** The on-screen keyboard shrinks the viewport
+below the baseline, so the growth term clamped to 0 and the reserve vanished
+mid-typing — the same symptom this change exists to prevent. When the viewport
+is *smaller* than the baseline the property is now left alone, because a lost
+status bar makes the viewport bigger and never smaller.
+
+Measured results: landscape panel `position: absolute` with
+`#grid-switch-content` as its `offsetParent`, rail 152px, panel 290px over a
+365px map column, details box still `static`. Safe top: 47px after a simulated
+rotation loss, 47px held while the keyboard is up, 0px in a browser tab.
+Opening toast on screen and tappable during `vision-step-0`, with the log pill
+correctly still faded.
+
 ## Decisions and their reasons
 
 | Decision | Reason |
