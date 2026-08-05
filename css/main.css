@@ -6337,12 +6337,17 @@ body.layout-small ul#switch-tabs {
   text-indent: -18px;
 }
 body.layout-small ul#switch-tabs li {
+  display: inline-block !important;
   text-indent: 0;
   vertical-align: top;
   margin: 0 0 5px 0 !important;
   top: 0;
   border-radius: 0;
   border-bottom-width: 1px !important;
+}
+body.layout-small ul#switch-tabs li[style*="display: none"],
+body.layout-small ul#switch-tabs li[style*="display:none"] {
+  display: none !important;
 }
 body.layout-small ul#switch-tabs li.selected {
   padding-bottom: 5px;

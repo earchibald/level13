@@ -601,7 +601,19 @@ body.layout-small ul#switch-tabs {
 	text-indent: -18px;
 }
 
+// !important because something in the load-and-unlock path writes an inline
+// display on a tab, and an inline style beats a stylesheet rule. Reported
+// twice from play: "outside" and "bag" correct on one row, "party" and "map"
+// each taking a full-width row of their own - which is what an li does when it
+// is block-level, and list-item is jQuery's fallback for an li it cannot
+// restore. The writer was not reproducible here; there is one correct display
+// for a tab in this layout, so it is stated rather than hoped for.
+//
+// Paired with the hide guard at the end of this rule set: an important author
+// declaration also beats jQuery's inline `display: none`, so without it a
+// hidden tab would show.
 body.layout-small ul#switch-tabs li {
+	display: inline-block !important;
 	text-indent: 0;
 	vertical-align: top;
 	// a row gap so wrapped rows do not sit tight against each other - without
@@ -610,6 +622,12 @@ body.layout-small ul#switch-tabs li {
 	top: 0;
 	border-radius: 0;
 	border-bottom-width: 1px !important;
+}
+
+// hide still means hide - see the section of that name at the end of the file
+body.layout-small ul#switch-tabs li[style*="display: none"],
+body.layout-small ul#switch-tabs li[style*="display:none"] {
+	display: none !important;
 }
 
 body.layout-small ul#switch-tabs li.selected {
