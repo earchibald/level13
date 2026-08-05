@@ -6774,7 +6774,7 @@ body.layout-small.tab-switch-out #out-container-compass {
   box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
   display: grid !important;
   grid-template-columns: 126px minmax(0, 1fr);
-  grid-template-areas: "map controls" "meta meta";
+  grid-template-areas: "resources resources" "map controls" "meta meta";
   max-height: 42vh;
   overflow-y: auto;
   align-items: center;
@@ -7679,6 +7679,7 @@ body.layout-small #grid-switch-content {
   box-sizing: border-box;
 }
 body.layout-small #out-container-compass > #out-resources-row {
+  grid-area: resources;
   display: block;
   padding: 4px 10px 2px 10px;
   font-size: 0.85rem;
