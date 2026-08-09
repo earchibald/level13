@@ -187,7 +187,12 @@ define([
 			let msg = neverSynced
 				? "There is a save in the cloud, and this device has not synced with it yet.<br/><br/>"
 				: "A save from another device is in the cloud.<br/><br/>";
-			msg += "<span class='p-meta'>cloud updated: " + cloudUpdatedAt + "</span><br/><br/>";
+			let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
+			let cloudDate = cloudUpdatedAt;
+			if (manageSaveSystem && cloudUpdatedAt) {
+				cloudDate = manageSaveSystem.getDateDisplayString(new Date(cloudUpdatedAt));
+			}
+			msg += "<span class='p-meta'>cloud updated: " + cloudDate + "</span><br/><br/>";
 			msg += "Load it, or keep the save on this device and carry on from here?";
 
 			GameGlobals.uiFunctions.showQuestionPopup("Cloud saves", msg, "Load the cloud save", "Keep this device's",

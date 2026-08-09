@@ -139,7 +139,10 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 				let localData = system.getSaveSlotData(slotID);
 				let localDate = localData && localData.date ? system.getDateDisplayString(localData.date) : "empty";
 				let msg = "Overwrite this slot with the cloud save?<br/><br/>";
-				msg += "<span class='p-meta'>cloud: " + result.updatedAt + "<br/>local: " + localDate + "</span>";
+				// same formatter and timezone as the local time beside it, so the two can
+				// actually be compared by eye
+				let cloudDate = result.updatedAt ? system.getDateDisplayString(new Date(result.updatedAt)) : "unknown";
+				msg += "<span class='p-meta'>cloud: " + cloudDate + "<br/>local: " + localDate + "</span>";
 				GameGlobals.uiFunctions.showConfirmation(msg, function () {
 					// go through loadState, the same path import and the Load button use: it
 					// dispatches restartGameSignal, which is what actually rebuilds the world.

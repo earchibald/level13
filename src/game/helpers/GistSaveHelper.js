@@ -89,6 +89,10 @@ function (Ash, GameGlobals, GameConstants) {
 			let gistId = this.getGistId();
 			if (!gistId) return Promise.resolve({ ok: false, error: "Not set up" });
 			return fetch(this.API_ROOT + "/gists/" + gistId, {
+				// always hit the network: a stale updated_at would let this device believe
+				// the cloud has not moved when it has, which is the exact stomp the guard exists
+				// to prevent. An installed PWA caches these hard otherwise.
+				cache: "no-store",
 				headers: { "Accept": "application/vnd.github+json" }
 			}).then(function (response) {
 				if (!response.ok) {
@@ -264,6 +268,8 @@ function (Ash, GameGlobals, GameConstants) {
 			let fileName = this.getFileNameForSlot(slotID);
 
 			return fetch(this.API_ROOT + "/gists/" + gistId, {
+				// see fetchGistState: these reads must not come from the browser cache
+				cache: "no-store",
 				headers: { "Accept": "application/vnd.github+json" }
 			}).then(function (response) {
 				if (!response.ok) {
@@ -282,7 +288,7 @@ function (Ash, GameGlobals, GameConstants) {
 					// the API inlines content only below 1MB; above that it sets truncated
 					// and the real content is behind raw_url
 					if (file.truncated && file.raw_url) {
-						return fetch(file.raw_url).then(function (raw) {
+						return fetch(file.raw_url, { cache: "no-store" }).then(function (raw) {
 							return raw.text();
 						}).then(function (text) {
 							helper.setLastSeen(json.updated_at);
