@@ -807,6 +807,40 @@ define(['ash',
 				return null;
 			},
 
+			// switch to a tab by id; false when the tab is not available yet, so callers
+			// can do nothing rather than jump somewhere unlocked
+			showTabById: function (tabID) {
+				let $tab = $("#switch-tabs li#" + tabID);
+				if ($tab.length == 0) return false;
+				if ($tab.attr("data-visible") != "true") return false;
+				if ($("#switch-tabs li.selected")[0] != $tab[0]) {
+					$tab[0].click();
+				}
+				this.scrollToTabTop();
+				return true;
+			},
+
+			showInventoryContext: function () {
+				if (this.popupManager.hasOpenPopup()) return;
+				if (!this.showTabById(this.elementIDs.tabs.bag)) return;
+				// same popup as the bag tab's manage inventory button
+				GameGlobals.playerActionFunctions.startInventoryManagement();
+			},
+
+			// costs of an action as span strings, color coded like the button callouts
+			getActionCostsSpanList: function (action) {
+				let costs = GameGlobals.playerActionsHelper.getCosts(action);
+				let costKeys = costs ? Object.keys(costs) : [];
+				let result = [];
+				for (let i = 0; i < costKeys.length; i++) {
+					let key = costKeys[i];
+					let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
+					let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
+					result.push("<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span>");
+				}
+				return result;
+			},
+
 			triggerBackToCamp: function () {
 				let action = "move_camp_level";
 				let $btn = $("#out-action-move-camp");
