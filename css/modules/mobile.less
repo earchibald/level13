@@ -36,6 +36,10 @@ body.sunlit {
 // value that stands in every layout that has no chrome to measure.
 :root {
 	--l13-chrome-height: 0px;
+	// How tall the shell is (see updateSafeAreaTop, which measures it). A percentage
+	// until then, and in every layout that never measures - which is also what it
+	// falls back to if the measurement is ever missing.
+	--l13-viewport-height: 100%;
 }
 
 // ---------------------------------------------------------------------------
@@ -2774,13 +2778,18 @@ body.layout-small #mainmap-sector-details-content td.textwidth {
 // on the root as well as on body: body's overflow only reaches the viewport
 // while the root's stays `visible`, and something in the sheets below sets it,
 // so the document kept 55px of scroll and the chrome kept coming loose
+// The measured viewport height, not 100%. iOS can lay the standalone view out over
+// the whole screen while the page goes on resolving percentages against the height it
+// had before, and the column then stopped a status bar short of the bottom with the
+// background showing through. updateSafeAreaTop writes the number every time the
+// viewport changes, so this tracks whatever the view actually is.
 html:has(> body.layout-small) {
-	height: 100%;
+	height: var(--l13-viewport-height);
 	overflow: hidden;
 }
 
 body.layout-small {
-	height: 100%;
+	height: var(--l13-viewport-height);
 	overflow: hidden;
 }
 
@@ -3248,7 +3257,7 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
 // stack of bands and wrong for a map that has to fit the viewport exactly.
 html:has(> body.landscape-map),
 body.landscape-map {
-	height: 100%;
+	height: var(--l13-viewport-height);
 	overflow: hidden;
 }
 

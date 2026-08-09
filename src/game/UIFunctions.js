@@ -796,14 +796,19 @@ define(['ash',
 
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
-				// in a results popup with a "take all" button, ENTER takes all and ESC takes the selected items (or continues)
+				// ENTER presses the open popup's marked button - fight, take all, carry on -
+				// and ESC its safe one, above. Which button that is comes from the markup
+				// (.button-popup-enter), so a popup that builds its own buttons instead of
+				// the common ones is reached by the same key. It used to look for one id,
+				// #confirmation-takeall, so the fight popup answered neither key.
+				//
 				// the active condition keeps ENTER free for the location actions when no such popup is open.
 				// It has to stay universal, because triggerHotkey skips non-universal hotkeys whenever a popup
 				// is open and an open popup is the only time this key means anything - so the condition carries
 				// the hotkeys-enabled setting too, which universal would otherwise bypass
-				let hasTakeAllPopup = () => GameGlobals.gameState.settings.hotkeysEnabled && GameGlobals.uiFunctions.popupManager.hasTakeAllButton();
-				this.registerHotkey("Take all", "Enter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerTakeAll(), { isHiddenFromList: true, activeCondition: hasTakeAllPopup });
-				this.registerHotkey("Take all", "NumpadEnter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerTakeAll(), { isHiddenFromList: true, activeCondition: hasTakeAllPopup });
+				let hasPopupEnterAction = () => GameGlobals.gameState.settings.hotkeysEnabled && GameGlobals.uiFunctions.popupManager.hasEnterButton();
+				this.registerHotkey("Confirm", "Enter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerEnterButton(), { isHiddenFromList: true, activeCondition: hasPopupEnterAction });
+				this.registerHotkey("Confirm", "NumpadEnter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerEnterButton(), { isHiddenFromList: true, activeCondition: hasPopupEnterAction });
 
 				// same path as more > settings; the popup contains the hotkey list
 				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?" });

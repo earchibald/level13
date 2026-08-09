@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m74" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m74" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m74" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m75" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m75" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m75" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -971,12 +971,17 @@
 			<div class="buttonbox" id="fight-buttons-infightactions"></div>
 			<div id="fight-popup-results"></div>
 			<div class="buttonbox" id="fight-buttons-main">
-				<button id="out-action-fight-cancel" class="action action-manual-trigger" action="flee">Flee</button>
-				<button id="out-action-fight-confirm" class="action" action="fight">Fight</button>
-				<button id="out-action-fight-close">Leave</button>
-				<button id="out-action-fight-continue">Continue</button>
-				<button id="out-action-fight-takeselected" class="action inventory-selection-ok" action="accept_inventory">Continue</button>
-				<button id="out-action-fight-takeall" class='action inventory-selection-takeall' action='take_all'>Take all</button>
+				<!-- One popup, four states (see UIOutFightSystem.updateFightPopupState),
+				     so each state marks its own Enter and Escape button and the popup
+				     manager presses whichever is on screen. Without these the keys did
+				     nothing here at all: the manager looked for #confirmation-takeall and
+				     .button-popup-escape, and this popup builds its own buttons. -->
+				<button id="out-action-fight-cancel" class="action action-manual-trigger button-popup-escape" action="flee">Flee</button>
+				<button id="out-action-fight-confirm" class="action button-popup-enter" action="fight">Fight</button>
+				<button id="out-action-fight-close" class="button-popup-enter button-popup-escape">Leave</button>
+				<button id="out-action-fight-continue" class="button-popup-enter button-popup-escape">Continue</button>
+				<button id="out-action-fight-takeselected" class="action inventory-selection-ok button-popup-escape" action="accept_inventory">Continue</button>
+				<button id="out-action-fight-takeall" class='action inventory-selection-takeall button-popup-enter' action='take_all'>Take all</button>
 			</div>
 		</div>
 		

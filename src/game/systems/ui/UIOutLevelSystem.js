@@ -85,6 +85,11 @@ define([
 
 		pendingUpdateMap: true,
 
+		// which rooms this browser has already described - see updateRoomIntro. Beside
+		// the save, never in it.
+		STORAGE_KEY_ROOM_INTROS: "room-intros-seen",
+		shownRoomIntros: null,
+
 		constructor: function () {
 			GameGlobals.uiFunctions.toggle("#switch-out .bubble", false);
 
@@ -1356,13 +1361,18 @@ define([
 		// text carries the glowstick countdown and whether there are enemies
 		// about, so hashing it would re-open the panel on almost every tick.
 		//
-		// Held in memory and not saved. The save format uses two-letter keys
-		// and drops falsy values to stay small, and a hash per sector across a
-		// whole world would cost real bytes for a cosmetic memory. The only
-		// visible effect is that reloading re-shows the intro for the one room
-		// you load into.
+		// Kept in the browser, NOT in the save. The save format uses two-letter
+		// keys and drops falsy values to stay small, and a hash per sector
+		// across a whole world would cost real bytes for what is a cosmetic
+		// memory - and it would ride the cloud save to other devices, where it
+		// is nobody's memory. So it sits beside the save instead: this browser
+		// remembers which rooms it has already described, and a different or a
+		// cleared browser describes them again, which is the right trade.
+		//
+		// It was in memory only, so every reload described every room the
+		// player walked back through as if it were new.
 		updateRoomIntro: function (sectorHeaderText, hasVision, features, isScouted, hasCampHere) {
-			if (!this.shownRoomIntros) this.shownRoomIntros = {};
+			if (!this.shownRoomIntros) this.shownRoomIntros = this.loadShownRoomIntros();
 
 			let position = this.playerPosNodes.head.position;
 			let positionKey = position.level + "." + position.sectorX + "." + position.sectorY;
@@ -1395,8 +1405,42 @@ define([
 			// leaving camp and on vision changing, so the intro arrives when
 			// whatever was in the way clears.
 			this.shownRoomIntros[positionKey] = hash;
+			this.saveShownRoomIntros();
 
 			GameGlobals.uiFunctions.toggleRoomPanel(true);
+		},
+
+		// One world's worth, under one key, stamped with the seed it belongs to. A
+		// mismatched seed is a different world - a restart, or a save from elsewhere -
+		// and its rooms are not these rooms, so the memory starts empty rather than
+		// silently swallowing the new world's first intros.
+		//
+		// Keeping only the current world also bounds what this can grow to: one entry
+		// per room described, about twenty bytes each, and nothing accumulating across
+		// games. Going back to an older world describes its rooms again.
+		loadShownRoomIntros: function () {
+			try {
+				let raw = localStorage.getItem(this.STORAGE_KEY_ROOM_INTROS);
+				let stored = raw ? JSON.parse(raw) : null;
+				if (stored && stored.seed === GameGlobals.gameState.worldSeed && stored.rooms) return stored.rooms;
+			} catch (ex) {
+				log.w("could not read shown room intros: " + ex);
+			}
+			return {};
+		},
+
+		// Storage can be full or refused - private browsing, a quota - and none of this
+		// is worth an exception on the path that shows a room description. Losing it
+		// costs one repeated intro.
+		saveShownRoomIntros: function () {
+			try {
+				localStorage.setItem(this.STORAGE_KEY_ROOM_INTROS, JSON.stringify({
+					seed: GameGlobals.gameState.worldSeed,
+					rooms: this.shownRoomIntros
+				}));
+			} catch (ex) {
+				log.w("could not store shown room intros: " + ex);
+			}
 		},
 
 		// djb2. Short keys, thousands of sectors, and only ever compared with
@@ -1469,12 +1513,14 @@ define([
 			this.showTollGatePopup(direction);
 		},
 
-		// The shown-intro map lives on the system, not in the save, so a restart
-		// in the same page would otherwise inherit it - same starting position,
-		// same identity hash - and the new game's first room would open with no
-		// intro at all.
+		// The shown-intro map belongs to one world, not to the save, so a restart in
+		// the same page would otherwise inherit it - same starting position, same
+		// identity hash - and the new game's first room would open with no intro at
+		// all. The stored copy is stamped with a world seed and would be rejected on
+		// the next read anyway; this drops it now so nothing carries over in memory.
 		onGameReset: function () {
 			this.shownRoomIntros = {};
+			this.saveShownRoomIntros();
 			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 

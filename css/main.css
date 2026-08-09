@@ -6141,6 +6141,7 @@ body.sunlit {
 }
 :root {
   --l13-chrome-height: 0px;
+  --l13-viewport-height: 100%;
 }
 #rotate-notice {
   display: none;
@@ -7816,11 +7817,11 @@ body.layout-small #mainmap-sector-details-content td.textwidth {
   }
 }
 html:has(> body.layout-small) {
-  height: 100%;
+  height: var(--l13-viewport-height);
   overflow: hidden;
 }
 body.layout-small {
-  height: 100%;
+  height: var(--l13-viewport-height);
   overflow: hidden;
 }
 body.layout-small {
@@ -8081,7 +8082,7 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
 }
 html:has(> body.landscape-map),
 body.landscape-map {
-  height: 100%;
+  height: var(--l13-viewport-height);
   overflow: hidden;
 }
 body.landscape-map {

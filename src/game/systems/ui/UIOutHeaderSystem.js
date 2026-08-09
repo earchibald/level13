@@ -1339,6 +1339,21 @@ define([
 			growth = Math.min(growth, this.MAX_SAFE_TOP);
 
 			document.documentElement.style.setProperty("--l13-safe-top", Math.max(measured, growth) + "px");
+
+			// The other half of the same problem, and the half that was missed.
+			//
+			// When iOS stops leaving a band for the status bar, the view is laid out over
+			// the whole screen but the page can go on sizing itself to the height it had
+			// before. `height: 100%` then resolves short, and the app column stops a
+			// status bar's worth above the bottom of the screen with the background
+			// showing through - which is what the reserve above was compensating for at
+			// the top while nothing put the bottom right.
+			//
+			// So the shell takes its height from a measured number rather than a
+			// percentage. This is recomputed on every viewport change, so unlike the
+			// baseline above it cannot go stale: whatever iOS does next, the next frame
+			// corrects it.
+			document.documentElement.style.setProperty("--l13-viewport-height", window.innerHeight + "px");
 		},
 
 		updateLayoutMode: function () {
