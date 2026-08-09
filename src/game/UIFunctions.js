@@ -906,15 +906,16 @@ define(['ash',
 				return result;
 			},
 
-			// SaveSystem is an Ash system, so it cannot be held at module load
-			getSaveSystemForCloud: function () {
-				if (!this.cloudSaveSystem) {
+			// UIOutManageSaveSystem owns loadState, the game's real "load this save" path.
+			// It is an Ash system, so it cannot be held at module load
+			getManageSaveSystemForCloud: function () {
+				if (!this.cloudManageSaveSystem) {
 					try {
-						let SaveSystem = require("game/systems/SaveSystem");
-						this.cloudSaveSystem = GameGlobals.engine.getSystem(SaveSystem);
+						let UIOutManageSaveSystem = require("game/systems/ui/UIOutManageSaveSystem");
+						this.cloudManageSaveSystem = GameGlobals.engine.getSystem(UIOutManageSaveSystem);
 					} catch (ex) { return null; }
 				}
-				return this.cloudSaveSystem;
+				return this.cloudManageSaveSystem;
 			},
 
 			// the map cursor lives in UIOutMapSystem; this is the hotkey's way in

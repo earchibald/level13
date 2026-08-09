@@ -194,12 +194,17 @@ define([
 							GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "Could not load: " + result.error, "OK", null, null, false, true);
 							return;
 						}
-						let saveSystem = GameGlobals.uiFunctions.getSaveSystemForCloud();
-						if (saveSystem) saveSystem.saveDataToSlot(slotID, result.data);
+						// same path as import and the Load button - see the note in
+						// UIOutManageSaveSystem.cloudLoadSelectedSlot
+						let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
+						if (!manageSaveSystem) return;
+						let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
+						if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
+							GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "That cloud save could not be read.", "OK", null, null, false, true);
+							return;
+						}
 						helper.resolveConflict(cloudUpdatedAt);
-						// the running game is still the old state, and this slot is the one
-						// the game boots from, so reloading is what makes the load take effect
-						location.reload();
+						manageSaveSystem.loadState(saveJSON);
 					});
 				},
 				function () {

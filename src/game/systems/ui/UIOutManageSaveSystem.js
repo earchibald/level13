@@ -141,16 +141,17 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 				let msg = "Overwrite this slot with the cloud save?<br/><br/>";
 				msg += "<span class='p-meta'>cloud: " + result.updatedAt + "<br/>local: " + localDate + "</span>";
 				GameGlobals.uiFunctions.showConfirmation(msg, function () {
-					// saveDataToSlot owns the storage-key rule, including the legacy "save"
-					// key the default slot also writes. Do not hand-roll those keys here.
-					system.getSaveSystem().saveDataToSlot(slotID, result.data);
-					// reloading only takes effect for the slot the game boots from; for any
-					// other slot it would boot the default one and look like nothing happened
-					if (slotID == GameConstants.SAVE_SLOT_DEFAULT) {
-						location.reload();
+					// go through loadState, the same path import and the Load button use: it
+					// dispatches restartGameSignal, which is what actually rebuilds the world.
+					// Writing the slot and reloading is NOT equivalent and left the world
+					// partially stale - right position, wrong inventory
+					let saveSystem = system.getSaveSystem();
+					let saveJSON = saveSystem.getSaveJSONfromCompressed(result.data);
+					if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
+						GameGlobals.uiFunctions.showInfoPopup("Cloud load", "That cloud save could not be read.", "OK", null, null, false, true);
 						return;
 					}
-					GameGlobals.uiFunctions.showInfoPopup("Cloud load", "Slot updated. Open manage saves and load it to play it.", "OK", null, null, false, true);
+					system.loadState(saveJSON);
 				}, false, true);
 			});
 		},
