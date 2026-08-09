@@ -374,27 +374,32 @@ define([
 			if (!this.selectedSector) return;
 			let pos = this.selectedSector.get(PositionComponent);
 			if (!pos) return;
-			let $cell = $(".map-overlay-cell[data-level='" + pos.level + "'][data-x='" + pos.sectorX + "'][data-y='" + pos.sectorY + "']");
-			if ($cell.length == 0) return;
 			let $container = $("#mainmap-container");
 			if ($container.length == 0) return;
+			// scope to the main map: the minimap draws cells with the same data attributes,
+			// and its copy is not displayed, so measuring it would give nonsense
+			let $cell = $container.find(".map-overlay-cell[data-level='" + pos.level + "'][data-x='" + pos.sectorX + "'][data-y='" + pos.sectorY + "']");
+			if ($cell.length == 0) return;
 
-			// scroll the container, never the page: scrollIntoView would move the whole
-			// document to bring a cell inside a scrolling pane into view
-			let cellLeft = $cell.position().left + $container.scrollLeft();
-			let cellTop = $cell.position().top + $container.scrollTop();
-			let cellW = $cell.outerWidth();
-			let cellH = $cell.outerHeight();
-			let viewW = $container.width();
-			let viewH = $container.height();
-			let scrollL = $container.scrollLeft();
-			let scrollT = $container.scrollTop();
+			// measure with bounding rects rather than position(): the cell's offset parent is
+			// the scrolled content, not the container, so position() is already content
+			// relative and adding scrollLeft would count the scroll twice
+			let cellRect = $cell[0].getBoundingClientRect();
+			let containerRect = $container[0].getBoundingClientRect();
 
-			if (cellLeft < scrollL) $container.scrollLeft(cellLeft);
-			else if (cellLeft + cellW > scrollL + viewW) $container.scrollLeft(cellLeft + cellW - viewW);
+			let deltaLeft = cellRect.left - containerRect.left;
+			if (deltaLeft < 0) {
+				$container.scrollLeft($container.scrollLeft() + deltaLeft);
+			} else if (deltaLeft + cellRect.width > containerRect.width) {
+				$container.scrollLeft($container.scrollLeft() + deltaLeft + cellRect.width - containerRect.width);
+			}
 
-			if (cellTop < scrollT) $container.scrollTop(cellTop);
-			else if (cellTop + cellH > scrollT + viewH) $container.scrollTop(cellTop + cellH - viewH);
+			let deltaTop = cellRect.top - containerRect.top;
+			if (deltaTop < 0) {
+				$container.scrollTop($container.scrollTop() + deltaTop);
+			} else if (deltaTop + cellRect.height > containerRect.height) {
+				$container.scrollTop($container.scrollTop() + deltaTop + cellRect.height - containerRect.height);
+			}
 		},
 
 		// Drops the selection, which is what hides the details - updateSector
