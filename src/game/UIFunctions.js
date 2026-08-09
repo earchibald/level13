@@ -1601,7 +1601,11 @@ define(['ash',
 				if (e.originalEvent.isTextInput) return;
 				// number inputs (steppers) don't set isTextInput; never treat typing in a field as a hotkey
 				let targetTagName = e.target ? e.target.tagName : null;
-				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA") return;
+				// SELECT too: a focused dropdown uses letters for type-ahead and arrows to
+				// change its value, so a hotkey would fire on top of the dropdown's own
+				// handling. The map tab's level and map mode dropdowns share keys with the
+				// map cursor, where this is not theoretical
+				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA" || targetTagName == "SELECT") return;
 				// Enter on a focused button already clicked it on keydown; don't also trigger the hotkey
 				// the tab switches are exempt: they keep focus after a click, and re-selecting the open tab
 				// does nothing, so swallowing the keyup would lose that tab's own ENTER action
