@@ -59,6 +59,13 @@ define([
 			$("#settings-checkbox-github-auto").change(() => {
 				GameGlobals.gistSaveHelper.setAutoMirrorEnabled($("#settings-checkbox-github-auto").is(":checked"));
 			});
+			// on change, not on a button: there is nothing to validate and nothing to go
+			// wrong. setDeviceName trims and falls back, so put back what it settled on
+			// rather than leaving the box showing something that was not stored
+			$("#settings-github-device").change(() => {
+				let stored = GameGlobals.gistSaveHelper.setDeviceName($("#settings-github-device").val());
+				$("#settings-github-device").val(stored);
+			});
 
             let languageOptions = "";
             for (var key in GameGlobals.textLoader.textSources) {
@@ -227,20 +234,47 @@ define([
             });
         },
 
-		showCloudArrivalPrompt: function (cloudRevision, cloudUpdatedAt) {
+		// "saved from iPhone-a3f2, 9 Aug 10:14" - the one line every cloud card and
+		// prompt carries, so the player can always tell WHICH device and WHEN without
+		// having to reason about it.
+		//
+		// The device comes from the meta file the writing device leaves in the gist.
+		// A gist written before that file existed has none, so the wording falls back
+		// to the gist's own timestamp and says nothing it cannot know.
+		getCloudSaveDescription: function (state) {
+			let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
+			let when = (state.meta && state.meta.at) || state.updatedAt;
+			let whenText = when;
+			if (manageSaveSystem && when) {
+				whenText = manageSaveSystem.getDateDisplayString(new Date(when));
+			}
+			let device = state.meta && state.meta.device;
+			let isThisDevice = device && device === GameGlobals.gistSaveHelper.getDeviceName();
+			if (!device) return "<span class='p-meta'>cloud updated: " + whenText + "</span>";
+			return "<span class='p-meta'>saved from " + device + (isThisDevice ? " (this device)" : "") + ", " + whenText + "</span>";
+		},
+
+		// Anything the game does to this device's state on its own gets one of these.
+		// Silent is what made the cloud saves impossible to reason about: the game
+		// would adopt a revision, or load a whole save over the running game, and say
+		// nothing at all about it.
+		showCloudCard: function (msg) {
+			GameGlobals.uiFunctions.showInfoPopup("Cloud saves", msg, "OK", null, null, false, true);
+		},
+
+		showCloudArrivalPrompt: function (state) {
 			let helper = GameGlobals.gistSaveHelper;
 			let slotID = GameConstants.SAVE_SLOT_DEFAULT;
+			let cloudRevision = state.revision;
 
 			let neverSynced = !helper.getLastSeenRevision();
+			let device = state.meta && state.meta.device;
 			let msg = neverSynced
 				? "There is a save in the cloud, and this device has not synced with it yet.<br/><br/>"
-				: "A save from another device is in the cloud.<br/><br/>";
-			let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
-			let cloudDate = cloudUpdatedAt;
-			if (manageSaveSystem && cloudUpdatedAt) {
-				cloudDate = manageSaveSystem.getDateDisplayString(new Date(cloudUpdatedAt));
-			}
-			msg += "<span class='p-meta'>cloud updated: " + cloudDate + "</span><br/><br/>";
+				: (device
+					? "A save from " + device + " is in the cloud.<br/><br/>"
+					: "A save from another device is in the cloud.<br/><br/>");
+			msg += this.getCloudSaveDescription(state) + "<br/><br/>";
 			msg += "Load it, or keep the save on this device and carry on from here?";
 
 			GameGlobals.uiFunctions.showQuestionPopup("Cloud saves", msg, "Load the cloud save", "Keep this device's",
@@ -280,6 +314,9 @@ define([
             // the box doubles as the display: this is the value the player copies to a second
             // device, so it has to be selectable, not buried in a status line
             $("#settings-github-gist").val(helper.getGistId() || "");
+            // getDeviceName invents one on first read, so the box is never empty and the
+            // player always knows what the other device will call this one
+            $("#settings-github-device").val(helper.getDeviceName());
             $("#settings-checkbox-github-auto").prop("disabled", !isConfigured);
             $("#settings-checkbox-github-auto").prop("checked", helper.isAutoMirrorEnabled());
             this.updateCloudSyncStatus();
@@ -366,7 +403,8 @@ define([
         },
 
 		// once per game start: if the cloud moved since this device last synced, another
-		// device has been played. Never changes anything on its own
+		// device has been played. Loads nothing on its own - the most it does by itself
+		// is accept a revision this device wrote, and it says so when it does
 		checkCloudSaveOnArrival: function () {
 			let sys = this;
 			let helper = GameGlobals.gistSaveHelper;
@@ -378,6 +416,9 @@ define([
 				let lastSeen = helper.getLastSeenRevision();
 				if (!state.revision) return;
 				if (lastSeen && state.revision === lastSeen) {
+					// nothing moved and nothing was changed, so there is nothing to report:
+					// a card on every launch that only ever says "all fine" is one the
+					// player stops reading, and then misses the one that matters
 					helper.clearConflictIfResolved();
 					return;
 				}
@@ -386,7 +427,7 @@ define([
 				// save, which of the two is current is genuinely unknown, so ask rather than
 				// assume. An empty cloud has nothing to ask about.
 				if (!lastSeen) {
-					let hasAnySave = (state.fileNames || []).some(function (n) { return n.indexOf("level13-") === 0 && n !== "level13-readme.txt"; });
+					let hasAnySave = (state.fileNames || []).some(function (n) { return helper.isSaveFileName(n); });
 					if (!hasAnySave) return;
 				}
 
@@ -396,12 +437,17 @@ define([
 				// the player's own last autosave is the bug this checks for.
 				helper.isOwnCloudState(state, GameConstants.SAVE_SLOT_DEFAULT).then(function (isOurs) {
 					if (isOurs) {
+						// accepting a revision changes what this device will do next - it
+						// starts pushing again - so it is not nothing, and it used to happen
+						// in silence
 						helper.resolveConflict(state.revision);
 						sys.updateCloudSyncStatus();
+						sys.showCloudCard("The cloud already holds this device's own last save, so the game has caught up with it. Nothing was loaded."
+							+ "<br/><br/>" + sys.getCloudSaveDescription(state));
 						return;
 					}
 					helper.hasConflict = true;
-					sys.showCloudArrivalPrompt(state.revision, state.updatedAt);
+					sys.showCloudArrivalPrompt(state);
 				});
 			});
 		},
@@ -434,18 +480,20 @@ define([
 						sys.updateCloudSyncStatus();
 						return;
 					}
-					sys.applyIdleCloudFinding(state.revision, state.updatedAt);
+					sys.applyIdleCloudFinding(state);
 				});
 			});
 		},
 
-		applyIdleCloudFinding: function (cloudRevision, cloudUpdatedAt) {
+		applyIdleCloudFinding: function (state) {
+			let sys = this;
 			let helper = GameGlobals.gistSaveHelper;
+			let cloudRevision = state.revision;
 			// in conflict means this device holds progress the cloud refused, which could be
 			// hours of play. Loading over it silently would destroy that, so ask.
 			if (helper.isInConflict() || !helper.getLastSeenRevision()) {
 				helper.hasConflict = true;
-				this.showCloudArrivalPrompt(cloudRevision, cloudUpdatedAt);
+				this.showCloudArrivalPrompt(state);
 				return;
 			}
 
@@ -456,12 +504,29 @@ define([
 			helper.loadSlot(GameConstants.SAVE_SLOT_DEFAULT).then(function (result) {
 				if (!result.ok) return;
 				let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
-				if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) return;
+				if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
+					// loadSlot has already moved the marker, because reading succeeded - it
+					// is the CONTENT that is unusable. Saying nothing would leave the device
+					// believing it is in sync with a save it cannot read, and the player with
+					// no idea why the cloud had gone quiet.
+					sys.showCloudCard("A newer save was found in the cloud, but it could not be read, so nothing was loaded."
+						+ "<br/><br/>" + sys.getCloudSaveDescription(state));
+					return;
+				}
 				// the REVISION, never the timestamp: this value becomes the marker every
 				// later check compares against, and a timestamp there can never match a SHA,
 				// so the next push would report a conflict that does not exist
 				helper.resolveConflict(cloudRevision);
 				manageSaveSystem.loadState(saveJSON);
+				// This replaces the whole running game with another device's save. It is
+				// safe - the state it overwrote is already in the cloud - but it is the
+				// largest thing the game does without being asked, and it did it in
+				// silence. Coming back to a session that has quietly become a different
+				// one, with no way to tell what happened, is how the cloud saves came to
+				// feel untrustworthy.
+				sys.showCloudCard("A newer save was found in the cloud and has been loaded."
+					+ "<br/><br/>" + sys.getCloudSaveDescription(state)
+					+ "<br/><br/><span class='p-meta'>This device's own progress was already in the cloud, so nothing was lost.</span>");
 			});
 		},
 

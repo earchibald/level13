@@ -21,6 +21,14 @@ function (Ash, GameGlobals, GameConstants) {
 		// the cloud ahead of us because of US? - see isOwnCloudState.
 		STORAGE_KEY_OWN_REVISIONS: "github-gist-own-revisions",
 		STORAGE_KEY_PUSHED_PREFIX: "github-gist-pushed-",
+		// what this device calls itself. Local, like the token: it says which device
+		// wrote the cloud save, so "a save from another device" can name the device.
+		STORAGE_KEY_DEVICE_NAME: "github-gist-device-name",
+
+		// one small file beside the saves, rewritten with every push, holding who wrote
+		// last and when. Not part of any save: nothing reads it to play the game.
+		META_FILE_NAME: "level13-meta.json",
+		README_FILE_NAME: "level13-readme.txt",
 
 		// enough to cover a session's worth of writes. The list only has to outlive the
 		// gap between a write and the next check, and a stale entry costs nothing: a
@@ -241,7 +249,7 @@ function (Ash, GameGlobals, GameConstants) {
 					// revision. That is an exact identity for one state of the gist, unlike
 					// a timestamp, which is only equal by assumption across endpoints
 					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
-					return { ok: true, revision: revision, updatedAt: json.updated_at, fileNames: json.files ? Object.keys(json.files) : [] };
+					return { ok: true, revision: revision, updatedAt: json.updated_at, meta: helper.parseMeta(json), fileNames: json.files ? Object.keys(json.files) : [] };
 				});
 			}).catch(function (ex) {
 				return { ok: false, error: "Could not reach GitHub: " + ex };
@@ -258,6 +266,68 @@ function (Ash, GameGlobals, GameConstants) {
 
 		getFileNameForSlot: function (slotID) {
 			return "level13-" + slotID + ".txt";
+		},
+
+		// the gist holds a readme and a meta file beside the saves, and neither is one.
+		// Counting them as saves is how an empty cloud looks occupied.
+		isSaveFileName: function (name) {
+			if (!name || name.indexOf("level13-") !== 0) return false;
+			return name !== this.README_FILE_NAME && name !== this.META_FILE_NAME;
+		},
+
+		// A name for this device, so the cloud can say who wrote last. Made up on first
+		// use from what the browser admits to, with a short suffix because two phones of
+		// the same make would otherwise share one name. The player can rename it in
+		// settings - that is the whole point of showing it.
+		getDeviceName: function () {
+			try {
+				let stored = localStorage.getItem(this.STORAGE_KEY_DEVICE_NAME);
+				if (stored) return stored;
+			} catch (ex) { /* fall through to a fresh name */ }
+			let name = this.getDefaultDeviceName();
+			this.setDeviceName(name);
+			return name;
+		},
+
+		setDeviceName: function (name) {
+			name = (name || "").trim().substring(0, 40);
+			if (!name) name = this.getDefaultDeviceName();
+			try { localStorage.setItem(this.STORAGE_KEY_DEVICE_NAME, name); } catch (ex) { log.w("could not store device name: " + ex); }
+			return name;
+		},
+
+		getDefaultDeviceName: function () {
+			let ua = navigator.userAgent || "";
+			let platform = "device";
+			if (/iPhone/i.test(ua)) platform = "iPhone";
+			else if (/iPad/i.test(ua)) platform = "iPad";
+			else if (/Android/i.test(ua)) platform = "Android";
+			else if (/Macintosh|Mac OS X/i.test(ua)) platform = "Mac";
+			else if (/Windows/i.test(ua)) platform = "Windows";
+			else if (/Linux/i.test(ua)) platform = "Linux";
+			// four hex characters, so two of the same make are told apart
+			let suffix = Math.floor(Math.random() * 0x10000).toString(16);
+			while (suffix.length < 4) suffix = "0" + suffix;
+			return platform + "-" + suffix;
+		},
+
+		getMetaFileContent: function (slotID) {
+			return JSON.stringify({
+				device: this.getDeviceName(),
+				at: new Date().toISOString(),
+				slot: slotID
+			});
+		},
+
+		parseMeta: function (json) {
+			let file = json && json.files ? json.files[this.META_FILE_NAME] : null;
+			if (!file || !file.content) return null;
+			try {
+				let meta = JSON.parse(file.content);
+				return meta && meta.device ? meta : null;
+			} catch (ex) {
+				return null;
+			}
 		},
 
 		// the internal backup and loaded slots are the game's own bookkeeping, not saves a
@@ -506,6 +576,9 @@ function (Ash, GameGlobals, GameConstants) {
 			let helper = this;
 			let files = {};
 			files[this.getFileNameForSlot(slotID)] = { content: data };
+			// in the same request, so one write is one revision and the record of who
+			// wrote it can never disagree with what was written
+			files[this.META_FILE_NAME] = { content: this.getMetaFileContent(slotID) };
 
 			// BEFORE the request, not after. If the answer never comes back - a phone
 			// backgrounded mid-push, an app closed - GitHub still holds the write, and
