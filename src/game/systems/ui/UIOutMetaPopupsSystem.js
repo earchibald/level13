@@ -391,7 +391,10 @@ define([
 				if (!result.ok) return;
 				let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
 				if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) return;
-				helper.resolveConflict(cloudUpdatedAt);
+				// the REVISION, never the timestamp: this value becomes the marker every
+				// later check compares against, and a timestamp there can never match a SHA,
+				// so the next push would report a conflict that does not exist
+				helper.resolveConflict(cloudRevision);
 				manageSaveSystem.loadState(saveJSON);
 			});
 		},
