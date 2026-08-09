@@ -2962,6 +2962,11 @@ body.dark #settings-github-token {
   min-width: 180px;
   margin-right: 6px;
 }
+body.dark #settings-github-gist {
+  min-width: 260px;
+  margin: 4px 0 0 0;
+  font-family: monospace;
+}
 body.dark #settings-github-status {
   margin: 4px 0 8px 0;
   word-break: break-all;
@@ -5777,6 +5782,11 @@ body.sunlit .settings-group-header {
 body.sunlit #settings-github-token {
   min-width: 180px;
   margin-right: 6px;
+}
+body.sunlit #settings-github-gist {
+  min-width: 260px;
+  margin: 4px 0 0 0;
+  font-family: monospace;
 }
 body.sunlit #settings-github-status {
   margin: 4px 0 8px 0;

@@ -177,7 +177,11 @@ define([
         onGithubValidateClicked: function () {
             let sys = this;
             let existingId = GameGlobals.gistSaveHelper.getGistId();
-            if (existingId) {
+            let enteredId = ($("#settings-github-gist").val() || "").trim();
+
+            // an empty box means "make me a new gist", which is the only path that can strand
+            // saves. Joining a gist by ID never destroys anything, so it needs no confirmation.
+            if (!enteredId && existingId) {
                 GameGlobals.uiFunctions.showConfirmation(
                     "This will create a new gist and stop using the current one.<br/><br/><span class='p-meta'>Saves already in gist " + existingId + " stay on GitHub, but the game will no longer see them.</span>",
                     function () { sys.runGithubValidation(); }, false, true);
@@ -189,13 +193,23 @@ define([
         runGithubValidation: function () {
             let sys = this;
             let token = $("#settings-github-token").val();
+            let enteredId = ($("#settings-github-gist").val() || "").trim();
+            let isJoiningNewGist = !!enteredId && enteredId != GameGlobals.gistSaveHelper.getGistId();
             $("#settings-github-status").text("Checking...");
-            GameGlobals.gistSaveHelper.validateAndSetup(token).then(function (result) {
+
+            let promise = enteredId
+                ? GameGlobals.gistSaveHelper.adoptGist(token, enteredId)
+                : GameGlobals.gistSaveHelper.validateAndSetup(token);
+
+            promise.then(function (result) {
                 if (result.ok) {
                     // the token is never shown again, the same way GitHub treats it
                     $("#settings-github-token").val("");
                 }
                 sys.updateGithubSettings();
+                // a device that has just joined an existing gist is behind it by construction,
+                // so ask about the save waiting there instead of making the player find it
+                if (result.ok && isJoiningNewGist) sys.checkCloudSaveOnArrival();
             });
         },
 
@@ -247,6 +261,9 @@ define([
             let isConfigured = helper.isConfigured();
             let status = isConfigured ? "Connected. Saves go to gist " + helper.getGistId() : (helper.getLastError() || "Not set up");
             $("#settings-github-status").text(status);
+            // the box doubles as the display: this is the value the player copies to a second
+            // device, so it has to be selectable, not buried in a status line
+            $("#settings-github-gist").val(helper.getGistId() || "");
             $("#settings-checkbox-github-auto").prop("disabled", !isConfigured);
             $("#settings-checkbox-github-auto").prop("checked", helper.isAutoMirrorEnabled());
             this.updateCloudSyncStatus();

@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m71",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Cloud saves: a second device now joins the first device's gist instead of making its own, so both devices share one cloud save"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Settings shows the Gist ID, and takes one, so it can be copied to another device"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m70",
             "requiredVersion": "0.6.1",
             "phase": "beta",

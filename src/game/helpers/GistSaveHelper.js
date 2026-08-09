@@ -230,6 +230,90 @@ function (Ash, GameGlobals, GameConstants) {
 			});
 		},
 
+		// Joining a gist that already exists is the whole of the two-device story. Without
+		// this, every device that validates a token creates its OWN gist, and each one then
+		// reads back only what it wrote - two devices, two clouds, no sharing, and no error
+		// anywhere to say so.
+		adoptGist: function (token, gistId) {
+			let helper = this;
+			if (!token) return Promise.resolve({ ok: false, error: "No token entered" });
+			if (!gistId) return Promise.resolve({ ok: false, error: "No gist ID entered" });
+
+			gistId = gistId.trim();
+
+			return fetch(this.API_ROOT + "/gists/" + gistId, {
+				cache: "no-store",
+				headers: {
+					"Authorization": "Bearer " + token,
+					"Accept": "application/vnd.github+json"
+				}
+			}).then(function (response) {
+				if (!response.ok) {
+					return helper.getErrorMessage(response).then(function (msg) {
+						if (response.status == 404) msg = "No gist with that ID, or this token cannot see it";
+						helper.lastError = msg;
+						return { ok: false, error: msg };
+					});
+				}
+				return response.json().then(function (json) {
+					// a mistyped ID is likely to be another of this account's gists, and the
+					// token can write to those. Refuse before writing rather than dropping a
+					// readme into something unrelated.
+					let fileNames = json.files ? Object.keys(json.files) : [];
+					let looksRight = json.description == helper.GIST_DESCRIPTION
+						|| fileNames.some(function (n) { return n.indexOf("level13-") === 0; });
+					if (!looksRight) {
+						let msg = "That gist does not look like a Level 13 saves gist";
+						helper.lastError = msg;
+						return { ok: false, error: msg };
+					}
+
+					// reading proves nothing about writing, and a device that can read but not
+					// push would look connected right up until the first save failed. Write the
+					// readme back: unchanged content creates no revision, so this costs nothing.
+					let existing = json.files ? json.files["level13-readme.txt"] : null;
+					let content = (existing && existing.content) || "Level 13 save data. Created by the game.";
+					let files = { "level13-readme.txt": { content: content } };
+
+					return fetch(helper.API_ROOT + "/gists/" + gistId, {
+						method: "PATCH",
+						headers: {
+							"Authorization": "Bearer " + token,
+							"Accept": "application/vnd.github+json",
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({ files: files })
+					}).then(function (patch) {
+						if (!patch.ok) {
+							return helper.getErrorMessage(patch).then(function (msg) {
+								if (patch.status == 403 || patch.status == 401) msg = "This token cannot write to that gist. Check the Gists permission.";
+								helper.lastError = msg;
+								return { ok: false, error: msg };
+							});
+						}
+						let isSameGist = (helper.getGistId() == gistId);
+						helper.setToken(token);
+						helper.setGistId(gistId);
+						// deliberately NOT storing a revision, unlike validateAndSetup. A gist
+						// this device just created is empty, so it is in sync by definition. One
+						// it has just joined may hold another device's save, and an unset marker
+						// is exactly how the arrival check knows to offer it.
+						// Re-validating a new token against the gist this device already uses is
+						// not joining anything, so its marker stays: clearing it would report a
+						// conflict with the device's own save.
+						if (!isSameGist) helper.setLastSeenRevision("");
+						helper.hasConflict = false;
+						helper.lastError = null;
+						return { ok: true, gistId: gistId };
+					});
+				});
+			}).catch(function (ex) {
+				let msg = "Could not reach GitHub: " + ex;
+				helper.lastError = msg;
+				return { ok: false, error: msg };
+			});
+		},
+
 		saveSlot: function (slotID, data) {
 			let helper = this;
 			if (!this.isConfigured()) return Promise.resolve({ ok: false, error: "Not set up" });

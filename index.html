@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m70" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m70" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m70" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m71" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m71" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m71" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -1099,6 +1099,9 @@
 					<input type="password" id="settings-github-token" placeholder="GitHub token" autocomplete="off" />
 					<button id="btn-settings-github-validate">Save and validate</button>
 				</span>
+				<span class="settings-entry">
+					<input type="text" id="settings-github-gist" placeholder="Gist ID (blank makes a new one)" autocomplete="off" spellcheck="false" />
+				</span>
 				<p id="settings-github-status" class="p-meta">Not set up</p>
 				<span class="settings-entry">
 					<input type="checkbox" class="checkbox" id="settings-checkbox-github-auto" /><p class="checkbox-label">Mirror every save automatically</p>
@@ -1129,9 +1132,17 @@
 					<li>Leave <strong>Resource owner</strong> as your own account.</li>
 					<li>Open <strong>Permissions</strong>, find <strong>Account permissions</strong>, and set <strong>Gists</strong> to <strong>Read and write</strong>.</li>
 					<li>Press <strong>Generate token</strong> and copy it. GitHub shows it once and never again.</li>
-					<li>Paste it into the token box in Settings and press <strong>Save and validate</strong>.</li>
+					<li>Paste it into the token box in Settings, leave the Gist ID box empty, and press <strong>Save and validate</strong>.</li>
 				</ol>
-				<p class="p-meta">Validating creates one secret gist called "Level 13 saves". Each save slot becomes a file inside it.</p>
+				<p class="p-meta">Validating with an empty Gist ID box creates one secret gist called "Level 13 saves". Each save slot becomes a file inside it.</p>
+				<p class="settings-group-header">Adding a second device</p>
+				<p>Every device must use the <em>same</em> gist, or each one only ever reads back its own saves.</p>
+				<ol>
+					<li>On the device that is already set up, open Settings and copy the Gist ID shown in the Gist ID box.</li>
+					<li>On the new device, paste the same token into the token box.</li>
+					<li>Paste that Gist ID into the <strong>Gist ID</strong> box.</li>
+					<li>Press <strong>Save and validate</strong>. The game joins the existing gist instead of making a new one, and offers you the save already in it.</li>
+				</ol>
 			</div>
 			<div class="buttonbox">
 				<button id="github-setup-popup-close" class="button-popup-default">Close</button>
