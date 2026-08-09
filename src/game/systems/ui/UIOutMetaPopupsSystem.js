@@ -4,7 +4,8 @@ define([
 	'game/GameGlobals',
 	'game/GlobalSignals',
 	'game/constants/GameConstants',
-], function (Ash, UIList, GameGlobals, GlobalSignals, GameConstants) {
+	'game/constants/LogConstants',
+], function (Ash, UIList, GameGlobals, GlobalSignals, GameConstants, LogConstants) {
 	
     let UIOutMetaPopupsSystem = Ash.System.extend({
 
@@ -20,6 +21,7 @@ define([
 			GlobalSignals.add(this, GlobalSignals.popupOpenedSignal, this.onPopupOpened);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
 			GlobalSignals.add(this, GlobalSignals.gameShownSignal, this.onGameShown);
+			GlobalSignals.add(this, GlobalSignals.cloudSyncStateChangedSignal, this.onCloudSyncStateChanged);
 		},
 
 		removeFromEngine: function (engine) {
@@ -229,7 +231,39 @@ define([
             $("#settings-github-status").text(status);
             $("#settings-checkbox-github-auto").prop("disabled", !isConfigured);
             $("#settings-checkbox-github-auto").prop("checked", helper.isAutoMirrorEnabled());
+            this.updateCloudSyncStatus();
         },
+
+		onCloudSyncStateChanged: function (state, message) {
+			this.updateCloudSyncStatus();
+			// only failures and conflicts are worth interrupting for. A toast every two
+			// minutes for a working sync would train the player to ignore all of them,
+			// including these. There is no dedicated toast channel in this game, so this
+			// rides the same in-world log the player already checks for other messages;
+			// a null id gets LogConstants' own generic unique id, uncapped by any cooldown,
+			// and global visibility means it is not tied to wherever the player happens to be
+			if (state == "failed" || state == "conflict") {
+				let text = "Cloud save " + (state == "conflict" ? "needs attention" : "failed") + ": " + (message || "unknown");
+				GameGlobals.playerHelper.addLogMessage(null, text, { visibility: LogConstants.MSG_VISIBILITY_GLOBAL });
+			}
+		},
+
+		updateCloudSyncStatus: function () {
+			let helper = GameGlobals.gistSaveHelper;
+			let $el = $("#cloud-sync-status");
+			if (!helper.isConfigured()) { GameGlobals.uiFunctions.toggle($el, false); return; }
+
+			let info = helper.getSyncState();
+			let text = "cloud: not synced yet";
+			if (info.state == "syncing") text = "cloud: saving...";
+			else if (info.state == "synced") text = "cloud: saved " + (info.at ? info.at.toLocaleString(navigator.language, { timeStyle: "short" }) : "");
+			else if (info.state == "failed") text = "cloud: failed";
+			else if (info.state == "conflict") text = "cloud: needs attention";
+
+			$el.text(text);
+			$el.toggleClass("warning", info.state == "failed" || info.state == "conflict");
+			GameGlobals.uiFunctions.toggle($el, true);
+		},
 
         saveSettings: function () {
             GameGlobals.gameState.settings.sfxEnabled = $("#settings-checkbox-sfx-enabled").is(':checked');

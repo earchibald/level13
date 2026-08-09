@@ -26,6 +26,8 @@ function (Ash, GameGlobals, GameConstants) {
 
 		lastError: null,
 		hasConflict: false,
+		syncState: "idle",
+		syncStateAt: null,
 		pendingMirrors: null,
 		lastMirrorTimestamps: null,
 		pendingMirrorTimers: null,
@@ -136,6 +138,22 @@ function (Ash, GameGlobals, GameConstants) {
 			return this.lastError;
 		},
 
+		// one place the UI can read, and one signal it can listen to, so the footer and any
+		// toast agree about what happened
+		setSyncState: function (state, message) {
+			// GlobalSignals is not in this file's define list (it binds positionally to the
+			// factory callback), so it is resolved lazily here instead of adding it there
+			let GlobalSignals = require("game/GlobalSignals");
+			this.syncState = state;
+			this.syncStateAt = new Date();
+			this.syncStateMessage = message || null;
+			GlobalSignals.cloudSyncStateChangedSignal.dispatch(state, message || null);
+		},
+
+		getSyncState: function () {
+			return { state: this.syncState, at: this.syncStateAt, message: this.syncStateMessage || null };
+		},
+
 		// GitHub's errors are usually JSON, but a proxy or a rate limiter can answer with an
 		// HTML page. Reading the body as text first means a rate limit reports as a rate
 		// limit instead of as a parse error dressed up as a connection problem.
@@ -200,10 +218,12 @@ function (Ash, GameGlobals, GameConstants) {
 			let helper = this;
 			if (!this.isConfigured()) return Promise.resolve({ ok: false, error: "Not set up" });
 
+			this.setSyncState("syncing");
+
 			// check the cloud has not moved under us before writing over it. Both values come
 			// from GitHub, so no clock comparison between devices is involved
 			return this.fetchGistState().then(function (state) {
-				if (!state.ok) return { ok: false, error: state.error };
+				if (!state.ok) { helper.setSyncState("failed", state.error); return { ok: false, error: state.error }; }
 
 				let lastSeen = helper.getLastSeen();
 				let fileName = helper.getFileNameForSlot(slotID);
@@ -217,11 +237,13 @@ function (Ash, GameGlobals, GameConstants) {
 					if (hasFileAlready) {
 						helper.hasConflict = true;
 						helper.lastError = "This device has not synced with the cloud yet. Load the cloud save or keep this one, in settings.";
+						helper.setSyncState("conflict", helper.lastError);
 						return { ok: false, error: helper.lastError, conflict: true };
 					}
 				} else if (state.updatedAt && state.updatedAt !== lastSeen) {
 					helper.hasConflict = true;
 					helper.lastError = "Another device has saved since this one. Load it or keep this save, in settings.";
+					helper.setSyncState("conflict", helper.lastError);
 					return { ok: false, error: helper.lastError, conflict: true };
 				}
 
@@ -240,6 +262,7 @@ function (Ash, GameGlobals, GameConstants) {
 					if (!response.ok) {
 						return helper.getErrorMessage(response).then(function (msg) {
 							helper.lastError = msg;
+							helper.setSyncState("failed", msg);
 							return { ok: false, error: msg };
 						});
 					}
@@ -248,12 +271,14 @@ function (Ash, GameGlobals, GameConstants) {
 						helper.setLastSeen(json.updated_at);
 						helper.hasConflict = false;
 						helper.lastError = null;
+						helper.setSyncState("synced");
 						return { ok: true };
 					});
 				});
 			}).catch(function (ex) {
 				let msg = "Could not reach GitHub: " + ex;
 				helper.lastError = msg;
+				helper.setSyncState("failed", msg);
 				return { ok: false, error: msg };
 			});
 		},
