@@ -258,14 +258,15 @@ define([
 			this.craftPopupReopen = true;
 			GameGlobals.uiFunctions.popupManager.closePopup("craft-popup");
 
+			// the popup manager closes this popup itself - handleOkButton after the ok
+			// callback, and the cancel handler before the cancel callback. Closing it here
+			// too schedules a second, unbalanced hideOverlay, and the overlay is the craft
+			// popup's parent, so the reopen below would be hidden the moment it happened.
 			GameGlobals.uiFunctions.popupManager.showPopup("Craft", msg, "Craft", "Cancel", null,
 				function () {
-					GameGlobals.uiFunctions.popupManager.closePopup("common-popup");
 					GameGlobals.playerActionFunctions.startAction(actionName);
 				},
-				function () {
-					GameGlobals.uiFunctions.popupManager.closePopup("common-popup");
-				},
+				null,
 				{ isMeta: false, isDismissable: true }
 			);
 		},
