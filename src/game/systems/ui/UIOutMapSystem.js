@@ -324,6 +324,79 @@ define([
 			this.updateSector();
 		},
 
+		// KEYBOARD CURSOR
+		// The map is driven with the same eight directions the player walks with. One press
+		// is one cell: the cursor never scans across a gap looking for the next drawn sector,
+		// because a press that jumps an arbitrary distance reads as the cursor teleporting.
+
+		canSelectSectorAt: function (level, x, y) {
+			let sector = GameGlobals.levelHelper.getSectorByPosition(level, x, y);
+			if (!sector) return false;
+			// a blank cell is blank on purpose - landing on one would confirm a sector is
+			// there, which is exactly what the map is withholding
+			let status = GameGlobals.uiMapHelper.getSectorStatus(sector);
+			if (status == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_INVISIBLE) return false;
+			return true;
+		},
+
+		moveSelectionInDirection: function (direction) {
+			if (!this.selectedSector) {
+				// nothing selected yet, so start where the player is
+				return this.selectPlayerSectorIfOnLevel();
+			}
+
+			let currentPos = this.selectedSector.get(PositionComponent);
+			if (!currentPos) return false;
+
+			let nextPos = PositionConstants.getNeighbourPosition(currentPos, direction);
+			if (!this.canSelectSectorAt(currentPos.level, nextPos.sectorX, nextPos.sectorY)) return false;
+
+			this.selectSector(currentPos.level, nextPos.sectorX, nextPos.sectorY);
+			this.scrollSelectionIntoView();
+			return true;
+		},
+
+		selectPlayerSectorIfOnLevel: function () {
+			if (!this.playerPositionNodes.head) return false;
+			let playerPos = this.playerPositionNodes.head.position;
+			// the level selector can be showing a level the player is not on, and there is
+			// nothing of theirs to select there
+			if (this.selectedLevel != playerPos.level) return false;
+			if (!this.canSelectSectorAt(playerPos.level, playerPos.sectorX, playerPos.sectorY)) return false;
+			this.selectSector(playerPos.level, playerPos.sectorX, playerPos.sectorY);
+			this.scrollSelectionIntoView();
+			return true;
+		},
+
+		// a click can only reach a cell that is already on screen, so nothing needed this
+		// until the keyboard could move the selection somewhere the player is not looking
+		scrollSelectionIntoView: function () {
+			if (!this.selectedSector) return;
+			let pos = this.selectedSector.get(PositionComponent);
+			if (!pos) return;
+			let $cell = $(".map-overlay-cell[data-level='" + pos.level + "'][data-x='" + pos.sectorX + "'][data-y='" + pos.sectorY + "']");
+			if ($cell.length == 0) return;
+			let $container = $("#mainmap-container");
+			if ($container.length == 0) return;
+
+			// scroll the container, never the page: scrollIntoView would move the whole
+			// document to bring a cell inside a scrolling pane into view
+			let cellLeft = $cell.position().left + $container.scrollLeft();
+			let cellTop = $cell.position().top + $container.scrollTop();
+			let cellW = $cell.outerWidth();
+			let cellH = $cell.outerHeight();
+			let viewW = $container.width();
+			let viewH = $container.height();
+			let scrollL = $container.scrollLeft();
+			let scrollT = $container.scrollTop();
+
+			if (cellLeft < scrollL) $container.scrollLeft(cellLeft);
+			else if (cellLeft + cellW > scrollL + viewW) $container.scrollLeft(cellLeft + cellW - viewW);
+
+			if (cellTop < scrollT) $container.scrollTop(cellTop);
+			else if (cellTop + cellH > scrollT + viewH) $container.scrollTop(cellTop + cellH - viewH);
+		},
+
 		// Drops the selection, which is what hides the details - updateSector
 		// toggles the content block on whether there is a selected sector. Same
 		// two steps selectLevel takes, so the map redraws without its highlight.
