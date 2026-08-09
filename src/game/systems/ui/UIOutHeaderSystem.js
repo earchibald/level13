@@ -1220,11 +1220,29 @@ define([
 			if (width <= height) return false;
 			if (height > UIConstants.LANDSCAPE_MAP_MAX_HEIGHT) return false;
 
-			// nothing to turn the phone for until the map exists. Read the toggle
-			// state rather than :visible - landscape hides the whole tab bar, so
-			// the button's computed display says nothing about whether the player
-			// has a map, and reading it would flip the mode back off every resize
-			return GameGlobals.uiFunctions.isElementToggled($("#switch-map")) === true;
+			// nothing to turn the phone for until the map exists
+			return this.hasMapForLandscape();
+		},
+
+		// Whether the player has a map, asked of the game state.
+		//
+		// This used to read data-visible on #switch-map. That attribute is written by
+		// UIOutTabBarSystem, so it is only true once THAT system has run - and on a
+		// load from a save the layout passes run before it does. A phone already
+		// sideways, or turned while the world was still loading, read "no map", showed
+		// the rotate notice, and kept showing it: the mode only re-asks when something
+		// changes, and the map button appearing is not a change anything reports.
+		//
+		// The same condition UIOutTabBarSystem uses, from the same place, so the tab
+		// button and the landscape mode can no longer disagree about whether there is
+		// a map. Reading :visible instead would be worse still - landscape hides the
+		// whole tab bar, so the computed display says nothing about the player at all.
+		hasMapForLandscape: function () {
+			if (GameGlobals.uiMapHelper && GameGlobals.uiMapHelper.isMapRevealed) return true;
+			// hasItem reads the player node without checking it exists, and this is
+			// asked during startup, before there is one
+			if (!this.playerStatsNodes || !this.playerStatsNodes.head) return false;
+			return GameGlobals.playerHelper.hasItem("equipment_map");
 		},
 
 		// Landscape is the map tab and nothing else, so it switches to that tab
@@ -2271,6 +2289,13 @@ define([
 
 		onInventoryChanged: function () {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			// picking up the map is what turns a sideways phone from the rotate notice
+			// into the fullscreen map, and it is the only moment that says so. The
+			// notice covers the screen, so the player cannot tap anything to make the
+			// ordinary layout passes run and ask again.
+			if (this.isLandscapeMapLayout() !== this.elements.body.hasClass("landscape-map")) {
+				this.updateLayout();
+			}
 			this.queueResourceUpdate();
 			this.queueResourceBarUpdate();
 			this.updateCurrency();
