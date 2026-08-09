@@ -101,6 +101,7 @@ define([
 			this.elements.scavengedValue = $("#out-scavenged-value");
 			this.elements.resourcesValue = $("#out-resources-value");
 			this.elements.itemsValue = $("#out-items-value");
+			this.elements.findsRow = $("#out-finds-row");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
 			this.elements.btnClearWorkshop = $("#out-action-clear-workshop");
 			this.elements.btnNap = $("#out-action-nap");
@@ -789,6 +790,21 @@ define([
 			return Text.t("ui.common.value_unknown");
 		},
 
+		// Whether there is an items line to show at all.
+		//
+		// The regular layout's table has always asked this, and answered by leaving the
+		// line out. The phone's finds row did not, so a room that produces no items -
+		// most of them - carried a permanent "Items: ?" that could never become
+		// anything. One rule in one place now, so the two layouts cannot drift again.
+		//
+		// It flips at scouting, not while scavenging, so the row does not change height
+		// under a thumb that is mid-tap.
+		hasVisibleItemsToShow: function (featuresComponent) {
+			if (!featuresComponent) return false;
+			if (featuresComponent.itemsScavengeable.length == 0) return false;
+			return GameGlobals.sectorHelper.hasSectorVisibleIngredients();
+		},
+
 		// The items list, on the same three-state rule as the resources list
 		// above and deliberately not a simpler one. "There are no items here"
 		// is knowledge the player has to earn: reading it off an empty list
@@ -840,17 +856,13 @@ define([
 
 			fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
 
-			// The table shows this line only when there is something to say,
-			// which is how it has always read. The finds row cannot do that -
-			// a line that comes and goes moves the buttons under the thumb -
-			// so the row carries the "nothing known" reading instead.
-			if (featuresComponent.itemsScavengeable.length > 0) {
+			// Only when there is something to say, which is how this table has always
+			// read - and now how the phone's finds row reads too, through the same
+			// predicate rather than a copy of the condition.
+			if (this.hasVisibleItemsToShow(featuresComponent)) {
 				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
 				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
-				let showIngredients = GameGlobals.sectorHelper.hasSectorVisibleIngredients();
-				if (showIngredients) {
-					fields.push(Text.t("ui.exploration.sector_status_items_found_field", TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable)));
-				}
+				fields.push(Text.t("ui.exploration.sector_status_items_found_field", TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable)));
 			}
 
 			return fields;
@@ -1348,6 +1360,10 @@ define([
 			this.elements.scavengedValue.text(this.getScavengedText(isScouted, sectorStatus));
 			this.elements.resourcesValue.text(this.getResourcesFoundText(featuresComponent, sectorStatus));
 			this.elements.itemsValue.text(this.getItemsFoundText(featuresComponent, sectorStatus));
+			// A class on the row rather than uiFunctions.toggle: toggle writes an inline
+			// display, and the line is a flex container, so it would come back as a block
+			// and put the label and the list on separate lines.
+			this.elements.findsRow.toggleClass("no-items", !this.hasVisibleItemsToShow(featuresComponent));
 
 			this.updateRoomIntro(sectorHeaderText, hasVision, features, isScouted, hasCampHere);
 		},

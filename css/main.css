@@ -7884,6 +7884,9 @@ body.layout-small #out-finds-row > .finds-line {
   white-space: nowrap;
   overflow: hidden;
 }
+body.layout-small #out-finds-row.no-items > .finds-line-items {
+  display: none;
+}
 body.layout-small #out-finds-row .finds-part {
   overflow: hidden;
   text-overflow: ellipsis;

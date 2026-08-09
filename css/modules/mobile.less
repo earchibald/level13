@@ -2865,10 +2865,9 @@ body.layout-small #grid-switch-content {
 // direction buttons: how far it is scavenged, what resources are in it, what
 // items are in it.
 //
-// Exactly two lines, always. Each line stays one line and truncates rather
-// than wrapping, and the items line is present even when it has nothing to
-// say - the whole point of the row is that the direction buttons under the
-// player's thumb do not move as finds come in.
+// Each line stays one line and truncates rather than wrapping, and neither
+// comes and goes as finds arrive - the whole point of the row is that the
+// direction buttons under the player's thumb do not move mid-tap.
 body.layout-small #out-container-compass > #out-finds-row {
 	grid-area: finds;
 	display: block;
@@ -2882,6 +2881,16 @@ body.layout-small #out-finds-row > .finds-line {
 	line-height: 1.35;
 	white-space: nowrap;
 	overflow: hidden;
+}
+
+// The items line is absent, not blank, in a room with nothing to report about
+// items - which is most of them. The regular layout's table has always left it
+// out; the row carried "Items: ?" for ever instead, a reading that could never
+// become anything. UIOutLevelSystem sets the class (see hasVisibleItemsToShow),
+// and it changes at scouting rather than during scavenging, so the row does not
+// resize under a thumb.
+body.layout-small #out-finds-row.no-items > .finds-line-items {
+	display: none;
 }
 
 body.layout-small #out-finds-row .finds-part {

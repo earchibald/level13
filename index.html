@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m76" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m76" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m76" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m77" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m77" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m77" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -394,7 +394,9 @@
 							     they are tapping fastest. -->
 							<div id="out-finds-row">
 								<div class="finds-line"><span class="finds-part finds-part-scavenged"><span class="label">Scavenged</span>: <span id="out-scavenged-value">?</span></span><span class="finds-part finds-part-resources"><span class="label">Resources</span>: <span id="out-resources-value">?</span></span></div>
-								<div class="finds-line"><span class="finds-part finds-part-items"><span class="label">Items</span>: <span id="out-items-value">?</span></span></div>
+								<!-- absent, not blank, in a room with no items to report - see
+								     hasVisibleItemsToShow -->
+								<div class="finds-line finds-line-items"><span class="finds-part finds-part-items"><span class="label">Items</span>: <span id="out-items-value">?</span></span></div>
 							</div>
 							<div id="minimap-background-container" class="canvas-container">
 								<canvas id="minimap-background" width="224" height="224"></canvas>
