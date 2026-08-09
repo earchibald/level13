@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m68",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a cloud save no longer makes the next save report a conflict with another device"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m67",
             "requiredVersion": "0.6.1",
             "phase": "beta",
