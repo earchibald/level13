@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m69",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "A device that hit a cloud save conflict no longer stays stuck on it after the conflict has passed"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m68",
             "requiredVersion": "0.6.1",
             "phase": "beta",
