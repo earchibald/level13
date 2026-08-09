@@ -727,8 +727,11 @@ define(['ash',
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
 				// in a results popup with a "take all" button, ENTER takes all and ESC takes the selected items (or continues)
-				// the active condition keeps ENTER free for the location actions when no such popup is open
-				let hasTakeAllPopup = () => GameGlobals.uiFunctions.popupManager.hasTakeAllButton();
+				// the active condition keeps ENTER free for the location actions when no such popup is open.
+				// It has to stay universal, because triggerHotkey skips non-universal hotkeys whenever a popup
+				// is open and an open popup is the only time this key means anything - so the condition carries
+				// the hotkeys-enabled setting too, which universal would otherwise bypass
+				let hasTakeAllPopup = () => GameGlobals.gameState.settings.hotkeysEnabled && GameGlobals.uiFunctions.popupManager.hasTakeAllButton();
 				this.registerHotkey("Take all", "Enter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerTakeAll(), { isHiddenFromList: true, activeCondition: hasTakeAllPopup });
 				this.registerHotkey("Take all", "NumpadEnter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerTakeAll(), { isHiddenFromList: true, activeCondition: hasTakeAllPopup });
 
