@@ -125,6 +125,10 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 				}));
 			}
 
+			// a results popup can't be dismissed, but ESC still takes its safe option (continue / take selected)
+			// while ENTER goes to "take all"; popups with a cancel button already give ESC something to do
+			$("#info-ok").toggleClass("button-popup-escape", showInventoryManagement && !cancelButtonLabel);
+
 			if ($defaultButton == null) {
 				$defaultButton = $("#confirmation-cancel");
 			}
@@ -301,9 +305,37 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 				let isDismissable = dataDismissable == true || dataDismissable == "true";
 				if (isDismissable) {
 					popupManager.dismissPopup($(this));
+				} else {
+					popupManager.triggerEscapeButton($(this));
 				}
 			});
 			this.updatePause();
+		},
+
+		// a popup that is not dismissable can still offer a safe option on ESC, such as "take selected"
+		triggerEscapeButton: function ($popup) {
+			if (!GameGlobals.gameState.isPlayerInputAccepted()) return;
+			let $escapeButton = $popup.find(".button-popup-escape");
+			if ($escapeButton.length == 0) return;
+			if ($escapeButton.hasClass("btn-disabled")) return;
+			let dataDismissed = $popup.attr("data-dismissed");
+			if (dataDismissed == true || dataDismissed == "true") return;
+			let dataToggling = $popup.attr("data-toggling");
+			if (dataToggling == true || dataToggling == "true") return;
+			$popup.attr("data-dismissed", "true");
+			$escapeButton.trigger("click");
+		},
+
+		hasTakeAllButton: function () {
+			return $(".popup:visible #confirmation-takeall").length > 0;
+		},
+
+		triggerTakeAll: function () {
+			if (!GameGlobals.gameState.isPlayerInputAccepted()) return;
+			let $button = $(".popup:visible #confirmation-takeall");
+			if ($button.length == 0) return;
+			if ($button.hasClass("btn-disabled")) return;
+			$button.trigger("click");
 		},
 
 		dismissPopup: function ($popup) {

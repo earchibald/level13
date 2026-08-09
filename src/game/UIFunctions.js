@@ -35,7 +35,7 @@ define(['ash',
 			contextHotkeyActions: [ "enter_camp", "move_level_up", "move_level_down", "leave_camp" ],
 
 			// hotkeys with custom callbacks whose buttons should still show a badge
-			manualHotkeyHints: { "move_camp_level": "B" },
+			manualHotkeyHints: { "move_camp_level": "B", "take_all": "&#9166;", "accept_inventory": "Esc" },
 
 			texts: [],
 
@@ -717,6 +717,12 @@ define(['ash',
 
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
+				// in a results popup with a "take all" button, ENTER takes all and ESC takes the selected items (or continues)
+				// the active condition keeps ENTER free for the location actions when no such popup is open
+				let hasTakeAllPopup = () => GameGlobals.uiFunctions.popupManager.hasTakeAllButton();
+				this.registerHotkey("Take all", "Enter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerTakeAll(), { isHiddenFromList: true, activeCondition: hasTakeAllPopup });
+				this.registerHotkey("Take all", "NumpadEnter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerTakeAll(), { isHiddenFromList: true, activeCondition: hasTakeAllPopup });
+
 				// same path as more > settings; the popup contains the hotkey list
 				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?" });
 			},
@@ -749,6 +755,8 @@ define(['ash',
 						activeCondition = () => !GameGlobals.gameState.settings.hotkeysNumpad;
 					}
 				}
+
+				if (options.activeCondition) activeCondition = options.activeCondition;
 
 				if (!this.hotkeys[code]) this.hotkeys[code] = [];
 
