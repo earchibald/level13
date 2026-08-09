@@ -724,6 +724,32 @@ define(['ash',
 				this.registerHotkey("Craft", "KeyK", defaultModifier, null, false, false, () => GlobalSignals.openCraftPopupSignal.dispatch());
 				this.registerHotkey("Manage inventory", "KeyI", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showInventoryContext());
 
+				// the map is driven with the same eight directions as walking. The movement
+				// hotkeys are all scoped to tabs.out, so these letters are free here.
+				// The numpad gating is NOT automatic: registerHotkey derives it from a
+				// "move_" action name and these are callbacks, so it is passed explicitly
+				// or both sets would be live at once and the setting would do nothing
+				let PositionConstants = require("game/constants/PositionConstants");
+				let mapDirections = [
+					{ code: "KeyW", numpad: "Numpad8", dir: PositionConstants.DIRECTION_NORTH, name: "Map N" },
+					{ code: "KeyA", numpad: "Numpad4", dir: PositionConstants.DIRECTION_WEST, name: "Map W" },
+					{ code: "KeyS", numpad: "Numpad2", dir: PositionConstants.DIRECTION_SOUTH, name: "Map S" },
+					{ code: "KeyD", numpad: "Numpad6", dir: PositionConstants.DIRECTION_EAST, name: "Map E" },
+					{ code: "KeyQ", numpad: "Numpad7", dir: PositionConstants.DIRECTION_NW, name: "Map NW" },
+					{ code: "KeyE", numpad: "Numpad9", dir: PositionConstants.DIRECTION_NE, name: "Map NE" },
+					{ code: "KeyZ", numpad: "Numpad1", dir: PositionConstants.DIRECTION_SW, name: "Map SW" },
+					{ code: "KeyC", numpad: "Numpad3", dir: PositionConstants.DIRECTION_SE, name: "Map SE" },
+				];
+				let useLetters = () => !GameGlobals.gameState.settings.hotkeysNumpad;
+				let useNumpad = () => GameGlobals.gameState.settings.hotkeysNumpad;
+				for (let i = 0; i < mapDirections.length; i++) {
+					let entry = mapDirections[i];
+					let move = () => GameGlobals.uiFunctions.moveMapSelection(entry.dir);
+					let options = { isHiddenFromList: i > 0, activeCondition: useLetters };
+					this.registerHotkey(entry.name, entry.code, defaultModifier, tabs.map, false, false, move, options);
+					this.registerHotkey(entry.name, entry.numpad, defaultModifier, tabs.map, false, false, move, { isHiddenFromList: true, activeCondition: useNumpad });
+				}
+
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
 				// in a results popup with a "take all" button, ENTER takes all and ESC takes the selected items (or continues)
@@ -846,6 +872,23 @@ define(['ash',
 					result.push("<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span>");
 				}
 				return result;
+			},
+
+			// the map cursor lives in UIOutMapSystem; this is the hotkey's way in
+			moveMapSelection: function (direction) {
+				let system = GameGlobals.uiFunctions.getMapSystem();
+				if (!system) return;
+				system.moveSelectionInDirection(direction);
+			},
+
+			getMapSystem: function () {
+				if (!this.mapSystem) {
+					try {
+						let UIOutMapSystem = require("game/systems/ui/UIOutMapSystem");
+						this.mapSystem = GameGlobals.engine.getSystem(UIOutMapSystem);
+					} catch (ex) { return null; }
+				}
+				return this.mapSystem;
 			},
 
 			triggerBackToCamp: function () {
