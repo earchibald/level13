@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m60",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Saves can be kept in a GitHub Gist and loaded on another machine, set up with a token in settings"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m59",
             "requiredVersion": "0.6.1",
             "phase": "beta",
