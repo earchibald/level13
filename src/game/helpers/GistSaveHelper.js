@@ -267,12 +267,18 @@ function (Ash, GameGlobals, GameConstants) {
 						});
 					}
 					return response.json().then(function (json) {
-						// straight from the write, so no second request is needed
-						helper.setLastSeen(json.updated_at);
-						helper.hasConflict = false;
-						helper.lastError = null;
-						helper.setSyncState("synced");
-						return { ok: true };
+						// the marker must come from the same kind of read it will later be
+						// compared against. Storing the PATCH response's own updated_at
+						// assumed the two endpoints report an identical string, and if they
+						// ever differ then every successful save plants a marker that the
+						// next check reads as another device having written.
+						return helper.fetchGistState().then(function (after) {
+							helper.setLastSeen(after.ok && after.updatedAt ? after.updatedAt : json.updated_at);
+							helper.hasConflict = false;
+							helper.lastError = null;
+							helper.setSyncState("synced");
+							return { ok: true };
+						});
 					});
 				});
 			}).catch(function (ex) {
