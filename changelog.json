@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m62",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "A device that is behind can no longer overwrite a newer cloud save; it asks which one you want instead"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m61",
             "requiredVersion": "0.6.1",
             "phase": "beta",
