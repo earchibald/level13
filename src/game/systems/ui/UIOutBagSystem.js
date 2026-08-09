@@ -54,8 +54,11 @@ define([
 			this.initCraftingButtons();
 			this.initUseItemButtons();
 			this.initRepairItemButtons();
-			
+
 			$("#btn-self-manage-inventory").click($.proxy(this.showInventoryManageemntPopup, this));
+			$("#btn-self-manage-inventory").append("<div class='hotkey-hint hide-in-small-layout'>I</div>");
+			$("#btn-self-craft").click($.proxy(this.onOpenCraftPopup, this));
+			$("#btn-self-craft").append("<div class='hotkey-hint hide-in-small-layout'>K</div>");
 			$("#btn-bag-autoequip").click($.proxy(this.autoEquip, this));
 			this.initCraftPopup();
 		},

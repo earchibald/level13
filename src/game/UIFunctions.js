@@ -720,6 +720,10 @@ define(['ash',
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
+				this.registerHotkey("Show map", "KeyP", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.map));
+				this.registerHotkey("Craft", "KeyK", defaultModifier, null, false, false, () => GlobalSignals.openCraftPopupSignal.dispatch());
+				this.registerHotkey("Manage inventory", "KeyI", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showInventoryContext());
+
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
 				// in a results popup with a "take all" button, ENTER takes all and ESC takes the selected items (or continues)
