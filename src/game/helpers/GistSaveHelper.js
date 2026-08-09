@@ -1,0 +1,250 @@
+// Cloud saves through a GitHub Gist.
+//
+// One secret gist holds one file per save slot, named level13-<slot>.txt. Writing needs a
+// fine-grained token with the account permission Gists: read and write. Reading needs no
+// token at all, because a secret gist is unlisted rather than private - which is also why
+// this is not a privacy feature and the UI says so.
+//
+// Nothing here touches the DOM, and nothing here can fail in a way that reaches the local
+// save: mirrorSlot swallows everything.
+define(['ash', 'game/GameGlobals', 'game/constants/GameConstants'],
+function (Ash, GameGlobals, GameConstants) {
+
+	let GistSaveHelper = Ash.Class.extend({
+
+		STORAGE_KEY_TOKEN: "github-token",
+		STORAGE_KEY_GIST_ID: "github-gist-id",
+		STORAGE_KEY_AUTO_MIRROR: "github-auto-mirror",
+
+		API_ROOT: "https://api.github.com",
+		GIST_DESCRIPTION: "Level 13 saves",
+
+		// rapid manual saves must not each become a request; autosave is every 2 minutes
+		// so this only ever bites on a burst
+		MIRROR_MIN_INTERVAL_MS: 10000,
+
+		lastError: null,
+		pendingMirrors: null,
+		lastMirrorTimestamps: null,
+
+		constructor: function () {
+			this.pendingMirrors = {};
+			this.lastMirrorTimestamps = {};
+		},
+
+		getToken: function () {
+			try { return localStorage.getItem(this.STORAGE_KEY_TOKEN) || null; } catch (ex) { return null; }
+		},
+
+		setToken: function (token) {
+			try { localStorage.setItem(this.STORAGE_KEY_TOKEN, token); } catch (ex) { log.w("could not store token: " + ex); }
+		},
+
+		clearToken: function () {
+			try {
+				localStorage.removeItem(this.STORAGE_KEY_TOKEN);
+				localStorage.removeItem(this.STORAGE_KEY_GIST_ID);
+			} catch (ex) { log.w("could not clear token: " + ex); }
+		},
+
+		getGistId: function () {
+			try { return localStorage.getItem(this.STORAGE_KEY_GIST_ID) || null; } catch (ex) { return null; }
+		},
+
+		setGistId: function (id) {
+			try { localStorage.setItem(this.STORAGE_KEY_GIST_ID, id); } catch (ex) { log.w("could not store gist id: " + ex); }
+		},
+
+		isConfigured: function () {
+			return !!this.getToken() && !!this.getGistId();
+		},
+
+		isAutoMirrorEnabled: function () {
+			try { return localStorage.getItem(this.STORAGE_KEY_AUTO_MIRROR) == "true"; } catch (ex) { return false; }
+		},
+
+		setAutoMirrorEnabled: function (on) {
+			try { localStorage.setItem(this.STORAGE_KEY_AUTO_MIRROR, on ? "true" : "false"); } catch (ex) { log.w("could not store auto mirror flag: " + ex); }
+		},
+
+		getFileNameForSlot: function (slotID) {
+			return "level13-" + slotID + ".txt";
+		},
+
+		// the internal backup and loaded slots are the game's own bookkeeping, not saves a
+		// player would look for on another machine
+		isMirroredSlot: function (slotID) {
+			switch (slotID) {
+				case GameConstants.SAVE_SLOT_DEFAULT: return true;
+				case GameConstants.SAVE_SLOT_USER_1: return true;
+				case GameConstants.SAVE_SLOT_USER_2: return true;
+				case GameConstants.SAVE_SLOT_USER_3: return true;
+				default: return false;
+			}
+		},
+
+		getLastError: function () {
+			return this.lastError;
+		},
+
+		// validation creates the gist, because that exercises the one permission the
+		// feature needs. Checking GET /gists instead would prove nothing: it is not
+		// documented for fine-grained tokens and is known to misbehave with them.
+		validateAndSetup: function (token) {
+			let helper = this;
+			if (!token) return Promise.resolve({ ok: false, error: "No token entered" });
+
+			let body = {
+				description: this.GIST_DESCRIPTION,
+				public: false,
+				files: { "level13-readme.txt": { content: "Level 13 save data. Created by the game." } }
+			};
+
+			return fetch(this.API_ROOT + "/gists", {
+				method: "POST",
+				headers: {
+					"Authorization": "Bearer " + token,
+					"Accept": "application/vnd.github+json",
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify(body)
+			}).then(function (response) {
+				return response.json().then(function (json) {
+					if (!response.ok) {
+						let msg = (json && json.message) ? json.message : ("HTTP " + response.status);
+						helper.lastError = msg;
+						return { ok: false, error: msg };
+					}
+					helper.setToken(token);
+					helper.setGistId(json.id);
+					helper.lastError = null;
+					return { ok: true, gistId: json.id };
+				});
+			}).catch(function (ex) {
+				let msg = "Could not reach GitHub: " + ex;
+				helper.lastError = msg;
+				return { ok: false, error: msg };
+			});
+		},
+
+		saveSlot: function (slotID, data) {
+			let helper = this;
+			if (!this.isConfigured()) return Promise.resolve({ ok: false, error: "Not set up" });
+
+			let files = {};
+			files[this.getFileNameForSlot(slotID)] = { content: data };
+
+			return fetch(this.API_ROOT + "/gists/" + this.getGistId(), {
+				method: "PATCH",
+				headers: {
+					"Authorization": "Bearer " + this.getToken(),
+					"Accept": "application/vnd.github+json",
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({ files: files })
+			}).then(function (response) {
+				if (!response.ok) {
+					return response.json().then(function (json) {
+						let msg = (json && json.message) ? json.message : ("HTTP " + response.status);
+						helper.lastError = msg;
+						return { ok: false, error: msg };
+					});
+				}
+				helper.lastError = null;
+				return { ok: true };
+			}).catch(function (ex) {
+				let msg = "Could not reach GitHub: " + ex;
+				helper.lastError = msg;
+				return { ok: false, error: msg };
+			});
+		},
+
+		// no Authorization header: a secret gist is readable by id, and fine-grained tokens
+		// do not document a read endpoint
+		loadSlot: function (slotID) {
+			let helper = this;
+			let gistId = this.getGistId();
+			if (!gistId) return Promise.resolve({ ok: false, error: "Not set up" });
+
+			let fileName = this.getFileNameForSlot(slotID);
+
+			return fetch(this.API_ROOT + "/gists/" + gistId, {
+				headers: { "Accept": "application/vnd.github+json" }
+			}).then(function (response) {
+				return response.json().then(function (json) {
+					if (!response.ok) {
+						let msg = (json && json.message) ? json.message : ("HTTP " + response.status);
+						helper.lastError = msg;
+						return { ok: false, error: msg };
+					}
+					let file = json.files ? json.files[fileName] : null;
+					if (!file) {
+						let msg = "No cloud save for this slot";
+						helper.lastError = msg;
+						return { ok: false, error: msg };
+					}
+					// the API inlines content only below 1MB; above that it sets truncated
+					// and the real content is behind raw_url
+					if (file.truncated && file.raw_url) {
+						return fetch(file.raw_url).then(function (raw) {
+							return raw.text();
+						}).then(function (text) {
+							helper.lastError = null;
+							return { ok: true, data: text, updatedAt: json.updated_at };
+						});
+					}
+					helper.lastError = null;
+					return { ok: true, data: file.content, updatedAt: json.updated_at };
+				});
+			}).catch(function (ex) {
+				let msg = "Could not reach GitHub: " + ex;
+				helper.lastError = msg;
+				return { ok: false, error: msg };
+			});
+		},
+
+		// fire and forget. Anything that goes wrong here is recorded and then dropped: the
+		// local save already succeeded and gameplay must not notice the network at all.
+		mirrorSlot: function (slotID, data) {
+			if (!this.isAutoMirrorEnabled()) return;
+			if (!this.isConfigured()) return;
+			if (!this.isMirroredSlot(slotID)) return;
+
+			let helper = this;
+			let now = new Date().getTime();
+			let last = this.lastMirrorTimestamps[slotID] || 0;
+			let sinceLast = now - last;
+
+			if (sinceLast < this.MIRROR_MIN_INTERVAL_MS) {
+				// coalesce: keep only the newest data, and let the timer already in flight send it
+				let hadPending = !!this.pendingMirrors[slotID];
+				this.pendingMirrors[slotID] = data;
+				if (hadPending) return;
+				setTimeout(function () {
+					let pending = helper.pendingMirrors[slotID];
+					delete helper.pendingMirrors[slotID];
+					if (pending) helper.sendMirror(slotID, pending);
+				}, this.MIRROR_MIN_INTERVAL_MS - sinceLast);
+				return;
+			}
+
+			this.sendMirror(slotID, data);
+		},
+
+		sendMirror: function (slotID, data) {
+			let helper = this;
+			this.lastMirrorTimestamps[slotID] = new Date().getTime();
+			try {
+				this.saveSlot(slotID, data).then(function (result) {
+					if (!result.ok) log.w("cloud mirror failed for [" + slotID + "]: " + result.error);
+				});
+			} catch (ex) {
+				helper.lastError = String(ex);
+				log.w("cloud mirror threw for [" + slotID + "]: " + ex);
+			}
+		},
+
+	});
+
+	return GistSaveHelper;
+});
