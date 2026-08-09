@@ -771,6 +771,13 @@ define(['ash',
 						() => GameGlobals.uiFunctions.moveMapSelection(arrow.dir), { isHiddenFromList: true });
 				}
 
+				// Escape goes back to the exploration tab, but ONLY when there is no popup:
+				// registered before the dismiss binding because triggerHotkey stops at the
+				// first match, and dismissPopups reports nothing back about whether it acted
+				this.registerHotkey("Back to exploration", "Escape", null, null, true, false,
+					() => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.out),
+					{ activeCondition: () => !GameGlobals.uiFunctions.popupManager.hasOpenPopup() });
+
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
 				// in a results popup with a "take all" button, ENTER takes all and ESC takes the selected items (or continues)
