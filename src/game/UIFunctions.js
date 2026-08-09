@@ -688,6 +688,14 @@ define(['ash',
 				this.registerHotkey("Move SE", "KeyC", defaultModifier, tabs.out, false, false, "move_sector_se");
 				this.registerHotkey("Move SE", "Numpad3", defaultModifier, tabs.out, false, false, "move_sector_se");
 
+				// arrows are a plain four-direction alternative to WASD, always available and
+				// independent of the numpad setting, which only chooses between letters and
+				// numpad for the full eight-direction layout
+				this.registerHotkey("Move N", "ArrowUp", defaultModifier, tabs.out, false, false, "move_sector_north", { isHiddenFromList: true, activeCondition: () => true });
+				this.registerHotkey("Move W", "ArrowLeft", defaultModifier, tabs.out, false, false, "move_sector_west", { isHiddenFromList: true, activeCondition: () => true });
+				this.registerHotkey("Move S", "ArrowDown", defaultModifier, tabs.out, false, false, "move_sector_south", { isHiddenFromList: true, activeCondition: () => true });
+				this.registerHotkey("Move E", "ArrowRight", defaultModifier, tabs.out, false, false, "move_sector_east", { isHiddenFromList: true, activeCondition: () => true });
+
 				this.registerHotkey("Scavenge", "KeyN", defaultModifier, tabs.out, false, false, "scavenge");
 				this.registerHotkey("Scout", "KeyM", defaultModifier, tabs.out, false, false, "scout");
 				this.registerHotkey("Collect water", "KeyG", defaultModifier, tabs.out, false, false, "use_out_collector_water");
@@ -748,6 +756,19 @@ define(['ash',
 					let options = { isHiddenFromList: i > 0, activeCondition: useLetters };
 					this.registerHotkey(entry.name, entry.code, defaultModifier, tabs.map, false, false, move, options);
 					this.registerHotkey(entry.name, entry.numpad, defaultModifier, tabs.map, false, false, move, { isHiddenFromList: true, activeCondition: useNumpad });
+				}
+
+				// the same four-direction arrow alternative on the map
+				let mapArrows = [
+					{ code: "ArrowUp", dir: PositionConstants.DIRECTION_NORTH, name: "Map N" },
+					{ code: "ArrowLeft", dir: PositionConstants.DIRECTION_WEST, name: "Map W" },
+					{ code: "ArrowDown", dir: PositionConstants.DIRECTION_SOUTH, name: "Map S" },
+					{ code: "ArrowRight", dir: PositionConstants.DIRECTION_EAST, name: "Map E" },
+				];
+				for (let i = 0; i < mapArrows.length; i++) {
+					let arrow = mapArrows[i];
+					this.registerHotkey(arrow.name, arrow.code, defaultModifier, tabs.map, false, false,
+						() => GameGlobals.uiFunctions.moveMapSelection(arrow.dir), { isHiddenFromList: true });
 				}
 
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
