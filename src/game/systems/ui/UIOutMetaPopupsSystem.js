@@ -183,7 +183,10 @@ define([
 			let helper = GameGlobals.gistSaveHelper;
 			let slotID = GameConstants.SAVE_SLOT_DEFAULT;
 
-			let msg = "A save from another device is in the cloud.<br/><br/>";
+			let neverSynced = !helper.getLastSeen();
+			let msg = neverSynced
+				? "There is a save in the cloud, and this device has not synced with it yet.<br/><br/>"
+				: "A save from another device is in the cloud.<br/><br/>";
 			msg += "<span class='p-meta'>cloud updated: " + cloudUpdatedAt + "</span><br/><br/>";
 			msg += "Load it, or keep the save on this device and carry on from here?";
 
@@ -276,8 +279,16 @@ define([
 				// being unable to reach GitHub is not a conflict, and must not block startup
 				if (!state.ok) return;
 				let lastSeen = helper.getLastSeen();
-				if (!lastSeen || !state.updatedAt) return;
-				if (state.updatedAt === lastSeen) return;
+				if (!state.updatedAt) return;
+				if (lastSeen && state.updatedAt === lastSeen) return;
+
+				// no marker means this device has never synced. If the cloud already holds a
+				// save, which of the two is current is genuinely unknown, so ask rather than
+				// assume. An empty cloud has nothing to ask about.
+				if (!lastSeen) {
+					let hasAnySave = (state.fileNames || []).some(function (n) { return n.indexOf("level13-") === 0 && n !== "level13-readme.txt"; });
+					if (!hasAnySave) return;
+				}
 
 				helper.hasConflict = true;
 				sys.showCloudArrivalPrompt(state.updatedAt);

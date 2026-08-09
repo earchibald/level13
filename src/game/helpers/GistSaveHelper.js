@@ -97,7 +97,7 @@ function (Ash, GameGlobals, GameConstants) {
 					});
 				}
 				return response.json().then(function (json) {
-					return { ok: true, updatedAt: json.updated_at };
+					return { ok: true, updatedAt: json.updated_at, fileNames: json.files ? Object.keys(json.files) : [] };
 				});
 			}).catch(function (ex) {
 				return { ok: false, error: "Could not reach GitHub: " + ex };
@@ -202,7 +202,20 @@ function (Ash, GameGlobals, GameConstants) {
 				if (!state.ok) return { ok: false, error: state.error };
 
 				let lastSeen = helper.getLastSeen();
-				if (lastSeen && state.updatedAt && state.updatedAt !== lastSeen) {
+				let fileName = helper.getFileNameForSlot(slotID);
+				let hasFileAlready = (state.fileNames || []).indexOf(fileName) >= 0;
+
+				if (!lastSeen) {
+					// this device has never synced, so it cannot know whether the cloud is
+					// ahead of it. Pushing anyway is how a device that predates this guard
+					// overwrites someone else's newer save. Silence is not permission.
+					// The one safe case is a slot the cloud has never held: nothing to lose.
+					if (hasFileAlready) {
+						helper.hasConflict = true;
+						helper.lastError = "This device has not synced with the cloud yet. Load the cloud save or keep this one, in settings.";
+						return { ok: false, error: helper.lastError, conflict: true };
+					}
+				} else if (state.updatedAt && state.updatedAt !== lastSeen) {
 					helper.hasConflict = true;
 					helper.lastError = "Another device has saved since this one. Load it or keep this save, in settings.";
 					return { ok: false, error: helper.lastError, conflict: true };
