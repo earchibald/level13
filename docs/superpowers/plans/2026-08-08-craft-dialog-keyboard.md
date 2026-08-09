@@ -25,8 +25,16 @@ Every task's verification uses this. Run it once per task, on a **new** port num
 
 ```bash
 cd /Users/earchibald/Worktrees/level13-gh-pages-mobile
-PORT=8500   # increment for every task
+PORT=8500   # increment for every task; 8414/8422-8424/8447/8477-8487 are already poisoned
 python3 -m http.server $PORT --bind 127.0.0.1 >/dev/null 2>&1 &
+```
+
+A new port is the only reliable cache buster here. Bumping `urlArgs` cannot fix its own
+delivery, because `src/config.js` is the file that carries it and is itself cached. Also
+unregister the service worker in the harness before trusting any CSS measurement:
+
+```js
+navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
 ```
 
 Seed the save into the origin before loading the harness. Navigate a browser tab to
@@ -440,9 +448,11 @@ Then the three Enter cases and Esc:
 - Enter on a **header** row folds it.
 - Enter on an **affordable** recipe closes the list and opens the confirmation; confirming
   starts the action; cancelling reopens the list with the cursor where it was.
-- Enter on an **unaffordable** recipe adds `craft-popup-flash` to that row for 1000 ms and
-  starts nothing. Find one with
-  `d.querySelector('.craft-popup-item-unavailable')`.
+- Enter on an **unaffordable** recipe adds `craft-popup-flash` to that row and starts
+  nothing. Find one with `d.querySelector('.craft-popup-item-unavailable')`. Check the
+  class is **added** immediately; do not time its removal against 1000 ms. `mtest2.html`
+  patches `requestAnimationFrame` only, and a hidden tab clamps `setTimeout` to ~1 s, so
+  the 1000 ms removal lands somewhere past that. Allow 2500 ms before asserting it is gone.
 - Esc closes the dialog.
 
 - [ ] **Step 9: Verify the Enter-leak case explicitly**
