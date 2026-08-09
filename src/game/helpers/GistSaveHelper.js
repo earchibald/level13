@@ -85,6 +85,17 @@ function (Ash, GameGlobals, GameConstants) {
 			this.lastError = null;
 		},
 
+		// The conflict flag must not latch. mirrorSlot refuses to push while it is set, and
+		// clearing it used to require a push to succeed - so once set it could never clear
+		// itself, and a device stayed stuck long after the cloud and the marker agreed
+		// again. Whenever a check observes agreement, the conflict is over by definition.
+		clearConflictIfResolved: function () {
+			if (!this.hasConflict) return;
+			this.hasConflict = false;
+			this.lastError = null;
+			this.setSyncState("synced");
+		},
+
 		// read just the gist's updated_at, for the guard and the arrival check
 		fetchGistState: function () {
 			let helper = this;

@@ -925,6 +925,14 @@ define(['ash',
 				system.moveSelectionInDirection(direction);
 			},
 
+			// the same path the + and - buttons take, so the guards on map style and
+			// player position apply to the keys as well
+			zoomMapView: function (steps) {
+				let system = GameGlobals.uiFunctions.getMapSystem();
+				if (!system) return;
+				system.onZoomButton(steps);
+			},
+
 			getMapSystem: function () {
 				if (!this.mapSystem) {
 					try {

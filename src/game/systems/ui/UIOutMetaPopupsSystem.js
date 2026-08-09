@@ -337,7 +337,10 @@ define([
 				if (!state.ok) return;
 				let lastSeen = helper.getLastSeenRevision();
 				if (!state.revision) return;
-				if (lastSeen && state.revision === lastSeen) return;
+				if (lastSeen && state.revision === lastSeen) {
+					helper.clearConflictIfResolved();
+					return;
+				}
 
 				// no marker means this device has never synced. If the cloud already holds a
 				// save, which of the two is current is genuinely unknown, so ask rather than
@@ -368,7 +371,10 @@ define([
 			helper.fetchGistState().then(function (state) {
 				if (!state.ok || !state.revision) return;
 				let lastSeen = helper.getLastSeenRevision();
-				if (lastSeen && state.revision === lastSeen) return;
+				if (lastSeen && state.revision === lastSeen) {
+					helper.clearConflictIfResolved();
+					return;
+				}
 				sys.applyIdleCloudFinding(state.revision, state.updatedAt);
 			});
 		},
