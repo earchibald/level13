@@ -428,7 +428,20 @@ body.touch button {
 		touch-action: pan-y;
 	}
 
+	// The game centres a popup by writing an inline top/left once, when it opens.
+	// Content that appears later - selecting a save slot reveals five more buttons -
+	// then grows the popup downward from a top that was correct for the old height,
+	// and the last row ends up below the screen with no way to reach it. Centring on
+	// the popup's own box instead costs nothing to recompute: the browser redoes it
+	// on every content change, and with the max-height above the popup cannot leave
+	// the viewport whatever it grows to.
+	// Not flex on #popup-overlay: jQuery writes display inline when it fades the
+	// overlay in and out, so a display rule here would need !important and would
+	// then stop the overlay hiding at all.
 	body[class] div.popup {
+		top: 50% !important;
+		left: 50% !important;
+		transform: translate(-50%, -50%);
 		max-width: 90%;
 	}
 

@@ -192,7 +192,11 @@ define([
 
         runGithubValidation: function () {
             let sys = this;
-            let token = $("#settings-github-token").val();
+            // a successful validation blanks the token box and never shows the token again, so
+            // on a device that is already set up the box is empty every time afterwards.
+            // Changing only the gist ID must not therefore fail as "No token entered": fall
+            // back to the token this device already holds.
+            let token = $("#settings-github-token").val() || GameGlobals.gistSaveHelper.getToken();
             let enteredId = ($("#settings-github-gist").val() || "").trim();
             let isJoiningNewGist = !!enteredId && enteredId != GameGlobals.gistSaveHelper.getGistId();
             $("#settings-github-status").text("Checking...");
@@ -207,6 +211,16 @@ define([
                     $("#settings-github-token").val("");
                 }
                 sys.updateGithubSettings();
+                if (!result.ok) {
+                    // updateGithubSettings refills the box from storage, which silently throws
+                    // away what the player typed and reads as the button doing nothing. Put it
+                    // back so the failed value is there to correct.
+                    $("#settings-github-gist").val(enteredId);
+                    // and it reports the STORED setup, which is still fine - so a device that
+                    // was already connected answers a failed attempt with "Connected" and the
+                    // player never learns what went wrong
+                    $("#settings-github-status").text(result.error || "Could not connect");
+                }
                 // a device that has just joined an existing gist is behind it by construction,
                 // so ask about the save waiting there instead of making the player find it
                 if (result.ok && isJoiningNewGist) sys.checkCloudSaveOnArrival();
@@ -259,7 +273,9 @@ define([
         updateGithubSettings: function () {
             let helper = GameGlobals.gistSaveHelper;
             let isConfigured = helper.isConfigured();
-            let status = isConfigured ? "Connected. Saves go to gist " + helper.getGistId() : (helper.getLastError() || "Not set up");
+            // the ID sits in the box just above, so repeating it here only costs two wrapped
+            // lines of a popup that is already tight on a phone
+            let status = isConfigured ? "Connected" : (helper.getLastError() || "Not set up");
             $("#settings-github-status").text(status);
             // the box doubles as the display: this is the value the player copies to a second
             // device, so it has to be selectable, not buried in a status line
@@ -289,11 +305,18 @@ define([
 			if (!helper.isConfigured()) { GameGlobals.uiFunctions.toggle($el, false); return; }
 
 			let info = helper.getSyncState();
-			let text = "cloud: not synced yet";
-			if (info.state == "syncing") text = "cloud: saving...";
-			else if (info.state == "synced") text = "cloud: saved " + (info.at ? info.at.toLocaleString(navigator.language, { timeStyle: "short" }) : "");
-			else if (info.state == "failed") text = "cloud: failed";
-			else if (info.state == "conflict") text = "cloud: needs attention";
+			// the gist ID identifies WHICH cloud this device is talking to. Two devices on two
+			// different gists is a silent failure - each one reads back only its own saves -
+			// and comparing these two labels is the fastest way to see it. A prefix is enough
+			// to tell two IDs apart and keeps the footer short.
+			let gistId = helper.getGistId() || "";
+			let label = "cloud " + gistId.substring(0, 8);
+
+			let text = label + ": not synced yet";
+			if (info.state == "syncing") text = label + ": saving...";
+			else if (info.state == "synced") text = label + ": saved " + (info.at ? info.at.toLocaleString(navigator.language, { timeStyle: "short" }) : "");
+			else if (info.state == "failed") text = label + ": failed";
+			else if (info.state == "conflict") text = label + ": needs attention";
 
 			$el.text(text);
 			$el.toggleClass("warning", info.state == "failed" || info.state == "conflict");

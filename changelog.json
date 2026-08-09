@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m72",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Changing the Gist ID works without pasting the token again, and a failed change says why instead of reverting silently"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "On phones a popup that grows after it opens no longer pushes its buttons off the bottom of the screen"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The footer shows which gist cloud saves go to, next to the version"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m71",
             "requiredVersion": "0.6.1",
             "phase": "beta",

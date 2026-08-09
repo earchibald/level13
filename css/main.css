@@ -6407,6 +6407,9 @@ body.touch button {
     touch-action: pan-y;
   }
   body[class] div.popup {
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%);
     max-width: 90%;
   }
   div.popup > .buttonbox:last-child {
