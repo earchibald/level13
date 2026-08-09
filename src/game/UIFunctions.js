@@ -125,6 +125,10 @@ define(['ash',
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 					uiFunctions.showManageSave();
 				});
+				$("#btn-reload").click(function (e) {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					uiFunctions.confirmReload();
+				});
 				$("#btn-stats").click(function (e) {
 					uiFunctions.showStatsPopup();
 				});
@@ -2488,6 +2492,15 @@ define(['ash',
 
 			showIncomingCaravanPopup: function () {
 				this.showSpecialPopup("incoming-caravan-popup");
+			},
+
+			// there is no browser chrome in an installed PWA, so this is the only way to
+			// reload. Confirmed because an accidental press mid-session would lose anything
+			// since the last save
+			confirmReload: function () {
+				this.showConfirmation("Reload the game?<br/><br/><span class='p-meta'>Anything since your last save is lost.</span>", function () {
+					location.reload();
+				}, false, true);
 			},
 
 			showManageSave: function () {
