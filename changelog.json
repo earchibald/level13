@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m61",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The map can be moved around with the same keys you walk with, starting from the sector you are standing in"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m60",
             "requiredVersion": "0.6.1",
             "phase": "beta",
