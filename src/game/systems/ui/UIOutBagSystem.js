@@ -264,7 +264,9 @@ define([
 			// popup's parent, so the reopen below would be hidden the moment it happened.
 			GameGlobals.uiFunctions.popupManager.showPopup("Craft", msg, "Craft", "Cancel", null,
 				function () {
-					GameGlobals.playerActionFunctions.startAction(actionName);
+					// startAction passes its param straight to craftItem; without it the item id is
+			// undefined and the craft throws on a null item definition
+			GameGlobals.playerActionFunctions.startAction(actionName, itemDefinition.id);
 				},
 				null,
 				{ isMeta: false, isDismissable: true }
