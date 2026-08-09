@@ -16,6 +16,16 @@ function (Ash, GameGlobals, GameConstants) {
 		STORAGE_KEY_GIST_ID: "github-gist-id",
 		STORAGE_KEY_AUTO_MIRROR: "github-auto-mirror",
 		STORAGE_KEY_LAST_SEEN: "github-gist-last-revision",
+		// every revision this device is known to have made or read, and a fingerprint
+		// of the last thing it tried to push. Both exist to answer one question - is
+		// the cloud ahead of us because of US? - see isOwnCloudState.
+		STORAGE_KEY_OWN_REVISIONS: "github-gist-own-revisions",
+		STORAGE_KEY_PUSHED_PREFIX: "github-gist-pushed-",
+
+		// enough to cover a session's worth of writes. The list only has to outlive the
+		// gap between a write and the next check, and a stale entry costs nothing: a
+		// revision this device really did make is its own write however old the entry is
+		MAX_OWN_REVISIONS: 30,
 
 		API_ROOT: "https://api.github.com",
 		GIST_DESCRIPTION: "Level 13 saves",
@@ -31,6 +41,7 @@ function (Ash, GameGlobals, GameConstants) {
 		pendingMirrors: null,
 		lastMirrorTimestamps: null,
 		pendingMirrorTimers: null,
+		writeQueue: null,
 
 		constructor: function () {
 			this.pendingMirrors = {};
@@ -73,6 +84,102 @@ function (Ash, GameGlobals, GameConstants) {
 			try { localStorage.setItem(this.STORAGE_KEY_LAST_SEEN, revision || ""); } catch (ex) { log.w("could not store last seen: " + ex); }
 		},
 
+		// The revisions this device made. A gist revision is a commit SHA, so this is an
+		// exact record of "we did that one" - no timestamps, no ordering, no guessing.
+		getOwnRevisions: function () {
+			try {
+				let raw = localStorage.getItem(this.STORAGE_KEY_OWN_REVISIONS);
+				let list = raw ? JSON.parse(raw) : [];
+				return Array.isArray(list) ? list : [];
+			} catch (ex) { return []; }
+		},
+
+		addOwnRevision: function (revision) {
+			if (!revision) return;
+			let list = this.getOwnRevisions();
+			if (list.indexOf(revision) >= 0) return;
+			list.push(revision);
+			while (list.length > this.MAX_OWN_REVISIONS) list.shift();
+			try { localStorage.setItem(this.STORAGE_KEY_OWN_REVISIONS, JSON.stringify(list)); } catch (ex) { log.w("could not store own revisions: " + ex); }
+		},
+
+		isOwnRevision: function (revision) {
+			return !!revision && this.getOwnRevisions().indexOf(revision) >= 0;
+		},
+
+		// everything this device knows about what it wrote, dropped. Only for changing
+		// gist: the knowledge is about one gist and means nothing about another.
+		forgetOwnHistory: function () {
+			let helper = this;
+			try {
+				localStorage.removeItem(this.STORAGE_KEY_OWN_REVISIONS);
+				[GameConstants.SAVE_SLOT_DEFAULT, GameConstants.SAVE_SLOT_USER_1, GameConstants.SAVE_SLOT_USER_2, GameConstants.SAVE_SLOT_USER_3].forEach(function (slotID) {
+					localStorage.removeItem(helper.STORAGE_KEY_PUSHED_PREFIX + slotID);
+				});
+			} catch (ex) { log.w("could not clear own history: " + ex); }
+		},
+
+		// A cheap content fingerprint. Two 32-bit FNV-1a hashes with different offset
+		// bases, plus the length: enough to tell one save blob from another, and far
+		// too little to reconstruct anything from. It is only ever compared with a
+		// fingerprint this same device wrote.
+		getFingerprint: function (text) {
+			if (typeof text !== "string") return null;
+			let a = 0x811c9dc5, b = 0x01000193;
+			for (let i = 0; i < text.length; i++) {
+				let c = text.charCodeAt(i);
+				a = Math.imul(a ^ c, 0x01000193);
+				b = Math.imul(b ^ c, 0x85ebca6b);
+			}
+			return text.length + "-" + (a >>> 0).toString(16) + "-" + (b >>> 0).toString(16);
+		},
+
+		getPushedFingerprint: function (slotID) {
+			try { return localStorage.getItem(this.STORAGE_KEY_PUSHED_PREFIX + slotID) || null; } catch (ex) { return null; }
+		},
+
+		setPushedFingerprint: function (slotID, fingerprint) {
+			try { localStorage.setItem(this.STORAGE_KEY_PUSHED_PREFIX + slotID, fingerprint || ""); } catch (ex) { log.w("could not store pushed fingerprint: " + ex); }
+		},
+
+		// The cloud is not where this device left it. That is only news if somebody ELSE
+		// moved it, and there are three ordinary ways for this device to have moved it
+		// without knowing:
+		//
+		//  - the write landed and the answer did not. A phone that is backgrounded, or
+		//    an app closed mid-push, leaves GitHub holding a commit this device never
+		//    learned the SHA of. Every check afterwards reads that as another device.
+		//  - two slots pushed at once. The rate limit is per slot, so two writes can be
+		//    in flight together; GitHub serialises them into two commits and whichever
+		//    answer arrives last decides the marker, which can be the earlier of the two.
+		//  - the read was stale. Anonymous gist reads go through a cache that can still
+		//    be showing the state from before this device's own write.
+		//
+		// So ask whether this device made the head, rather than assuming it did not. The
+		// revision list answers the last two outright. For the first there is no SHA to
+		// compare, so compare the content instead: the fingerprint is recorded BEFORE
+		// the push goes out, which is exactly the case where the answer never came back.
+		isOwnCloudState: function (state, slotID) {
+			let helper = this;
+			if (!state || !state.revision) return Promise.resolve(false);
+			if (this.isOwnRevision(state.revision)) return Promise.resolve(true);
+
+			// The revision is the gist's, the fingerprint is one slot's. So a head another
+			// device made by writing a DIFFERENT slot reads as ours here. That is the safe
+			// way round: this device goes on writing its own slot, which was never in
+			// question, and touches nothing the other device wrote.
+			let pushed = this.getPushedFingerprint(slotID);
+			if (!pushed) return Promise.resolve(false);
+
+			return this.fetchSlotContent(slotID).then(function (result) {
+				if (!result.ok) return false;
+				let isOurs = helper.getFingerprint(result.data) === pushed;
+				// remember the SHA too, so the next check costs nothing
+				if (isOurs) helper.addOwnRevision(state.revision);
+				return isOurs;
+			}).catch(function () { return false; });
+		},
+
 		// another device has written since this one last synced
 		isInConflict: function () {
 			return this.hasConflict;
@@ -82,6 +189,9 @@ function (Ash, GameGlobals, GameConstants) {
 		resolveConflict: function (revision) {
 			this.hasConflict = false;
 			this.setLastSeenRevision(revision);
+			// a revision the player has accepted is settled, and must never come back as
+			// a question - so it counts as this device's own from here on
+			this.addOwnRevision(revision);
 			this.lastError = null;
 		},
 
@@ -96,6 +206,19 @@ function (Ash, GameGlobals, GameConstants) {
 			this.setSyncState("synced");
 		},
 
+		// A gist is readable by id without a token, so reads work whatever the token is
+		// doing. Send it when there is one anyway: an anonymous read is served from a
+		// cache that can still be showing the state from before this device's own write,
+		// and this device then reads its own save as somebody else's.
+		//
+		// `cache: no-store` only governs the BROWSER's cache and cannot reach that one.
+		getReadHeaders: function () {
+			let headers = { "Accept": "application/vnd.github+json" };
+			let token = this.getToken();
+			if (token) headers["Authorization"] = "Bearer " + token;
+			return headers;
+		},
+
 		// read just the gist's updated_at, for the guard and the arrival check
 		fetchGistState: function () {
 			let helper = this;
@@ -106,7 +229,7 @@ function (Ash, GameGlobals, GameConstants) {
 				// the cloud has not moved when it has, which is the exact stomp the guard exists
 				// to prevent. An installed PWA caches these hard otherwise.
 				cache: "no-store",
-				headers: { "Accept": "application/vnd.github+json" }
+				headers: this.getReadHeaders()
 			}).then(function (response) {
 				if (!response.ok) {
 					return helper.getErrorMessage(response).then(function (msg) {
@@ -218,7 +341,10 @@ function (Ash, GameGlobals, GameConstants) {
 					helper.setToken(token);
 					helper.setGistId(json.id);
 					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
-					if (revision) helper.setLastSeenRevision(revision);
+					if (revision) {
+						helper.setLastSeenRevision(revision);
+						helper.addOwnRevision(revision);
+					}
 					helper.hasConflict = false;
 					helper.lastError = null;
 					return { ok: true, gistId: json.id };
@@ -301,7 +427,13 @@ function (Ash, GameGlobals, GameConstants) {
 						// Re-validating a new token against the gist this device already uses is
 						// not joining anything, so its marker stays: clearing it would report a
 						// conflict with the device's own save.
-						if (!isSameGist) helper.setLastSeenRevision("");
+						if (!isSameGist) {
+							helper.setLastSeenRevision("");
+							// the revisions and fingerprints belong to the gist this device is
+							// leaving. Carried across they could match the new gist's head by
+							// accident and hide a real save waiting in it.
+							helper.forgetOwnHistory();
+						}
 						helper.hasConflict = false;
 						helper.lastError = null;
 						return { ok: true, gistId: gistId };
@@ -314,7 +446,18 @@ function (Ash, GameGlobals, GameConstants) {
 			});
 		},
 
+		// Writes go one at a time. The rate limit in mirrorSlot is per slot, so two slots
+		// could be in flight together; GitHub then serialises them into two commits and
+		// whichever answer arrives last decides the marker - which can be the earlier of
+		// the two, leaving this device permanently "behind" a cloud it wrote itself.
 		saveSlot: function (slotID, data) {
+			let helper = this;
+			let run = function () { return helper.saveSlotNow(slotID, data); };
+			this.writeQueue = (this.writeQueue || Promise.resolve()).then(run, run);
+			return this.writeQueue;
+		},
+
+		saveSlotNow: function (slotID, data) {
 			let helper = this;
 			if (!this.isConfigured()) return Promise.resolve({ ok: false, error: "Not set up" });
 
@@ -328,28 +471,48 @@ function (Ash, GameGlobals, GameConstants) {
 				let lastSeen = helper.getLastSeenRevision();
 				let fileName = helper.getFileNameForSlot(slotID);
 				let hasFileAlready = (state.fileNames || []).indexOf(fileName) >= 0;
+				let isBehind = !lastSeen ? hasFileAlready : (!!state.revision && state.revision !== lastSeen);
 
-				if (!lastSeen) {
-					// this device has never synced, so it cannot know whether the cloud is
-					// ahead of it. Pushing anyway is how a device that predates this guard
-					// overwrites someone else's newer save. Silence is not permission.
-					// The one safe case is a slot the cloud has never held: nothing to lose.
-					if (hasFileAlready) {
+				// Behind the cloud is not the same as behind ANOTHER DEVICE - see
+				// isOwnCloudState. Only the second is a conflict; the first is this
+				// device catching up with its own writing, and reporting that as a
+				// conflict is what stopped it saving at all.
+				return (isBehind ? helper.isOwnCloudState(state, slotID) : Promise.resolve(false)).then(function (isOurs) {
+					if (isBehind && isOurs) {
+						// caught up: the head is ours, so take it as seen and push on
+						if (state.revision) helper.setLastSeenRevision(state.revision);
+						helper.hasConflict = false;
+						helper.lastError = null;
+					} else if (isBehind) {
 						helper.hasConflict = true;
-						helper.lastError = "This device has not synced with the cloud yet. Load the cloud save or keep this one, in settings.";
+						helper.lastError = lastSeen
+							? "Another device has saved since this one. Load it or keep this save, in settings."
+							: "This device has not synced with the cloud yet. Load the cloud save or keep this one, in settings.";
 						helper.setSyncState("conflict", helper.lastError);
 						return { ok: false, error: helper.lastError, conflict: true };
 					}
-				} else if (state.revision && state.revision !== lastSeen) {
-					helper.hasConflict = true;
-					helper.lastError = "Another device has saved since this one. Load it or keep this save, in settings.";
-					helper.setSyncState("conflict", helper.lastError);
-					return { ok: false, error: helper.lastError, conflict: true };
-				}
 
-				let files = {};
-				files[helper.getFileNameForSlot(slotID)] = { content: data };
+					return helper.pushSlot(slotID, data);
+				});
+			}).catch(function (ex) {
+				let msg = "Could not reach GitHub: " + ex;
+				helper.lastError = msg;
+				helper.setSyncState("failed", msg);
+				return { ok: false, error: msg };
+			});
+		},
 
+		pushSlot: function (slotID, data) {
+			let helper = this;
+			let files = {};
+			files[this.getFileNameForSlot(slotID)] = { content: data };
+
+			// BEFORE the request, not after. If the answer never comes back - a phone
+			// backgrounded mid-push, an app closed - GitHub still holds the write, and
+			// this is the only record that it was ours. See isOwnCloudState.
+			this.setPushedFingerprint(slotID, this.getFingerprint(data));
+
+			return Promise.resolve().then(function () {
 				return fetch(helper.API_ROOT + "/gists/" + helper.getGistId(), {
 					method: "PATCH",
 					headers: {
@@ -373,6 +536,7 @@ function (Ash, GameGlobals, GameConstants) {
 							// exactly what this device just created. If another device writes
 							// after us, the next guard catches it, as it should
 							helper.setLastSeenRevision(revision);
+							helper.addOwnRevision(revision);
 							helper.hasConflict = false;
 							helper.lastError = null;
 							helper.setSyncState("synced");
@@ -383,7 +547,10 @@ function (Ash, GameGlobals, GameConstants) {
 						// a stale marker reads as another device having written, and stops
 						// this device pushing at all
 						return helper.fetchGistState().then(function (after) {
-							if (after.ok && after.revision) helper.setLastSeenRevision(after.revision);
+							if (after.ok && after.revision) {
+								helper.setLastSeenRevision(after.revision);
+								helper.addOwnRevision(after.revision);
+							}
 							helper.hasConflict = false;
 							helper.lastError = null;
 							helper.setSyncState("synced");
@@ -399,9 +566,11 @@ function (Ash, GameGlobals, GameConstants) {
 			});
 		},
 
-		// no Authorization header: a secret gist is readable by id, and fine-grained tokens
-		// do not document a read endpoint
-		loadSlot: function (slotID) {
+		// Read one slot and change nothing. isOwnCloudState asks this question while
+		// deciding whether there is a conflict at all, so it must not move the marker or
+		// clear the flag the way loadSlot does - that would answer the question by
+		// erasing it.
+		fetchSlotContent: function (slotID) {
 			let helper = this;
 			let gistId = this.getGistId();
 			if (!gistId) return Promise.resolve({ ok: false, error: "Not set up" });
@@ -411,43 +580,51 @@ function (Ash, GameGlobals, GameConstants) {
 			return fetch(this.API_ROOT + "/gists/" + gistId, {
 				// see fetchGistState: these reads must not come from the browser cache
 				cache: "no-store",
-				headers: { "Accept": "application/vnd.github+json" }
+				headers: this.getReadHeaders()
 			}).then(function (response) {
 				if (!response.ok) {
 					return helper.getErrorMessage(response).then(function (msg) {
-						helper.lastError = msg;
 						return { ok: false, error: msg };
 					});
 				}
 				return response.json().then(function (json) {
 					let file = json.files ? json.files[fileName] : null;
-					if (!file) {
-						let msg = "No cloud save for this slot";
-						helper.lastError = msg;
-						return { ok: false, error: msg };
-					}
+					if (!file) return { ok: false, error: "No cloud save for this slot" };
+
+					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
 					// the API inlines content only below 1MB; above that it sets truncated
 					// and the real content is behind raw_url
-					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
 					if (file.truncated && file.raw_url) {
 						return fetch(file.raw_url, { cache: "no-store" }).then(function (raw) {
 							return raw.text();
 						}).then(function (text) {
-							if (revision) helper.setLastSeenRevision(revision);
-							helper.hasConflict = false;
-							helper.lastError = null;
-							return { ok: true, data: text, updatedAt: json.updated_at };
+							return { ok: true, data: text, revision: revision, updatedAt: json.updated_at };
 						});
 					}
-					if (revision) helper.setLastSeenRevision(revision);
-					helper.hasConflict = false;
-					helper.lastError = null;
-					return { ok: true, data: file.content, updatedAt: json.updated_at };
+					return { ok: true, data: file.content, revision: revision, updatedAt: json.updated_at };
 				});
 			}).catch(function (ex) {
-				let msg = "Could not reach GitHub: " + ex;
-				helper.lastError = msg;
-				return { ok: false, error: msg };
+				return { ok: false, error: "Could not reach GitHub: " + ex };
+			});
+		},
+
+		loadSlot: function (slotID) {
+			let helper = this;
+			return this.fetchSlotContent(slotID).then(function (result) {
+				if (!result.ok) {
+					helper.lastError = result.error;
+					return result;
+				}
+				// this device now holds exactly what the cloud holds, so that revision is
+				// its own as much as one it wrote itself
+				if (result.revision) {
+					helper.setLastSeenRevision(result.revision);
+					helper.addOwnRevision(result.revision);
+				}
+				helper.setPushedFingerprint(slotID, helper.getFingerprint(result.data));
+				helper.hasConflict = false;
+				helper.lastError = null;
+				return { ok: true, data: result.data, updatedAt: result.updatedAt };
 			});
 		},
 

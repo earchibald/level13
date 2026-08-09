@@ -390,8 +390,19 @@ define([
 					if (!hasAnySave) return;
 				}
 
-				helper.hasConflict = true;
-				sys.showCloudArrivalPrompt(state.revision, state.updatedAt);
+				// The commonest way to reach here is not another device at all: this one
+				// pushed and was closed before the answer arrived, so the cloud moved and
+				// the marker did not. Asking "load the save from your other device?" about
+				// the player's own last autosave is the bug this checks for.
+				helper.isOwnCloudState(state, GameConstants.SAVE_SLOT_DEFAULT).then(function (isOurs) {
+					if (isOurs) {
+						helper.resolveConflict(state.revision);
+						sys.updateCloudSyncStatus();
+						return;
+					}
+					helper.hasConflict = true;
+					sys.showCloudArrivalPrompt(state.revision, state.updatedAt);
+				});
 			});
 		},
 
@@ -415,7 +426,16 @@ define([
 					helper.clearConflictIfResolved();
 					return;
 				}
-				sys.applyIdleCloudFinding(state.revision, state.updatedAt);
+				// as in checkCloudSaveOnArrival: a head this device made is not a finding.
+				// Left unchecked this one is worse, because it repeats every idle period.
+				helper.isOwnCloudState(state, GameConstants.SAVE_SLOT_DEFAULT).then(function (isOurs) {
+					if (isOurs) {
+						helper.resolveConflict(state.revision);
+						sys.updateCloudSyncStatus();
+						return;
+					}
+					sys.applyIdleCloudFinding(state.revision, state.updatedAt);
+				});
 			});
 		},
 

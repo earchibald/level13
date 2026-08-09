@@ -1504,6 +1504,21 @@ define([
 			if (height === this.lastViewportHeight && width === this.lastViewportWidth) return;
 			this.lastViewportHeight = height;
 			this.lastViewportWidth = width;
+			// A rotation is a viewport change, and on iOS it is often the ONLY sign
+			// of one - the resize event onWindowResized listens for does not always
+			// arrive. Measuring is not enough: which way up the phone is decides
+			// .landscape-map, and that class is what chooses between the fullscreen
+			// map and the rotate notice. Without this a sideways phone kept the
+			// portrait layout laid out sideways, and a phone turned back upright
+			// kept the fullscreen map.
+			//
+			// A mode change moves elements between the header and the banner, so it
+			// takes the whole pass; a viewport that only grew or shrank needs the
+			// measurements and nothing else.
+			if (this.isLandscapeMapLayout() !== this.elements.body.hasClass("landscape-map")) {
+				this.updateLayout();
+				return;
+			}
 			this.updateMeasurements();
 		},
 
