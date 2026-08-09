@@ -15,7 +15,7 @@ function (Ash, GameGlobals, GameConstants) {
 		STORAGE_KEY_TOKEN: "github-token",
 		STORAGE_KEY_GIST_ID: "github-gist-id",
 		STORAGE_KEY_AUTO_MIRROR: "github-auto-mirror",
-		STORAGE_KEY_LAST_SEEN: "github-gist-last-seen",
+		STORAGE_KEY_LAST_SEEN: "github-gist-last-revision",
 
 		API_ROOT: "https://api.github.com",
 		GIST_DESCRIPTION: "Level 13 saves",
@@ -65,12 +65,12 @@ function (Ash, GameGlobals, GameConstants) {
 			return !!this.getToken() && !!this.getGistId();
 		},
 
-		getLastSeen: function () {
+		getLastSeenRevision: function () {
 			try { return localStorage.getItem(this.STORAGE_KEY_LAST_SEEN) || null; } catch (ex) { return null; }
 		},
 
-		setLastSeen: function (updatedAt) {
-			try { localStorage.setItem(this.STORAGE_KEY_LAST_SEEN, updatedAt || ""); } catch (ex) { log.w("could not store last seen: " + ex); }
+		setLastSeenRevision: function (revision) {
+			try { localStorage.setItem(this.STORAGE_KEY_LAST_SEEN, revision || ""); } catch (ex) { log.w("could not store last seen: " + ex); }
 		},
 
 		// another device has written since this one last synced
@@ -79,9 +79,9 @@ function (Ash, GameGlobals, GameConstants) {
 		},
 
 		// the player has chosen a side, so pushing may resume
-		resolveConflict: function (updatedAt) {
+		resolveConflict: function (revision) {
 			this.hasConflict = false;
-			this.setLastSeen(updatedAt);
+			this.setLastSeenRevision(revision);
 			this.lastError = null;
 		},
 
@@ -103,7 +103,11 @@ function (Ash, GameGlobals, GameConstants) {
 					});
 				}
 				return response.json().then(function (json) {
-					return { ok: true, updatedAt: json.updated_at, fileNames: json.files ? Object.keys(json.files) : [] };
+					// a gist is a git repo: history[0].version is the SHA of the current
+					// revision. That is an exact identity for one state of the gist, unlike
+					// a timestamp, which is only equal by assumption across endpoints
+					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
+					return { ok: true, revision: revision, updatedAt: json.updated_at, fileNames: json.files ? Object.keys(json.files) : [] };
 				});
 			}).catch(function (ex) {
 				return { ok: false, error: "Could not reach GitHub: " + ex };
@@ -202,7 +206,8 @@ function (Ash, GameGlobals, GameConstants) {
 				return response.json().then(function (json) {
 					helper.setToken(token);
 					helper.setGistId(json.id);
-					helper.setLastSeen(json.updated_at);
+					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
+					if (revision) helper.setLastSeenRevision(revision);
 					helper.hasConflict = false;
 					helper.lastError = null;
 					return { ok: true, gistId: json.id };
@@ -225,7 +230,7 @@ function (Ash, GameGlobals, GameConstants) {
 			return this.fetchGistState().then(function (state) {
 				if (!state.ok) { helper.setSyncState("failed", state.error); return { ok: false, error: state.error }; }
 
-				let lastSeen = helper.getLastSeen();
+				let lastSeen = helper.getLastSeenRevision();
 				let fileName = helper.getFileNameForSlot(slotID);
 				let hasFileAlready = (state.fileNames || []).indexOf(fileName) >= 0;
 
@@ -240,7 +245,7 @@ function (Ash, GameGlobals, GameConstants) {
 						helper.setSyncState("conflict", helper.lastError);
 						return { ok: false, error: helper.lastError, conflict: true };
 					}
-				} else if (state.updatedAt && state.updatedAt !== lastSeen) {
+				} else if (state.revision && state.revision !== lastSeen) {
 					helper.hasConflict = true;
 					helper.lastError = "Another device has saved since this one. Load it or keep this save, in settings.";
 					helper.setSyncState("conflict", helper.lastError);
@@ -267,13 +272,23 @@ function (Ash, GameGlobals, GameConstants) {
 						});
 					}
 					return response.json().then(function (json) {
-						// the marker must come from the same kind of read it will later be
-						// compared against. Storing the PATCH response's own updated_at
-						// assumed the two endpoints report an identical string, and if they
-						// ever differ then every successful save plants a marker that the
-						// next check reads as another device having written.
+						let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
+						if (revision) {
+							// the write's own revision is the most correct marker: it is
+							// exactly what this device just created. If another device writes
+							// after us, the next guard catches it, as it should
+							helper.setLastSeenRevision(revision);
+							helper.hasConflict = false;
+							helper.lastError = null;
+							helper.setSyncState("synced");
+							return { ok: true };
+						}
+						// the update endpoint is not documented to include history. If it did
+						// not, read the revision back rather than leaving the marker stale -
+						// a stale marker reads as another device having written, and stops
+						// this device pushing at all
 						return helper.fetchGistState().then(function (after) {
-							helper.setLastSeen(after.ok && after.updatedAt ? after.updatedAt : json.updated_at);
+							if (after.ok && after.revision) helper.setLastSeenRevision(after.revision);
 							helper.hasConflict = false;
 							helper.lastError = null;
 							helper.setSyncState("synced");
@@ -318,17 +333,18 @@ function (Ash, GameGlobals, GameConstants) {
 					}
 					// the API inlines content only below 1MB; above that it sets truncated
 					// and the real content is behind raw_url
+					let revision = (json.history && json.history.length > 0) ? json.history[0].version : null;
 					if (file.truncated && file.raw_url) {
 						return fetch(file.raw_url, { cache: "no-store" }).then(function (raw) {
 							return raw.text();
 						}).then(function (text) {
-							helper.setLastSeen(json.updated_at);
+							if (revision) helper.setLastSeenRevision(revision);
 							helper.hasConflict = false;
 							helper.lastError = null;
 							return { ok: true, data: text, updatedAt: json.updated_at };
 						});
 					}
-					helper.setLastSeen(json.updated_at);
+					if (revision) helper.setLastSeenRevision(revision);
 					helper.hasConflict = false;
 					helper.lastError = null;
 					return { ok: true, data: file.content, updatedAt: json.updated_at };

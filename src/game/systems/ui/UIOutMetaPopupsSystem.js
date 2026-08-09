@@ -199,11 +199,11 @@ define([
             });
         },
 
-		showCloudArrivalPrompt: function (cloudUpdatedAt) {
+		showCloudArrivalPrompt: function (cloudRevision, cloudUpdatedAt) {
 			let helper = GameGlobals.gistSaveHelper;
 			let slotID = GameConstants.SAVE_SLOT_DEFAULT;
 
-			let neverSynced = !helper.getLastSeen();
+			let neverSynced = !helper.getLastSeenRevision();
 			let msg = neverSynced
 				? "There is a save in the cloud, and this device has not synced with it yet.<br/><br/>"
 				: "A save from another device is in the cloud.<br/><br/>";
@@ -231,13 +231,13 @@ define([
 							GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "That cloud save could not be read.", "OK", null, null, false, true);
 							return;
 						}
-						helper.resolveConflict(cloudUpdatedAt);
+						helper.resolveConflict(cloudRevision);
 						manageSaveSystem.loadState(saveJSON);
 					});
 				},
 				function () {
 					// accept the cloud as seen without pulling, so this device may push again
-					helper.resolveConflict(cloudUpdatedAt);
+					helper.resolveConflict(cloudRevision);
 				},
 				false);
 		},
@@ -335,9 +335,9 @@ define([
 			helper.fetchGistState().then(function (state) {
 				// being unable to reach GitHub is not a conflict, and must not block startup
 				if (!state.ok) return;
-				let lastSeen = helper.getLastSeen();
-				if (!state.updatedAt) return;
-				if (lastSeen && state.updatedAt === lastSeen) return;
+				let lastSeen = helper.getLastSeenRevision();
+				if (!state.revision) return;
+				if (lastSeen && state.revision === lastSeen) return;
 
 				// no marker means this device has never synced. If the cloud already holds a
 				// save, which of the two is current is genuinely unknown, so ask rather than
@@ -348,7 +348,7 @@ define([
 				}
 
 				helper.hasConflict = true;
-				sys.showCloudArrivalPrompt(state.updatedAt);
+				sys.showCloudArrivalPrompt(state.revision, state.updatedAt);
 			});
 		},
 
@@ -366,20 +366,20 @@ define([
 
 			let sys = this;
 			helper.fetchGistState().then(function (state) {
-				if (!state.ok || !state.updatedAt) return;
-				let lastSeen = helper.getLastSeen();
-				if (lastSeen && state.updatedAt === lastSeen) return;
-				sys.applyIdleCloudFinding(state.updatedAt);
+				if (!state.ok || !state.revision) return;
+				let lastSeen = helper.getLastSeenRevision();
+				if (lastSeen && state.revision === lastSeen) return;
+				sys.applyIdleCloudFinding(state.revision, state.updatedAt);
 			});
 		},
 
-		applyIdleCloudFinding: function (cloudUpdatedAt) {
+		applyIdleCloudFinding: function (cloudRevision, cloudUpdatedAt) {
 			let helper = GameGlobals.gistSaveHelper;
 			// in conflict means this device holds progress the cloud refused, which could be
 			// hours of play. Loading over it silently would destroy that, so ask.
-			if (helper.isInConflict() || !helper.getLastSeen()) {
+			if (helper.isInConflict() || !helper.getLastSeenRevision()) {
 				helper.hasConflict = true;
-				this.showCloudArrivalPrompt(cloudUpdatedAt);
+				this.showCloudArrivalPrompt(cloudRevision, cloudUpdatedAt);
 				return;
 			}
 
