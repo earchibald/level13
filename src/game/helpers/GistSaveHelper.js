@@ -15,6 +15,7 @@ function (Ash, GameGlobals, GameConstants) {
 		STORAGE_KEY_TOKEN: "github-token",
 		STORAGE_KEY_GIST_ID: "github-gist-id",
 		STORAGE_KEY_AUTO_MIRROR: "github-auto-mirror",
+		STORAGE_KEY_LAST_SEEN: "github-gist-last-seen",
 
 		API_ROOT: "https://api.github.com",
 		GIST_DESCRIPTION: "Level 13 saves",
@@ -24,6 +25,7 @@ function (Ash, GameGlobals, GameConstants) {
 		MIRROR_MIN_INTERVAL_MS: 10000,
 
 		lastError: null,
+		hasConflict: false,
 		pendingMirrors: null,
 		lastMirrorTimestamps: null,
 		pendingMirrorTimers: null,
@@ -59,6 +61,47 @@ function (Ash, GameGlobals, GameConstants) {
 
 		isConfigured: function () {
 			return !!this.getToken() && !!this.getGistId();
+		},
+
+		getLastSeen: function () {
+			try { return localStorage.getItem(this.STORAGE_KEY_LAST_SEEN) || null; } catch (ex) { return null; }
+		},
+
+		setLastSeen: function (updatedAt) {
+			try { localStorage.setItem(this.STORAGE_KEY_LAST_SEEN, updatedAt || ""); } catch (ex) { log.w("could not store last seen: " + ex); }
+		},
+
+		// another device has written since this one last synced
+		isInConflict: function () {
+			return this.hasConflict;
+		},
+
+		// the player has chosen a side, so pushing may resume
+		resolveConflict: function (updatedAt) {
+			this.hasConflict = false;
+			this.setLastSeen(updatedAt);
+			this.lastError = null;
+		},
+
+		// read just the gist's updated_at, for the guard and the arrival check
+		fetchGistState: function () {
+			let helper = this;
+			let gistId = this.getGistId();
+			if (!gistId) return Promise.resolve({ ok: false, error: "Not set up" });
+			return fetch(this.API_ROOT + "/gists/" + gistId, {
+				headers: { "Accept": "application/vnd.github+json" }
+			}).then(function (response) {
+				if (!response.ok) {
+					return helper.getErrorMessage(response).then(function (msg) {
+						return { ok: false, error: msg };
+					});
+				}
+				return response.json().then(function (json) {
+					return { ok: true, updatedAt: json.updated_at };
+				});
+			}).catch(function (ex) {
+				return { ok: false, error: "Could not reach GitHub: " + ex };
+			});
 		},
 
 		isAutoMirrorEnabled: function () {
@@ -137,6 +180,8 @@ function (Ash, GameGlobals, GameConstants) {
 				return response.json().then(function (json) {
 					helper.setToken(token);
 					helper.setGistId(json.id);
+					helper.setLastSeen(json.updated_at);
+					helper.hasConflict = false;
 					helper.lastError = null;
 					return { ok: true, gistId: json.id };
 				});
@@ -151,26 +196,44 @@ function (Ash, GameGlobals, GameConstants) {
 			let helper = this;
 			if (!this.isConfigured()) return Promise.resolve({ ok: false, error: "Not set up" });
 
-			let files = {};
-			files[this.getFileNameForSlot(slotID)] = { content: data };
+			// check the cloud has not moved under us before writing over it. Both values come
+			// from GitHub, so no clock comparison between devices is involved
+			return this.fetchGistState().then(function (state) {
+				if (!state.ok) return { ok: false, error: state.error };
 
-			return fetch(this.API_ROOT + "/gists/" + this.getGistId(), {
-				method: "PATCH",
-				headers: {
-					"Authorization": "Bearer " + this.getToken(),
-					"Accept": "application/vnd.github+json",
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify({ files: files })
-			}).then(function (response) {
-				if (!response.ok) {
-					return helper.getErrorMessage(response).then(function (msg) {
-						helper.lastError = msg;
-						return { ok: false, error: msg };
-					});
+				let lastSeen = helper.getLastSeen();
+				if (lastSeen && state.updatedAt && state.updatedAt !== lastSeen) {
+					helper.hasConflict = true;
+					helper.lastError = "Another device has saved since this one. Load it or keep this save, in settings.";
+					return { ok: false, error: helper.lastError, conflict: true };
 				}
-				helper.lastError = null;
-				return { ok: true };
+
+				let files = {};
+				files[helper.getFileNameForSlot(slotID)] = { content: data };
+
+				return fetch(helper.API_ROOT + "/gists/" + helper.getGistId(), {
+					method: "PATCH",
+					headers: {
+						"Authorization": "Bearer " + helper.getToken(),
+						"Accept": "application/vnd.github+json",
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({ files: files })
+				}).then(function (response) {
+					if (!response.ok) {
+						return helper.getErrorMessage(response).then(function (msg) {
+							helper.lastError = msg;
+							return { ok: false, error: msg };
+						});
+					}
+					return response.json().then(function (json) {
+						// straight from the write, so no second request is needed
+						helper.setLastSeen(json.updated_at);
+						helper.hasConflict = false;
+						helper.lastError = null;
+						return { ok: true };
+					});
+				});
 			}).catch(function (ex) {
 				let msg = "Could not reach GitHub: " + ex;
 				helper.lastError = msg;
@@ -209,10 +272,14 @@ function (Ash, GameGlobals, GameConstants) {
 						return fetch(file.raw_url).then(function (raw) {
 							return raw.text();
 						}).then(function (text) {
+							helper.setLastSeen(json.updated_at);
+							helper.hasConflict = false;
 							helper.lastError = null;
 							return { ok: true, data: text, updatedAt: json.updated_at };
 						});
 					}
+					helper.setLastSeen(json.updated_at);
+					helper.hasConflict = false;
 					helper.lastError = null;
 					return { ok: true, data: file.content, updatedAt: json.updated_at };
 				});
@@ -229,6 +296,10 @@ function (Ash, GameGlobals, GameConstants) {
 			if (!this.isAutoMirrorEnabled()) return;
 			if (!this.isConfigured()) return;
 			if (!this.isMirroredSlot(slotID)) return;
+
+			// a refused push means another device owns the cloud right now. Retrying every
+			// two minutes would just hammer the same wall until the player resolves it
+			if (this.hasConflict) return;
 
 			let helper = this;
 			let now = new Date().getTime();
