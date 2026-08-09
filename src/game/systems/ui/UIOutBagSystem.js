@@ -185,7 +185,18 @@ define([
 			}
 		},
 
+		isCraftPopupInteractive: function () {
+			if (!$("#craft-popup").is(":visible")) return false;
+			if ($("#craft-popup").attr("data-visible") != "true") return false;
+			if (GameGlobals.uiFunctions.popupManager.isClosing("craft-popup")) return false;
+			return true;
+		},
+
 		onCraftPopupKeyDown: function (e) {
+			// the popup is not really open until showSpecialPopup's fadeIn sets data-visible,
+			// and slideToggleIf silently no-ops before that - so acting inside that window
+			// leaves the list on screen with its overlay gone and a popup stuck in the queue
+			if (!this.isCraftPopupInteractive()) return;
 			let code = e.originalEvent ? e.originalEvent.code : e.code;
 			switch (code) {
 				case "ArrowDown": e.preventDefault(); this.setCraftPopupCursor(this.craftPopupCursor + 1); break;
@@ -219,6 +230,7 @@ define([
 		},
 
 		activateCraftPopupRow: function () {
+			if (!this.isCraftPopupInteractive()) return;
 			if (this.craftPopupCursor == -1) {
 				$("#craft-popup-show-obsolete").click();
 				return;

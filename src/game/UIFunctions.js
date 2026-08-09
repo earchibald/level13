@@ -1603,7 +1603,10 @@ define(['ash',
 				// the tab switches are exempt: they keep focus after a click, and re-selecting the open tab
 				// does nothing, so swallowing the keyup would lose that tab's own ENTER action
 				let code = e.originalEvent.code;
-				let isButtonLike = $(e.target).is("button, a, [tabindex]") && !$(e.target).is("#switch-tabs li");
+				// only the OPEN tab is exempt. An unselected tab li still acts on keydown,
+				// so letting its keyup through too would fire the tab switch AND the hotkey,
+				// and the hotkey would read the tab that is on its way out
+				let isButtonLike = $(e.target).is("button, a, [tabindex]") && !$(e.target).is("#switch-tabs li.selected");
 				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && isButtonLike) return;
 				if (!GameGlobals.uiFunctions.triggerHotkey(code, e)) return;
 			},
