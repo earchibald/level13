@@ -40,6 +40,8 @@ define([
 			GlobalSignals.add(this, GlobalSignals.equipmentChangedSignal, this.onEquipmentChanged);
 			GlobalSignals.add(this, GlobalSignals.gameShownSignal, this.refresh);
 			GlobalSignals.add(this, GlobalSignals.clearBubblesSignal, this.clearBubble);
+			GlobalSignals.add(this, GlobalSignals.openCraftPopupSignal, this.onOpenCraftPopup);
+			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
 		},
 		
 		removeFromEngine: function (engine) {
@@ -55,6 +57,214 @@ define([
 			
 			$("#btn-self-manage-inventory").click($.proxy(this.showInventoryManageemntPopup, this));
 			$("#btn-bag-autoequip").click($.proxy(this.autoEquip, this));
+			this.initCraftPopup();
+		},
+				
+		// CRAFT POPUP (hotkey K)
+
+		initCraftPopup: function () {
+			let sys = this;
+			$("#craft-popup-close").click(function () {
+				GameGlobals.uiFunctions.popupManager.closePopup("craft-popup");
+			});
+			$("#craft-popup-show-obsolete").change(function () {
+				sys.rebuildCraftPopupList();
+			});
+			$("#craft-popup-list").on("click", ".craft-popup-row", function () {
+				let index = parseInt($(this).attr("data-index"));
+				if (isNaN(index)) return;
+				sys.setCraftPopupCursor(index);
+				sys.activateCraftPopupRow();
+			});
+		},
+
+		onOpenCraftPopup: function () {
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			if (!GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.bag)) return;
+
+			let sys = this;
+			if (typeof this.craftPopupCursor != "number") this.craftPopupCursor = 0;
+			this.craftPopupCollapsedTypes = this.craftPopupCollapsedTypes || {};
+
+			GameGlobals.uiFunctions.showSpecialPopup("craft-popup", {
+				isMeta: false,
+				isDismissable: true,
+				setupCallback: () => sys.rebuildCraftPopupList(),
+			});
+
+			$(document).on("keydown.craftpopup", $.proxy(this.onCraftPopupKeyDown, this));
+		},
+
+		onPopupClosed: function (popupID) {
+			if (popupID == "craft-popup") {
+				$(document).off("keydown.craftpopup");
+			}
+			// return to the craft popup after its confirmation dialog closes (confirm or cancel)
+			if (popupID == "common-popup" && this.craftPopupReopen) {
+				this.craftPopupReopen = false;
+				this.onOpenCraftPopup();
+			}
+		},
+
+		rebuildCraftPopupList: function () {
+			let $list = $("#craft-popup-list");
+			let showObsolete = $("#craft-popup-show-obsolete").is(":checked");
+
+			let rows = [];
+			let html = "";
+			let countObsolete = 0;
+
+			let itemDefinitions = this.getCraftableItemDefinitionsByType();
+			for (let type in itemDefinitions) {
+				let itemList = itemDefinitions[type].slice().sort(UIConstants.sortItemsByRelevance);
+				let visibleItems = [];
+				for (let i = 0; i < itemList.length; i++) {
+					let itemDefinition = itemList[i];
+					if (!this.isItemUnlocked(itemDefinition)) continue;
+					let isObsolete = this.isObsolete(itemDefinition);
+					if (isObsolete) countObsolete++;
+					if (isObsolete && !showObsolete) continue;
+					visibleItems.push(itemDefinition);
+				}
+				if (visibleItems.length == 0) continue;
+
+				let isCollapsed = this.craftPopupCollapsedTypes[type] == true;
+				let typeName = ItemConstants.getItemTypeDisplayName(ItemConstants.itemTypes[type], true);
+				rows.push({ rowType: "header", itemType: type });
+				html += "<div class='craft-popup-row craft-popup-header' data-index='" + (rows.length - 1) + "'>";
+				html += (isCollapsed ? "&#9656;" : "&#9662;") + " " + typeName + "<span class='header-count'> (" + visibleItems.length + ")</span>";
+				html += "</div>";
+
+				if (isCollapsed) continue;
+
+				for (let j = 0; j < visibleItems.length; j++) {
+					let itemDefinition = visibleItems[j];
+					let actionName = "craft_" + itemDefinition.id;
+					let isAvailable = GameGlobals.playerActionsHelper.checkAvailability(actionName);
+					let costsHTML = GameGlobals.uiFunctions.getActionCostsSpanList(actionName).join(" ");
+					rows.push({ rowType: "item", itemType: type, itemDefinition: itemDefinition });
+					html += "<div class='craft-popup-row craft-popup-item" + (isAvailable ? "" : " craft-popup-item-unavailable") + "' data-index='" + (rows.length - 1) + "'>";
+					html += "<span class='craft-popup-item-name'>" + ItemConstants.getItemDisplayName(itemDefinition) + "</span>";
+					html += "<span class='craft-popup-item-costs'>" + costsHTML + "</span>";
+					html += "</div>";
+				}
+			}
+
+			this.craftPopupRows = rows;
+
+			if (rows.length == 0) html = "<p class='p-meta'>No known recipes.</p>";
+			$list.html(html);
+
+			GameGlobals.uiFunctions.toggle("#craft-popup-obsolete-container", countObsolete > 0);
+
+			this.setCraftPopupCursor(typeof this.craftPopupCursor == "number" ? this.craftPopupCursor : 0);
+		},
+
+		// cursor -1 means the show obsolete toggle above the list
+		setCraftPopupCursor: function (index) {
+			let hasToggle = $("#craft-popup-obsolete-container").is(":visible");
+			let numRows = this.craftPopupRows ? this.craftPopupRows.length : 0;
+			if (numRows == 0 && !hasToggle) return;
+
+			let min = hasToggle ? -1 : 0;
+			if (index < min) index = min;
+			if (index >= numRows) index = numRows - 1;
+			if (index < min) index = min;
+
+			this.craftPopupCursor = index;
+			$("#craft-popup-list .craft-popup-row").removeClass("selected");
+			$("#craft-popup-obsolete-container").toggleClass("selected", index == -1);
+			if (index >= 0) {
+				let $row = $("#craft-popup-list .craft-popup-row[data-index='" + index + "']");
+				$row.addClass("selected");
+				if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
+			}
+		},
+
+		onCraftPopupKeyDown: function (e) {
+			let code = e.originalEvent ? e.originalEvent.code : e.code;
+			switch (code) {
+				case "ArrowDown": e.preventDefault(); this.setCraftPopupCursor(this.craftPopupCursor + 1); break;
+				case "ArrowUp": e.preventDefault(); this.setCraftPopupCursor(this.craftPopupCursor - 1); break;
+				case "ArrowLeft": e.preventDefault(); this.setCraftPopupSectionCollapsed(true); break;
+				case "ArrowRight": e.preventDefault(); this.setCraftPopupSectionCollapsed(false); break;
+				case "Enter": case "NumpadEnter": e.preventDefault(); this.activateCraftPopupRow(); break;
+				case "Space":
+					if (this.craftPopupCursor == -1) {
+						e.preventDefault();
+						$("#craft-popup-show-obsolete").click();
+					}
+					break;
+			}
+		},
+
+		setCraftPopupSectionCollapsed: function (collapsed) {
+			let row = this.craftPopupRows ? this.craftPopupRows[this.craftPopupCursor] : null;
+			if (!row) return;
+			let type = row.itemType;
+			if ((this.craftPopupCollapsedTypes[type] == true) == collapsed) return;
+			this.craftPopupCollapsedTypes[type] = collapsed;
+			this.rebuildCraftPopupList();
+			// keep the cursor on the section that was folded or unfolded
+			for (let i = 0; i < this.craftPopupRows.length; i++) {
+				if (this.craftPopupRows[i].rowType == "header" && this.craftPopupRows[i].itemType == type) {
+					this.setCraftPopupCursor(i);
+					break;
+				}
+			}
+		},
+
+		activateCraftPopupRow: function () {
+			if (this.craftPopupCursor == -1) {
+				$("#craft-popup-show-obsolete").click();
+				return;
+			}
+			let row = this.craftPopupRows ? this.craftPopupRows[this.craftPopupCursor] : null;
+			if (!row) return;
+			if (row.rowType == "header") {
+				this.setCraftPopupSectionCollapsed(this.craftPopupCollapsedTypes[row.itemType] != true);
+				return;
+			}
+			let actionName = "craft_" + row.itemDefinition.id;
+			if (!GameGlobals.playerActionsHelper.checkAvailability(actionName)) {
+				this.flashCraftPopupUnavailable(this.craftPopupCursor);
+				return;
+			}
+			this.openCraftConfirmation(row.itemDefinition);
+		},
+
+		// highlight the name and the lacking costs of an uncraftable recipe for a moment
+		flashCraftPopupUnavailable: function (rowIndex) {
+			let $row = $("#craft-popup-list .craft-popup-row[data-index='" + rowIndex + "']");
+			if ($row.length == 0) return;
+			$row.addClass("craft-popup-flash");
+			setTimeout(function () { $row.removeClass("craft-popup-flash"); }, 1000);
+		},
+
+		openCraftConfirmation: function (itemDefinition) {
+			let actionName = "craft_" + itemDefinition.id;
+			if (!GameGlobals.playerActionsHelper.checkAvailability(actionName)) return;
+
+			let itemName = ItemConstants.getItemDisplayName(itemDefinition);
+			let costsHTML = GameGlobals.uiFunctions.getActionCostsSpanList(actionName).join("<br/>");
+			let msg = "Craft " + itemName + "?";
+			if (costsHTML.length > 0) msg += "<br/><br/>" + costsHTML;
+
+			// popups don't stack: close the list, queue the confirmation, reopen the list after
+			this.craftPopupReopen = true;
+			GameGlobals.uiFunctions.popupManager.closePopup("craft-popup");
+
+			GameGlobals.uiFunctions.popupManager.showPopup("Craft", msg, "Craft", "Cancel", null,
+				function () {
+					GameGlobals.uiFunctions.popupManager.closePopup("common-popup");
+					GameGlobals.playerActionFunctions.startAction(actionName);
+				},
+				function () {
+					GameGlobals.uiFunctions.popupManager.closePopup("common-popup");
+				},
+				{ isMeta: false, isDismissable: true }
+			);
 		},
 				
 		initItemSlots: function () {
