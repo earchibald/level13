@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m58",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "K opens a craft dialog listing every known recipe grouped by type, navigated by the arrow keys, with a Craft button in the bag tab beside it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "I jumps to the bag and opens manage inventory; P jumps to the map"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m57",
             "requiredVersion": "0.6.1",
             "phase": "beta",
