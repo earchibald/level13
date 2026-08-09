@@ -11,9 +11,22 @@ define([
 
         metaMessages: [],
 
+		lastUserInputAt: null,
+		lastIdleCloudCheckAt: null,
+		IDLE_THRESHOLD_MS: 60000,
+		IDLE_CHECK_MIN_GAP_MS: 60000,
+
 		constructor: function () {
             this.showLanguageSelection = GameConstants.isDebugVersion;
             this.initElements();
+
+			let sys = this;
+			this.lastUserInputAt = new Date().getTime();
+			// any of these means the player is still here
+			$(document).on("keydown.cloudidle mousedown.cloudidle touchstart.cloudidle", function () {
+				sys.lastUserInputAt = new Date().getTime();
+			});
+
 			return this;
 		},
 
@@ -26,6 +39,11 @@ define([
 
 		removeFromEngine: function (engine) {
 			GlobalSignals.removeAll(this);
+			$(document).off(".cloudidle");
+		},
+
+		update: function (time) {
+			this.updateIdleCloudCheck();
 		},
 
         initElements: function () {
@@ -331,6 +349,50 @@ define([
 
 				helper.hasConflict = true;
 				sys.showCloudArrivalPrompt(state.updatedAt);
+			});
+		},
+
+		// a session left sitting is the moment to look for a newer save from elsewhere: the
+		// player has stopped doing anything here, so there is nothing of theirs to lose
+		updateIdleCloudCheck: function () {
+			let helper = GameGlobals.gistSaveHelper;
+			if (!helper.isConfigured()) return;
+
+			let now = new Date().getTime();
+			if (now - this.lastUserInputAt < this.IDLE_THRESHOLD_MS) return;
+			if (this.lastIdleCloudCheckAt && now - this.lastIdleCloudCheckAt < this.IDLE_CHECK_MIN_GAP_MS) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			this.lastIdleCloudCheckAt = now;
+
+			let sys = this;
+			helper.fetchGistState().then(function (state) {
+				if (!state.ok || !state.updatedAt) return;
+				let lastSeen = helper.getLastSeen();
+				if (lastSeen && state.updatedAt === lastSeen) return;
+				sys.applyIdleCloudFinding(state.updatedAt);
+			});
+		},
+
+		applyIdleCloudFinding: function (cloudUpdatedAt) {
+			let helper = GameGlobals.gistSaveHelper;
+			// in conflict means this device holds progress the cloud refused, which could be
+			// hours of play. Loading over it silently would destroy that, so ask.
+			if (helper.isInConflict() || !helper.getLastSeen()) {
+				helper.hasConflict = true;
+				this.showCloudArrivalPrompt(cloudUpdatedAt);
+				return;
+			}
+
+			// otherwise this device's state is already in the cloud, so the newer save
+			// descends from it and loading loses nothing worth keeping
+			let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
+			if (!manageSaveSystem) return;
+			helper.loadSlot(GameConstants.SAVE_SLOT_DEFAULT).then(function (result) {
+				if (!result.ok) return;
+				let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
+				if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) return;
+				helper.resolveConflict(cloudUpdatedAt);
+				manageSaveSystem.loadState(saveJSON);
 			});
 		},
 
