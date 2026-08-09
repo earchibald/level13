@@ -88,7 +88,12 @@ define(['ash',
 				};
 				$.each($("#switch-tabs li"), function () {
 					$(this).click(onTabClickedInternal);
-					$(this).keydown((e) => uiFunctions.onButtonLikeElementKeyDown(e, onTabClickedInternal));
+					// ENTER on the tab that is already open must not replay the tab transition:
+					// the keypress belongs to that tab's own action (leave camp, enter camp, use passage)
+					$(this).keydown((e) => {
+						if ($(e.currentTarget).hasClass("selected")) return;
+						uiFunctions.onButtonLikeElementKeyDown(e, onTabClickedInternal);
+					});
 					$(this).append("<span class='tab-hotkey-number' aria-hidden='true'></span>");
 				});
 
@@ -841,12 +846,17 @@ define(['ash',
 
 			triggerContextEnterAction: function () {
 				for (let i = 0; i < this.contextHotkeyActions.length; i++) {
-					let $btn = $("button.action[action='" + this.contextHotkeyActions[i] + "']");
-					if ($btn.length == 0) continue;
-					if (!$btn.is(":visible")) continue;
-					if ($btn.hasClass("btn-disabled")) continue;
-					$btn.click();
-					return;
+					let $buttons = $("button.action[action='" + this.contextHotkeyActions[i] + "']");
+					// an action can have more than one button (the mobile action bar keeps its own copy)
+					// test them one at a time: on a set, is(":visible") and hasClass() answer for any member,
+					// so a hidden disabled copy hid the usable button and the hotkey did nothing
+					for (let j = 0; j < $buttons.length; j++) {
+						let $btn = $buttons.eq(j);
+						if (!$btn.is(":visible")) continue;
+						if ($btn.hasClass("btn-disabled")) continue;
+						$btn.click();
+						return;
+					}
 				}
 			},
 			
@@ -1552,8 +1562,11 @@ define(['ash',
 				let targetTagName = e.target ? e.target.tagName : null;
 				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA") return;
 				// Enter on a focused button already clicked it on keydown; don't also trigger the hotkey
+				// the tab switches are exempt: they keep focus after a click, and re-selecting the open tab
+				// does nothing, so swallowing the keyup would lose that tab's own ENTER action
 				let code = e.originalEvent.code;
-				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && $(e.target).is("button, a, [tabindex]")) return;
+				let isButtonLike = $(e.target).is("button, a, [tabindex]") && !$(e.target).is("#switch-tabs li");
+				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && isButtonLike) return;
 				if (!GameGlobals.uiFunctions.triggerHotkey(code, e)) return;
 			},
 
