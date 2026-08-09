@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m78",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Escape presses continue at the end of a conversation"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m77",
             "requiredVersion": "0.6.1",
             "phase": "beta",

@@ -178,9 +178,18 @@ define([
 				}
 			} else {
 				let label = pageVO.Text.t(defaultLabelKey);
-				$("#dialogue-popup .buttonbox").append("<button class='action dialogue-option' action='end_dialogue'>" + label + "</button>");
+				// the only way on, so ESC means it too (see triggerEscapeButton).
+				// Deliberately not on the option buttons above: choosing one of several
+				// answers on the player's behalf is not what ESC is for.
+				$("#dialogue-popup .buttonbox").append("<button class='action dialogue-option button-popup-escape' action='end_dialogue'>" + label + "</button>");
 			}
-			
+
+			// This popup is not re-shown between pages - the buttons are rebuilt inside
+			// the open one - and showing a popup is what normally clears this flag. One
+			// ESC per dialogue would otherwise be all the player ever got, however many
+			// pages offered a continue.
+			$("#dialogue-popup").attr("data-dismissed", "false");
+
 			GameGlobals.uiFunctions.createButtons("#dialogue-popup .buttonbox");
 
 			GlobalSignals.elementCreatedSignal.dispatch();
