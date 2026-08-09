@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m67",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Saving to the cloud no longer reports that another device has written, and no longer stops the game syncing afterwards"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m66",
             "requiredVersion": "0.6.1",
             "phase": "beta",
