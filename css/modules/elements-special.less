@@ -955,3 +955,27 @@ div.grid-content {
 #github-setup-steps li {
 	margin-bottom: 6px;
 }
+
+// SETTINGS POPUP HEIGHT
+// The cloud saves section made this tall enough to run off the bottom of a desktop
+// window, taking the close button with it and leaving no way out of the dialog.
+// div.popup has no max-height at all, so a tall popup simply overflows the viewport.
+// Cap it and let the middle scroll, so the close button is always on screen.
+#settings-popup {
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+}
+
+#settings-popup h3,
+#settings-popup .buttonbox {
+	flex: 0 0 auto;
+}
+
+#settings-popup-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	// without this a flex child refuses to shrink below its content, and the
+	// overflow never engages
+	min-height: 0;
+}

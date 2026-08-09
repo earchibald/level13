@@ -2978,6 +2978,20 @@ body.dark #github-setup-steps ol {
 body.dark #github-setup-steps li {
   margin-bottom: 6px;
 }
+body.dark #settings-popup {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+body.dark #settings-popup h3,
+body.dark #settings-popup .buttonbox {
+  flex: 0 0 auto;
+}
+body.dark #settings-popup-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
 body.dark .loading-content,
 body.dark .thinking-content {
   position: fixed;
@@ -5779,6 +5793,20 @@ body.sunlit #github-setup-steps ol {
 }
 body.sunlit #github-setup-steps li {
   margin-bottom: 6px;
+}
+body.sunlit #settings-popup {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+body.sunlit #settings-popup h3,
+body.sunlit #settings-popup .buttonbox {
+  flex: 0 0 auto;
+}
+body.sunlit #settings-popup-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
 }
 body.sunlit .loading-content,
 body.sunlit .thinking-content {
