@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m59",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "One press of Enter no longer both switches tabs and fires the tab's own action"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A fast second Enter in the craft dialog no longer leaves it on screen without its overlay"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Enter no longer takes all when hotkeys are turned off in settings"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m58",
             "requiredVersion": "0.6.1",
             "phase": "beta",
