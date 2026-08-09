@@ -2951,6 +2951,33 @@ body.dark .craft-popup-row.craft-popup-flash span.action-cost-blocker {
   color: #e64646;
   font-weight: bold;
 }
+body.dark .settings-group {
+  margin: 10px 0;
+}
+body.dark .settings-group-header {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+body.dark #settings-github-token {
+  min-width: 180px;
+  margin-right: 6px;
+}
+body.dark #settings-github-status {
+  margin: 4px 0 8px 0;
+  word-break: break-all;
+}
+body.dark #github-setup-steps {
+  max-height: 55vh;
+  overflow-y: auto;
+  text-align: left;
+}
+body.dark #github-setup-steps ol {
+  margin: 8px 0 8px 18px;
+  list-style: decimal outside;
+}
+body.dark #github-setup-steps li {
+  margin-bottom: 6px;
+}
 body.dark .loading-content,
 body.dark .thinking-content {
   position: fixed;
@@ -5725,6 +5752,33 @@ body.sunlit .craft-popup-row.craft-popup-flash .craft-popup-item-name,
 body.sunlit .craft-popup-row.craft-popup-flash span.action-cost-blocker {
   color: #e64646;
   font-weight: bold;
+}
+body.sunlit .settings-group {
+  margin: 10px 0;
+}
+body.sunlit .settings-group-header {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+body.sunlit #settings-github-token {
+  min-width: 180px;
+  margin-right: 6px;
+}
+body.sunlit #settings-github-status {
+  margin: 4px 0 8px 0;
+  word-break: break-all;
+}
+body.sunlit #github-setup-steps {
+  max-height: 55vh;
+  overflow-y: auto;
+  text-align: left;
+}
+body.sunlit #github-setup-steps ol {
+  margin: 8px 0 8px 18px;
+  list-style: decimal outside;
+}
+body.sunlit #github-setup-steps li {
+  margin-bottom: 6px;
 }
 body.sunlit .loading-content,
 body.sunlit .thinking-content {

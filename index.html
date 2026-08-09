@@ -1088,12 +1088,47 @@
 			<span class="settings-entry">
 				<input type="checkbox" class="checkbox" id="settings-checkbox-hotkeys-numpad" /><p class="checkbox-label">Use Numpad for movement</p>
 			</span>
+			<div id="settings-github" class="settings-group">
+				<p class="settings-group-header">Cloud saves</p>
+				<span class="settings-entry">
+					<input type="password" id="settings-github-token" placeholder="GitHub token" autocomplete="off" />
+					<button id="btn-settings-github-validate">Save and validate</button>
+				</span>
+				<p id="settings-github-status" class="p-meta">Not set up</p>
+				<span class="settings-entry">
+					<input type="checkbox" class="checkbox" id="settings-checkbox-github-auto" /><p class="checkbox-label">Mirror every save automatically</p>
+				</span>
+				<button id="btn-settings-github-help">How do I get a token?</button>
+			</div>
 			<div id="hotkeys-list" class="scrollable-container"></div>
 			<div id="language-selection" class="hidden-by-default">
 				<select id="language-dropdown"></select>
 			</div>
 			<div class="buttonbox">
 				<button id="settings-popup-close" class="button-popup-default">Close</button>
+			</div>
+		</div>
+
+		<div id="github-setup-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="github-setup-popup-header" aria-modal="true">
+			<h3 id="github-setup-popup-header">Set up cloud saves</h3>
+			<div id="github-setup-steps" class="scrollable-container">
+				<p>Cloud saves keep a copy of your save in a GitHub Gist, so you can pick the game up on another machine.</p>
+				<p class="warning">The gist is <em>secret</em>, which means unlisted rather than private. Anyone with the link can read it. It holds a compressed game state and nothing personal, but it is not protected.</p>
+				<ol>
+					<li>On GitHub, open your profile picture menu and choose <strong>Settings</strong>.</li>
+					<li>In the left sidebar, choose <strong>Developer settings</strong>.</li>
+					<li>Under Personal access tokens, choose <strong>Fine-grained tokens</strong>, then <strong>Generate new token</strong>.<br/><span class="p-meta">Direct link: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></span></li>
+					<li>Give it a <strong>Token name</strong>, for example <em>level13 saves</em>.</li>
+					<li>Set an <strong>Expiration</strong>. When it expires, saving stops working until you make a new one.</li>
+					<li>Leave <strong>Resource owner</strong> as your own account.</li>
+					<li>Open <strong>Permissions</strong>, find <strong>Account permissions</strong>, and set <strong>Gists</strong> to <strong>Read and write</strong>.</li>
+					<li>Press <strong>Generate token</strong> and copy it. GitHub shows it once and never again.</li>
+					<li>Paste it into the token box in Settings and press <strong>Save and validate</strong>.</li>
+				</ol>
+				<p class="p-meta">Validating creates one secret gist called "Level 13 saves". Each save slot becomes a file inside it.</p>
+			</div>
+			<div class="buttonbox">
+				<button id="github-setup-popup-close" class="button-popup-default">Close</button>
 			</div>
 		</div>
 

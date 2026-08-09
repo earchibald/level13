@@ -33,6 +33,12 @@ define([
 			$("#settings-checkbox-sfx-enabled").change(() => sys.onSettingToggled());
 			$("#settings-checkbox-hotkeys-enabled").change(() => sys.onSettingToggled());
 			$("#settings-checkbox-hotkeys-numpad").change(() => sys.onSettingToggled());
+			$("#btn-settings-github-validate").click(() => sys.onGithubValidateClicked());
+			$("#btn-settings-github-help").click(() => GameGlobals.uiFunctions.showSpecialPopup("github-setup-popup", { isMeta: true, isDismissable: true }));
+			$("#github-setup-popup-close").click(() => GameGlobals.uiFunctions.popupManager.closePopup("github-setup-popup"));
+			$("#settings-checkbox-github-auto").change(() => {
+				GameGlobals.gistSaveHelper.setAutoMirrorEnabled($("#settings-checkbox-github-auto").is(":checked"));
+			});
 
             let languageOptions = "";
             for (var key in GameGlobals.textLoader.textSources) {
@@ -95,6 +101,7 @@ define([
         updateSettingsValues: function () {
             $("#settings-checkbox-sfx-enabled").prop("checked", GameGlobals.gameState.settings.sfxEnabled);
             $("#settings-checkbox-hotkeys-enabled").prop("checked", GameGlobals.gameState.settings.hotkeysEnabled);
+            this.updateGithubSettings();
             $("#settings-checkbox-hotkeys-numpad").prop("checked", GameGlobals.gameState.settings.hotkeysNumpad);
 
             $("#settings-checkbox-hotkeys-numpad").parent().find("input").prop('disabled', !GameGlobals.gameState.settings.hotkeysEnabled);
@@ -145,6 +152,40 @@ define([
 
         isHotkeyListItemDataSame: function (d1, d2) {
             return d1.displayName == d2.displayName && d1.value == d2.value && d1.isDisabled == d2.isDisabled;
+        },
+
+        onGithubValidateClicked: function () {
+            let sys = this;
+            let existingId = GameGlobals.gistSaveHelper.getGistId();
+            if (existingId) {
+                GameGlobals.uiFunctions.showConfirmation(
+                    "This will create a new gist and stop using the current one.<br/><br/><span class='p-meta'>Saves already in gist " + existingId + " stay on GitHub, but the game will no longer see them.</span>",
+                    function () { sys.runGithubValidation(); }, false, true);
+                return;
+            }
+            this.runGithubValidation();
+        },
+
+        runGithubValidation: function () {
+            let sys = this;
+            let token = $("#settings-github-token").val();
+            $("#settings-github-status").text("Checking...");
+            GameGlobals.gistSaveHelper.validateAndSetup(token).then(function (result) {
+                if (result.ok) {
+                    // the token is never shown again, the same way GitHub treats it
+                    $("#settings-github-token").val("");
+                }
+                sys.updateGithubSettings();
+            });
+        },
+
+        updateGithubSettings: function () {
+            let helper = GameGlobals.gistSaveHelper;
+            let isConfigured = helper.isConfigured();
+            let status = isConfigured ? "Connected. Saves go to gist " + helper.getGistId() : (helper.getLastError() || "Not set up");
+            $("#settings-github-status").text(status);
+            $("#settings-checkbox-github-auto").prop("disabled", !isConfigured);
+            $("#settings-checkbox-github-auto").prop("checked", helper.isAutoMirrorEnabled());
         },
 
         saveSettings: function () {
