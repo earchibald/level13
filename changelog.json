@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m65",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The cloud save is read fresh every time instead of from the browser cache, which was reporting saves over an hour out of date"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Cloud save times are shown in your own timezone, in the same format as the local time beside them"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m64",
             "requiredVersion": "0.6.1",
             "phase": "beta",
