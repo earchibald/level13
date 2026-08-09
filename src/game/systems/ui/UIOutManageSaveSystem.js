@@ -144,6 +144,12 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 					// saveDataToSlot owns the storage-key rule, including the legacy "save"
 					// key the default slot also writes. Do not hand-roll those keys here.
 					system.getSaveSystem().saveDataToSlot(slotID, result.data);
+					// reloading only takes effect for the slot the game boots from; for any
+					// other slot it would boot the default one and look like nothing happened
+					if (slotID == GameConstants.SAVE_SLOT_DEFAULT) {
+						location.reload();
+						return;
+					}
 					GameGlobals.uiFunctions.showInfoPopup("Cloud load", "Slot updated. Open manage saves and load it to play it.", "OK", null, null, false, true);
 				}, false, true);
 			});

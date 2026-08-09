@@ -197,7 +197,9 @@ define([
 						let saveSystem = GameGlobals.uiFunctions.getSaveSystemForCloud();
 						if (saveSystem) saveSystem.saveDataToSlot(slotID, result.data);
 						helper.resolveConflict(cloudUpdatedAt);
-						GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "Loaded. Reload the page to play it.", "OK", null, null, false, true);
+						// the running game is still the old state, and this slot is the one
+						// the game boots from, so reloading is what makes the load take effect
+						location.reload();
 					});
 				},
 				function () {
