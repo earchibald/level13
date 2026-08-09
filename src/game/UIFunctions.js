@@ -775,6 +775,18 @@ define(['ash',
 						() => GameGlobals.uiFunctions.moveMapSelection(arrow.dir), { isHiddenFromList: true });
 				}
 
+				// zoom, the same path the + and - buttons take.
+				// On most layouts + is Shift and =, and triggerHotkey skips a no-modifier
+				// hotkey whenever a modifier is held - so binding Equal alone would answer
+				// to = but not to the + actually printed on the key. Both forms are needed.
+				let zoomIn = () => GameGlobals.uiFunctions.zoomMapView(1);
+				let zoomOut = () => GameGlobals.uiFunctions.zoomMapView(-1);
+				this.registerHotkey("Zoom in", "Equal", defaultModifier, tabs.map, false, false, zoomIn, { displayKey: "+" });
+				this.registerHotkey("Zoom in", "Equal", "shiftKey", tabs.map, false, false, zoomIn, { isHiddenFromList: true });
+				this.registerHotkey("Zoom in", "NumpadAdd", defaultModifier, tabs.map, false, false, zoomIn, { isHiddenFromList: true });
+				this.registerHotkey("Zoom out", "Minus", defaultModifier, tabs.map, false, false, zoomOut, { displayKey: "-" });
+				this.registerHotkey("Zoom out", "NumpadSubtract", defaultModifier, tabs.map, false, false, zoomOut, { isHiddenFromList: true });
+
 				// Escape goes back to the exploration tab, but ONLY when there is no popup:
 				// registered before the dismiss binding because triggerHotkey stops at the
 				// first match, and dismissPopups reports nothing back about whether it acted
