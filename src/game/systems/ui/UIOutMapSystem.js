@@ -1376,6 +1376,12 @@ define([
 			}
 			this.updateMap();
 			this.centerMap();
+
+			// start where the player is, as though they had clicked their own sector.
+			// selectLevel above has already cleared selectedSector, and the tabProps branch
+			// sets it when the caller asked for a specific sector - so this only fills in
+			// the plain case of opening the map with nothing chosen
+			if (!this.selectedSector) this.selectPlayerSectorIfOnLevel();
 			this.updateMapCompletionHint();
 		},
 		
