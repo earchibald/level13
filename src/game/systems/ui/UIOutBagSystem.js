@@ -262,6 +262,7 @@ define([
 			// callback, and the cancel handler before the cancel callback. Closing it here
 			// too schedules a second, unbalanced hideOverlay, and the overlay is the craft
 			// popup's parent, so the reopen below would be hidden the moment it happened.
+			// The cancel callback is null for the same reason: closing is already handled.
 			GameGlobals.uiFunctions.popupManager.showPopup("Craft", msg, "Craft", "Cancel", null,
 				function () {
 					// startAction passes its param straight to craftItem; without it the
