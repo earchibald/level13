@@ -111,11 +111,15 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 			// the raw compressed string, exactly what localStorage holds and what the gist wants
 			let data = this.getSaveSystem().getDataFromSlot(slotID);
 			if (!data) {
+				GameGlobals.uiFunctions.popupManager.closePopup("manage-save-popup");
 				GameGlobals.uiFunctions.showInfoPopup("Cloud save", "That slot is empty.", "OK", null, null, false, true);
 				return;
 			}
 			GameGlobals.gistSaveHelper.saveSlot(slotID, data).then(function (result) {
 				let msg = result.ok ? "Saved to GitHub." : ("Could not save: " + result.error);
+				// popups do not stack: anything raised while manage-save-popup is open is
+				// queued behind it and never seen, so close it before reporting
+				GameGlobals.uiFunctions.popupManager.closePopup("manage-save-popup");
 				GameGlobals.uiFunctions.showInfoPopup("Cloud save", msg, "OK", null, null, false, true);
 			});
 		},
@@ -126,6 +130,8 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 			if (!slotID) return;
 			let system = this;
 			GameGlobals.gistSaveHelper.loadSlot(slotID).then(function (result) {
+				// popups do not stack, so close this one before raising the next
+				GameGlobals.uiFunctions.popupManager.closePopup("manage-save-popup");
 				if (!result.ok) {
 					GameGlobals.uiFunctions.showInfoPopup("Cloud load", "Could not load: " + result.error, "OK", null, null, false, true);
 					return;
@@ -138,8 +144,7 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 					// saveDataToSlot owns the storage-key rule, including the legacy "save"
 					// key the default slot also writes. Do not hand-roll those keys here.
 					system.getSaveSystem().saveDataToSlot(slotID, result.data);
-					system.refresh();
-					GameGlobals.uiFunctions.showInfoPopup("Cloud load", "Slot updated. Load it from the list to play it.", "OK", null, null, false, true);
+					GameGlobals.uiFunctions.showInfoPopup("Cloud load", "Slot updated. Open manage saves and load it to play it.", "OK", null, null, false, true);
 				}, false, true);
 			});
 		},
