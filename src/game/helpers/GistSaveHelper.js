@@ -26,10 +26,12 @@ function (Ash, GameGlobals, GameConstants) {
 		lastError: null,
 		pendingMirrors: null,
 		lastMirrorTimestamps: null,
+		pendingMirrorTimers: null,
 
 		constructor: function () {
 			this.pendingMirrors = {};
 			this.lastMirrorTimestamps = {};
+			this.pendingMirrorTimers = {};
 		},
 
 		getToken: function () {
@@ -87,6 +89,23 @@ function (Ash, GameGlobals, GameConstants) {
 			return this.lastError;
 		},
 
+		// GitHub's errors are usually JSON, but a proxy or a rate limiter can answer with an
+		// HTML page. Reading the body as text first means a rate limit reports as a rate
+		// limit instead of as a parse error dressed up as a connection problem.
+		getErrorMessage: function (response) {
+			return response.text().then(function (text) {
+				try {
+					let json = JSON.parse(text);
+					if (json && json.message) return json.message;
+				} catch (ex) {
+					// not JSON - fall through to the status
+				}
+				return "HTTP " + response.status;
+			}).catch(function () {
+				return "HTTP " + response.status;
+			});
+		},
+
 		// validation creates the gist, because that exercises the one permission the
 		// feature needs. Checking GET /gists instead would prove nothing: it is not
 		// documented for fine-grained tokens and is known to misbehave with them.
@@ -109,12 +128,13 @@ function (Ash, GameGlobals, GameConstants) {
 				},
 				body: JSON.stringify(body)
 			}).then(function (response) {
-				return response.json().then(function (json) {
-					if (!response.ok) {
-						let msg = (json && json.message) ? json.message : ("HTTP " + response.status);
+				if (!response.ok) {
+					return helper.getErrorMessage(response).then(function (msg) {
 						helper.lastError = msg;
 						return { ok: false, error: msg };
-					}
+					});
+				}
+				return response.json().then(function (json) {
 					helper.setToken(token);
 					helper.setGistId(json.id);
 					helper.lastError = null;
@@ -144,8 +164,7 @@ function (Ash, GameGlobals, GameConstants) {
 				body: JSON.stringify({ files: files })
 			}).then(function (response) {
 				if (!response.ok) {
-					return response.json().then(function (json) {
-						let msg = (json && json.message) ? json.message : ("HTTP " + response.status);
+					return helper.getErrorMessage(response).then(function (msg) {
 						helper.lastError = msg;
 						return { ok: false, error: msg };
 					});
@@ -171,12 +190,13 @@ function (Ash, GameGlobals, GameConstants) {
 			return fetch(this.API_ROOT + "/gists/" + gistId, {
 				headers: { "Accept": "application/vnd.github+json" }
 			}).then(function (response) {
-				return response.json().then(function (json) {
-					if (!response.ok) {
-						let msg = (json && json.message) ? json.message : ("HTTP " + response.status);
+				if (!response.ok) {
+					return helper.getErrorMessage(response).then(function (msg) {
 						helper.lastError = msg;
 						return { ok: false, error: msg };
-					}
+					});
+				}
+				return response.json().then(function (json) {
 					let file = json.files ? json.files[fileName] : null;
 					if (!file) {
 						let msg = "No cloud save for this slot";
@@ -217,18 +237,31 @@ function (Ash, GameGlobals, GameConstants) {
 
 			if (sinceLast < this.MIRROR_MIN_INTERVAL_MS) {
 				// coalesce: keep only the newest data, and let the timer already in flight send it
-				let hadPending = !!this.pendingMirrors[slotID];
+				let hadPending = !!this.pendingMirrorTimers[slotID];
 				this.pendingMirrors[slotID] = data;
 				if (hadPending) return;
-				setTimeout(function () {
+				this.pendingMirrorTimers[slotID] = setTimeout(function () {
 					let pending = helper.pendingMirrors[slotID];
 					delete helper.pendingMirrors[slotID];
+					delete helper.pendingMirrorTimers[slotID];
 					if (pending) helper.sendMirror(slotID, pending);
 				}, this.MIRROR_MIN_INTERVAL_MS - sinceLast);
 				return;
 			}
 
+			// sending right now, so drop whatever a pending timer was holding: it is older
+			// than this by construction, and letting it fire too would race two writes at the
+			// gist with no ordering guarantee - the older one can land last and win
+			this.cancelPendingMirror(slotID);
 			this.sendMirror(slotID, data);
+		},
+
+		cancelPendingMirror: function (slotID) {
+			if (this.pendingMirrorTimers[slotID]) {
+				clearTimeout(this.pendingMirrorTimers[slotID]);
+				delete this.pendingMirrorTimers[slotID];
+			}
+			delete this.pendingMirrors[slotID];
 		},
 
 		sendMirror: function (slotID, data) {
