@@ -179,6 +179,34 @@ define([
             });
         },
 
+		showCloudArrivalPrompt: function (cloudUpdatedAt) {
+			let helper = GameGlobals.gistSaveHelper;
+			let slotID = GameConstants.SAVE_SLOT_DEFAULT;
+
+			let msg = "A save from another device is in the cloud.<br/><br/>";
+			msg += "<span class='p-meta'>cloud updated: " + cloudUpdatedAt + "</span><br/><br/>";
+			msg += "Load it, or keep the save on this device and carry on from here?";
+
+			GameGlobals.uiFunctions.showQuestionPopup("Cloud saves", msg, "Load the cloud save", "Keep this device's",
+				function () {
+					helper.loadSlot(slotID).then(function (result) {
+						if (!result.ok) {
+							GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "Could not load: " + result.error, "OK", null, null, false, true);
+							return;
+						}
+						let saveSystem = GameGlobals.uiFunctions.getSaveSystemForCloud();
+						if (saveSystem) saveSystem.saveDataToSlot(slotID, result.data);
+						helper.resolveConflict(cloudUpdatedAt);
+						GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "Loaded. Reload the page to play it.", "OK", null, null, false, true);
+					});
+				},
+				function () {
+					// accept the cloud as seen without pulling, so this device may push again
+					helper.resolveConflict(cloudUpdatedAt);
+				},
+				false);
+		},
+
         updateGithubSettings: function () {
             let helper = GameGlobals.gistSaveHelper;
             let isConfigured = helper.isConfigured();
@@ -227,7 +255,27 @@ define([
 
         onGameShown: function () {
             this.loadMetaMessages();
+			this.checkCloudSaveOnArrival();
         },
+
+		// once per game start: if the cloud moved since this device last synced, another
+		// device has been played. Never changes anything on its own
+		checkCloudSaveOnArrival: function () {
+			let sys = this;
+			let helper = GameGlobals.gistSaveHelper;
+			if (!helper.isConfigured()) return;
+
+			helper.fetchGistState().then(function (state) {
+				// being unable to reach GitHub is not a conflict, and must not block startup
+				if (!state.ok) return;
+				let lastSeen = helper.getLastSeen();
+				if (!lastSeen || !state.updatedAt) return;
+				if (state.updatedAt === lastSeen) return;
+
+				helper.hasConflict = true;
+				sys.showCloudArrivalPrompt(state.updatedAt);
+			});
+		},
 
         onMetaMessagesLoaded: function () {
             this.showUnseenMetaMessages();

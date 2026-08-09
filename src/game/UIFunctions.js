@@ -874,6 +874,17 @@ define(['ash',
 				return result;
 			},
 
+			// SaveSystem is an Ash system, so it cannot be held at module load
+			getSaveSystemForCloud: function () {
+				if (!this.cloudSaveSystem) {
+					try {
+						let SaveSystem = require("game/systems/SaveSystem");
+						this.cloudSaveSystem = GameGlobals.engine.getSystem(SaveSystem);
+					} catch (ex) { return null; }
+				}
+				return this.cloudSaveSystem;
+			},
+
 			// the map cursor lives in UIOutMapSystem; this is the hotkey's way in
 			moveMapSelection: function (direction) {
 				let system = GameGlobals.uiFunctions.getMapSystem();
