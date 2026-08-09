@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m66",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The footer shows whether the cloud save is working, and a failure or a conflict raises a message"
+                },
+                {
+                    "type": "UI",
+                    "summary": "A session left idle for a minute looks for a newer save from another device, and takes it when there is nothing of yours to lose"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m65",
             "requiredVersion": "0.6.1",
             "phase": "beta",
