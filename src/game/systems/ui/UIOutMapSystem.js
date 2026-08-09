@@ -59,8 +59,6 @@ define([
 			$("#select-header-mapmode").on("change", $.proxy(this.onMapModeSelectorChanged, this));
 			$("#select-header-mapstyle").on("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.enableScrollingForMap("mainmap");
-			this._onMapMouseWheel = $.proxy(this.onMapMouseWheel, this);
-			$("#mainmap-container").on("wheel", this._onMapMouseWheel);
 			// delegated so the handlers survive the overlay being rebuilt (on zoom, level change etc)
 			this._onSectorHoverIn = $.proxy(this.onSectorHoverIn, this);
 			this._onSectorHoverMove = $.proxy(this.onSectorHoverMove, this);
@@ -98,7 +96,6 @@ define([
 			$("#select-header-mapmode").off("change", $.proxy(this.onMapModeSelectorChanged, this));
 			$("#select-header-mapstyle").off("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.disableScrollingForMap("mainmap");
-			if (this._onMapMouseWheel) $("#mainmap-container").off("wheel", this._onMapMouseWheel);
 			this.hideSectorTooltip();
 			if (this._onMapScroll) $("#mainmap-container").off("scroll", this._onMapScroll);
 			$("#mainmap-overlay, #minimap-overlay").off("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
@@ -745,17 +742,6 @@ define([
 			if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
 
 			$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
-		},
-
-		onMapMouseWheel: function (e) {
-			if (this.selectedMapStyle != this.MAP_STYLE_CANVAS) return;
-			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
-			this.hideSectorTooltip();
-			let originalEvent = e.originalEvent || e;
-			let deltaY = originalEvent.deltaY;
-			if (!deltaY) return;
-			e.preventDefault();
-			this.zoomMap(deltaY < 0 ? 1 : -1, originalEvent.pageX, originalEvent.pageY);
 		},
 
 		zoomMap: function (steps, pageX, pageY) {
