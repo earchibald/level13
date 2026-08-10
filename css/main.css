@@ -7509,12 +7509,57 @@ body.landscape-map #log-toasts {
     opacity: 0.6;
     font-size: 0.85em;
   }
+  #in-improvements-level tr,
+  #in-improvements-colony tr,
+  #in-improvements-level-built tr,
+  #in-improvements-colony-built tr {
+    display: grid;
+    grid-template-columns: min-content min-content 1fr;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 4px;
+    padding: 8px 0;
+  }
+  #in-improvements-level tr + tr,
+  #in-improvements-colony tr + tr,
+  #in-improvements-level-built tr + tr,
+  #in-improvements-colony-built tr + tr {
+    border-top: 1px solid var(--l13-mobile-border);
+  }
+  #in-improvements-level td.label,
+  #in-improvements-colony td.label,
+  #in-improvements-level-built td.label,
+  #in-improvements-colony-built td.label,
+  #in-improvements-level td.list-description,
+  #in-improvements-colony td.list-description,
+  #in-improvements-level-built td.list-description,
+  #in-improvements-colony-built td.list-description {
+    grid-column: 1 / -1;
+    width: auto;
+  }
+  #in-improvements-level td.minwidth,
+  #in-improvements-colony td.minwidth,
+  #in-improvements-level-built td.minwidth,
+  #in-improvements-colony-built td.minwidth {
+    width: auto;
+  }
+  #in-improvements-level td.minwidth:has(> button[style*="display: none"]),
+  #in-improvements-level td.minwidth:has(> button[style*="display:none"]),
+  #in-improvements-colony td.minwidth:has(> button[style*="display: none"]),
+  #in-improvements-colony td.minwidth:has(> button[style*="display:none"]),
+  #in-improvements-level-built td.minwidth:has(> button[style*="display: none"]),
+  #in-improvements-level-built td.minwidth:has(> button[style*="display:none"]),
+  #in-improvements-colony-built td.minwidth:has(> button[style*="display: none"]),
+  #in-improvements-colony-built td.minwidth:has(> button[style*="display:none"]) {
+    display: none;
+  }
   #in-improvements-level td.td-button,
   #in-improvements-colony td.td-button,
   #in-improvements-level-built td.td-button,
   #in-improvements-colony-built td.td-button {
+    grid-column: 3;
+    justify-self: end;
     width: auto !important;
-    margin-left: auto;
   }
   .trade-caravans-outgoing-plan td {
     width: 100%;

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m81",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Camp projects display as readable cards on mobile instead of overlapping table columns"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m80",
             "requiredVersion": "0.6.1",
             "phase": "beta",

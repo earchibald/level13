@@ -2288,14 +2288,76 @@ body.landscape-map #log-toasts {
 		font-size: 0.85em;
 	}
 
-	// project rows: the generated inline width:138px pins the flexed
-	// action cell; let it size to content and keep right alignment
+	// PROJECT ROWS: five columns - name, location, hide, map, and an action
+	// button that generates with an inline width:138px - cannot share a
+	// phone row. Flexed, the 5%-wide minwidth cells overflowed their boxes
+	// and the hide and map buttons painted over each other. Each row is a
+	// card instead: name, location under it, and the buttons on one line
+	// beneath with the action on the right edge.
+	#in-improvements-level tr,
+	#in-improvements-colony tr,
+	#in-improvements-level-built tr,
+	#in-improvements-colony-built tr {
+		display: grid;
+		grid-template-columns: min-content min-content 1fr;
+		align-items: center;
+		column-gap: 8px;
+		row-gap: 4px;
+		padding: 8px 0;
+	}
+
+	#in-improvements-level tr + tr,
+	#in-improvements-colony tr + tr,
+	#in-improvements-level-built tr + tr,
+	#in-improvements-colony-built tr + tr {
+		border-top: 1px solid var(--l13-mobile-border);
+	}
+
+	#in-improvements-level td.label,
+	#in-improvements-colony td.label,
+	#in-improvements-level-built td.label,
+	#in-improvements-colony-built td.label,
+	#in-improvements-level td.list-description,
+	#in-improvements-colony td.list-description,
+	#in-improvements-level-built td.list-description,
+	#in-improvements-colony-built td.list-description {
+		grid-column: 1 / -1;
+		width: auto;
+	}
+
+	// the width override beats td.minwidth (5%), which is what let the
+	// buttons overlap
+	#in-improvements-level td.minwidth,
+	#in-improvements-colony td.minwidth,
+	#in-improvements-level-built td.minwidth,
+	#in-improvements-colony-built td.minwidth {
+		width: auto;
+	}
+
+	// a cell whose only button is hidden (built rows, projects that cannot
+	// be hidden) must leave the grid entirely, or it holds an empty button
+	// line under the card. jQuery hides the button with an inline display,
+	// so that is what there is to match on.
+	#in-improvements-level td.minwidth:has(> button[style*="display: none"]),
+	#in-improvements-level td.minwidth:has(> button[style*="display:none"]),
+	#in-improvements-colony td.minwidth:has(> button[style*="display: none"]),
+	#in-improvements-colony td.minwidth:has(> button[style*="display:none"]),
+	#in-improvements-level-built td.minwidth:has(> button[style*="display: none"]),
+	#in-improvements-level-built td.minwidth:has(> button[style*="display:none"]),
+	#in-improvements-colony-built td.minwidth:has(> button[style*="display: none"]),
+	#in-improvements-colony-built td.minwidth:has(> button[style*="display:none"]) {
+		display: none;
+	}
+
+	// the action cell generates with an inline width:138px; let it size to
+	// content and keep it on the right edge of the button line
 	#in-improvements-level td.td-button,
 	#in-improvements-colony td.td-button,
 	#in-improvements-level-built td.td-button,
 	#in-improvements-colony-built td.td-button {
+		grid-column: 3;
+		justify-self: end;
 		width: auto !important;
-		margin-left: auto;
 	}
 
 	// outgoing caravan planner: stack the five widgets full-width
