@@ -1365,7 +1365,7 @@ define([
 			// and put the label and the list on separate lines.
 			this.elements.findsRow.toggleClass("no-items", !this.hasVisibleItemsToShow(featuresComponent));
 
-			this.updateRoomIntro(sectorHeaderText, hasVision, features, isScouted, hasCampHere);
+			this.updateRoomIntro(isScouted, hasCampHere);
 		},
 
 		// The description used to be on screen simply because it was in the
@@ -1373,9 +1373,19 @@ define([
 		// who has not asked for it should see it: the first time they stand
 		// here, and any time the room itself has changed since.
 		//
-		// The key is the room's identity, NOT the rendered description. That
-		// text carries the glowstick countdown and whether there are enemies
-		// about, so hashing it would re-open the panel on almost every tick.
+		// The key is the room's identity, and NOTHING that is merely true of the
+		// room right now. It used to hash the rendered header and description,
+		// which is not identity at all: getSectorDescription picks between a
+		// "sector-vision" and a "sector-novision" template, so the same room
+		// hashed differently by lamplight than in the dark, and the text
+		// features underneath it move with scavenging besides. A fresh launch
+		// starts with vision low and climbing, so the stored hash almost never
+		// matched and every room was described again - which is what this was
+		// supposed to stop.
+		//
+		// What is left is what actually makes a room worth introducing twice:
+		// having been scouted, and having a camp in it. Position is the key it
+		// is stored under, so it does not need repeating in the value.
 		//
 		// Kept in the browser, NOT in the save. The save format uses two-letter
 		// keys and drops falsy values to stay small, and a hash per sector
@@ -1387,20 +1397,18 @@ define([
 		//
 		// It was in memory only, so every reload described every room the
 		// player walked back through as if it were new.
-		updateRoomIntro: function (sectorHeaderText, hasVision, features, isScouted, hasCampHere) {
+		// A value stored by an earlier version is a number, and this one is a string, so
+		// they never match: every room gets one more introduction and then settles. One
+		// repeat is a better migration than reading someone else's format.
+		updateRoomIntro: function (isScouted, hasCampHere) {
 			if (!this.shownRoomIntros) this.shownRoomIntros = this.loadShownRoomIntros();
 
 			let position = this.playerPosNodes.head.position;
 			let positionKey = position.level + "." + position.sectorX + "." + position.sectorY;
 
-			let introKey = [
-				sectorHeaderText,
-				TextConstants.getSectorDescription(hasVision, features),
-				isScouted ? 1 : 0,
-				hasCampHere ? 1 : 0
-			].join("|");
-
-			let hash = this.getStringHash(introKey);
+			// two flags, so it is readable in storage and cannot drift with anything
+			// that is not one of them
+			let hash = (isScouted ? "1" : "0") + (hasCampHere ? "1" : "0");
 
 			if (this.shownRoomIntros[positionKey] === hash) return;
 
@@ -1457,16 +1465,6 @@ define([
 			} catch (ex) {
 				log.w("could not store shown room intros: " + ex);
 			}
-		},
-
-		// djb2. Short keys, thousands of sectors, and only ever compared with
-		// itself - a collision costs one intro that is not shown.
-		getStringHash: function (s) {
-			let hash = 5381;
-			for (let i = 0; i < s.length; i++) {
-				hash = ((hash << 5) + hash + s.charCodeAt(i)) | 0;
-			}
-			return hash;
 		},
 
 		updateLocationDetails: function () {

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m79",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Rooms are no longer described again every time the game is opened"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m78",
             "requiredVersion": "0.6.1",
             "phase": "beta",
