@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m82",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a cloud save no longer erases the memory of which rooms have been described"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m81",
             "requiredVersion": "0.6.1",
             "phase": "beta",

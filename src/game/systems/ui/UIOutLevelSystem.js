@@ -1401,7 +1401,15 @@ define([
 		// they never match: every room gets one more introduction and then settles. One
 		// repeat is a better migration than reading someone else's format.
 		updateRoomIntro: function (isScouted, hasCampHere) {
-			if (!this.shownRoomIntros) this.shownRoomIntros = this.loadShownRoomIntros();
+			// Never load - and above all never CACHE a load - while the world
+			// seed is unset. A load against seed 0 rejects the real memory,
+			// and caching that rejection replays every room for the session.
+			// The seed is 0 during boot and again between a reset and the
+			// world coming back, and this can run in both windows.
+			if (!this.shownRoomIntros) {
+				if (!GameGlobals.gameState.worldSeed) return;
+				this.shownRoomIntros = this.loadShownRoomIntros();
+			}
 
 			let position = this.playerPosNodes.head.position;
 			let positionKey = position.level + "." + position.sectorX + "." + position.sectorY;
@@ -1457,6 +1465,10 @@ define([
 		// is worth an exception on the path that shows a room description. Losing it
 		// costs one repeated intro.
 		saveShownRoomIntros: function () {
+			// a map stamped with seed 0 belongs to no world and would be
+			// rejected by every future load - refusing the write keeps
+			// whatever is stored, which at worst repeats one intro
+			if (!GameGlobals.gameState.worldSeed) return;
 			try {
 				localStorage.setItem(this.STORAGE_KEY_ROOM_INTROS, JSON.stringify({
 					seed: GameGlobals.gameState.worldSeed,
@@ -1527,14 +1539,18 @@ define([
 			this.showTollGatePopup(direction);
 		},
 
-		// The shown-intro map belongs to one world, not to the save, so a restart in
-		// the same page would otherwise inherit it - same starting position, same
-		// identity hash - and the new game's first room would open with no intro at
-		// all. The stored copy is stamped with a world seed and would be rejected on
-		// the next read anyway; this drops it now so nothing carries over in memory.
+		// Dropped from MEMORY only, never from storage. This fires for every
+		// world rebuild, and most rebuilds are the same world coming back:
+		// loading a cloud save at startup goes through the restart path, so
+		// clearing storage here wiped the room memory on every launch that
+		// touched the cloud - which on a phone is every launch - and every
+		// room introduced itself again. The stored copy is stamped with its
+		// world's seed: a genuinely new game has a new seed and rejects it
+		// on the next read, and the same world reloaded keeps its memory.
+		// Nulling the cache is still required, or a restart in the same page
+		// would inherit the old world's map without consulting the stamp.
 		onGameReset: function () {
-			this.shownRoomIntros = {};
-			this.saveShownRoomIntros();
+			this.shownRoomIntros = null;
 			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 
