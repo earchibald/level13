@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m80",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "CHANGE",
+                    "summary": "Sounds play with near-zero latency and no per-click stutter"
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "Sound files are no longer re-downloaded after every update"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m79",
             "requiredVersion": "0.6.1",
             "phase": "beta",

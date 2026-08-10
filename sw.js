@@ -12,9 +12,13 @@
  * src/config.js urlArgs, and the ?v= query on the css links in index.html.
  */
 
-var CACHE_VERSION = "0.6.3.m79";
+var CACHE_VERSION = "0.6.3.m80";
 var STATIC_CACHE = "l13-static-" + CACHE_VERSION;
 var SHELL_CACHE = "l13-shell-" + CACHE_VERSION;
+// unversioned on purpose: the sound files change essentially never, and the
+// versioned caches are deleted on every release - keeping audio in one of
+// them meant every release re-downloaded all of it
+var AUDIO_CACHE = "l13-audio-v1";
 var OFFLINE_URL = "offline.html";
 
 // kept small on purpose: the game pulls a few hundred files and pre-caching all
@@ -26,19 +30,46 @@ var APP_SHELL = [
 	"favicon.svg",
 ];
 
-var STATIC_PATTERN = /\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|mp3|m4a|ogg|wav)$/;
+// pre-cached so the first play of each sound never waits on the network;
+// the game decodes these once at startup
+var AUDIO_FILES = [
+	"audio/UIClick_BLEEOOP_Baby_Click.wav",
+	"audio/MECHSwtch_BLEEOOP_Mechanism.wav",
+	"audio/UIClick_BLEEOOP_Well_Oiled.wav",
+	"audio/UIClick_BLEEOOP_Old_Keycap.wav",
+	"audio/footstep1.mp3",
+	"audio/footstep2.mp3",
+	"audio/Modern10.m4a",
+];
+
+var STATIC_PATTERN = /\.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2?|ttf)$/;
+var AUDIO_PATTERN = /\.(?:mp3|m4a|ogg|wav)$/;
 
 self.addEventListener("install", function (event) {
 	event.waitUntil(
-		caches.open(SHELL_CACHE).then(function (cache) {
-			// one at a time: addAll rejects the whole install if any single
-			// request 404s, and a failed install leaves the old worker in place
-			return Promise.all(APP_SHELL.map(function (url) {
-				return cache.add(url).catch(function (e) {
-					console.warn("[sw] could not pre-cache " + url, e);
-				});
-			}));
-		})
+		Promise.all([
+			caches.open(SHELL_CACHE).then(function (cache) {
+				// one at a time: addAll rejects the whole install if any single
+				// request 404s, and a failed install leaves the old worker in place
+				return Promise.all(APP_SHELL.map(function (url) {
+					return cache.add(url).catch(function (e) {
+						console.warn("[sw] could not pre-cache " + url, e);
+					});
+				}));
+			}),
+			caches.open(AUDIO_CACHE).then(function (cache) {
+				// the audio cache persists across releases, so skip anything
+				// a previous install already fetched
+				return Promise.all(AUDIO_FILES.map(function (url) {
+					return cache.match(url).then(function (cached) {
+						if (cached) return null;
+						return cache.add(url).catch(function (e) {
+							console.warn("[sw] could not pre-cache " + url, e);
+						});
+					});
+				}));
+			}),
+		])
 	);
 	self.skipWaiting();
 });
@@ -48,6 +79,7 @@ self.addEventListener("activate", function (event) {
 		caches.keys().then(function (names) {
 			return Promise.all(names.map(function (name) {
 				if (name === STATIC_CACHE || name === SHELL_CACHE) return null;
+				if (name === AUDIO_CACHE) return null;
 				if (name.indexOf("l13-") !== 0) return null;
 				return caches.delete(name);
 			}));
@@ -81,19 +113,24 @@ self.addEventListener("fetch", function (event) {
 		return;
 	}
 
+	if (AUDIO_PATTERN.test(url.pathname)) {
+		event.respondWith(cacheFirst(request, AUDIO_CACHE));
+		return;
+	}
+
 	if (STATIC_PATTERN.test(url.pathname)) {
-		event.respondWith(cacheFirst(request));
+		event.respondWith(cacheFirst(request, STATIC_CACHE));
 		return;
 	}
 });
 
-function cacheFirst(request) {
+function cacheFirst(request, cacheName) {
 	return caches.match(request).then(function (cached) {
 		if (cached) return cached;
 		return fetch(request).then(function (response) {
 			if (response && response.ok) {
 				var copy = response.clone();
-				caches.open(STATIC_CACHE).then(function (cache) {
+				caches.open(cacheName).then(function (cache) {
 					cache.put(request, copy);
 				});
 			}
