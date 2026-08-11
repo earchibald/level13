@@ -6166,6 +6166,7 @@ body.sunlit .vis-camp-building-z4 {
 body.dark {
   --l13-mobile-bg: #282a28;
   --l13-mobile-border: #3a3a3a;
+  --l13-mobile-button-bg: #202220;
   --l13-mobile-divider: #6e7064;
   --l13-mobile-divider-shadow: rgba(0, 0, 0, 0.6);
   --l13-mobile-badge-bg: #cccccc;
@@ -6174,6 +6175,7 @@ body.dark {
 body.sunlit {
   --l13-mobile-bg: #ffffff;
   --l13-mobile-border: #aaaaaa;
+  --l13-mobile-button-bg: #fbfbfb;
   --l13-mobile-divider: #5f5f5f;
   --l13-mobile-divider-shadow: rgba(0, 0, 0, 0.28);
   --l13-mobile-badge-bg: #333333;
@@ -7123,6 +7125,9 @@ body.layout-small.tab-switch-milestones #grid-switch-content,
 body.layout-small.tab-switch-projects #grid-switch-content {
   padding-bottom: 8px;
 }
+body.layout-small .action-mirror.action-mirror-hidden {
+  display: none;
+}
 body.layout-small.tab-switch-embark #btn-log-toggle,
 body.layout-small.tab-switch-milestones #btn-log-toggle,
 body.layout-small.tab-switch-projects #btn-log-toggle {
@@ -7214,6 +7219,9 @@ body.layout-small.tab-switch-in #tab-header h2 {
   display: none;
 }
 body.layout-small.tab-switch-map #tab-header h2 {
+  display: none;
+}
+body.layout-small.tab-switch-projects #tab-header h2 {
   display: none;
 }
 body.layout-small div.grid-content {
@@ -7483,10 +7491,6 @@ body.landscape-map #log-toasts {
   #out-improvements tr,
   #in-improvements tr,
   #recruits-container tr,
-  #in-improvements-level tr,
-  #in-improvements-colony tr,
-  #in-improvements-level-built tr,
-  #in-improvements-colony-built tr,
   #trade-caravans-incoming-container tr,
   #trade-caravans-outgoing-container tr {
     display: flex;
@@ -7541,57 +7545,85 @@ body.landscape-map #log-toasts {
     opacity: 0.6;
     font-size: 0.85em;
   }
-  #in-improvements-level tr,
-  #in-improvements-colony tr,
-  #in-improvements-level-built tr,
-  #in-improvements-colony-built tr {
+  #container-tab-two-projects tr {
     display: grid;
-    grid-template-columns: min-content min-content 1fr;
+    grid-template-columns: 1fr auto auto auto;
     align-items: center;
-    column-gap: 8px;
-    row-gap: 4px;
-    padding: 8px 0;
+    column-gap: 6px;
+    row-gap: 1px;
+    padding: 6px 0 6px 8px;
   }
-  #in-improvements-level tr + tr,
-  #in-improvements-colony tr + tr,
-  #in-improvements-level-built tr + tr,
-  #in-improvements-colony-built tr + tr {
+  #container-tab-two-projects tr + tr {
     border-top: 1px solid var(--l13-mobile-border);
   }
-  #in-improvements-level td.label,
-  #in-improvements-colony td.label,
-  #in-improvements-level-built td.label,
-  #in-improvements-colony-built td.label,
-  #in-improvements-level td.list-description,
-  #in-improvements-colony td.list-description,
-  #in-improvements-level-built td.list-description,
-  #in-improvements-colony-built td.list-description {
+  #container-tab-two-projects td.label {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    min-width: 0;
+  }
+  #container-tab-two-projects td.list-description {
     grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
+    font-size: 0.85rem;
+    opacity: 0.75;
+  }
+  #container-tab-two-projects td.minwidth {
+    grid-row: 1;
     width: auto;
   }
-  #in-improvements-level td.minwidth,
-  #in-improvements-colony td.minwidth,
-  #in-improvements-level-built td.minwidth,
-  #in-improvements-colony-built td.minwidth {
-    width: auto;
+  #container-tab-two-projects td.minwidth:has(> button.hide-project) {
+    grid-column: 2;
   }
-  #in-improvements-level td.minwidth:has(> button[style*="display: none"]),
-  #in-improvements-level td.minwidth:has(> button[style*="display:none"]),
-  #in-improvements-colony td.minwidth:has(> button[style*="display: none"]),
-  #in-improvements-colony td.minwidth:has(> button[style*="display:none"]),
-  #in-improvements-level-built td.minwidth:has(> button[style*="display: none"]),
-  #in-improvements-level-built td.minwidth:has(> button[style*="display:none"]),
-  #in-improvements-colony-built td.minwidth:has(> button[style*="display: none"]),
-  #in-improvements-colony-built td.minwidth:has(> button[style*="display:none"]) {
+  #container-tab-two-projects td.minwidth:has(> button.navigation) {
+    grid-column: 3;
+  }
+  #container-tab-two-projects td.minwidth:has(> button[style*="display: none"]),
+  #container-tab-two-projects td.minwidth:has(> button[style*="display:none"]) {
     display: none;
   }
-  #in-improvements-level td.td-button,
-  #in-improvements-colony td.td-button,
-  #in-improvements-level-built td.td-button,
-  #in-improvements-colony-built td.td-button {
-    grid-column: 3;
+  #container-tab-two-projects button.hide-project {
+    border-width: 1px;
+    min-height: 36px;
+    padding: 4px 8px;
+    background: var(--l13-mobile-button-bg);
+    text-transform: lowercase;
+  }
+  #container-tab-two-projects td.td-button {
+    grid-column: 4;
+    grid-row: 1;
     justify-self: end;
     width: auto !important;
+    background: none;
+  }
+  #container-in-improvements-level-hidden {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 6px;
+    margin-bottom: 14px;
+  }
+  #container-in-improvements-level-hidden > .subheader {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+  #container-in-improvements-level-hidden > #in-improvements-reset-hidden {
+    grid-area: 1 / 2 / 2 / 3;
+    float: none;
+  }
+  #container-in-improvements-level-hidden > p {
+    grid-area: 2 / 1 / 3 / 3;
+  }
+  #in-improvements-reset-hidden {
+    border-width: 1px;
+    min-height: 36px;
+    padding: 4px 8px;
+    background: var(--l13-mobile-button-bg);
+  }
+  #container-tab-two-projects tr.current {
+    background: none;
+    box-shadow: inset 3px 0 0 0 var(--l13-mobile-divider);
   }
   .trade-caravans-outgoing-plan td {
     width: 100%;

@@ -11,6 +11,9 @@
 body.dark {
 	--l13-mobile-bg: #282a28;
 	--l13-mobile-border: #3a3a3a;
+	// @color-bg-button, for the places where a chromeless button has to be
+	// given the same box as the ordinary one standing next to it
+	--l13-mobile-button-bg: #202220;
 	// the pinned chrome and the scrolling page are both #282a28, so an edge
 	// between them has to carry the separation on its own: a brighter rule
 	// than the ordinary border, and a shadow so the page reads as passing
@@ -24,6 +27,7 @@ body.dark {
 body.sunlit {
 	--l13-mobile-bg: #ffffff;
 	--l13-mobile-border: #aaaaaa;
+	--l13-mobile-button-bg: #fbfbfb;
 	--l13-mobile-divider: #5f5f5f;
 	--l13-mobile-divider-shadow: rgba(0, 0, 0, 0.28);
 	--l13-mobile-badge-bg: #333333;
@@ -1607,6 +1611,15 @@ body.layout-small.tab-switch-projects #grid-switch-content {
 	padding-bottom: 8px;
 }
 
+// A bar whose own section is hidden. Docking lifts a mirror out of its tab and
+// hangs it off the shell column, where the container's display no longer
+// reaches it, so the section that owns the bar says here whether it is wanted.
+// UIOutProjectsSystem sets this on the Launch bar, which otherwise held a band
+// of bottom chrome on the projects tab from the first camp to the last.
+body.layout-small .action-mirror.action-mirror-hidden {
+	display: none;
+}
+
 // and the floating log pill sits above the bar rather than on top of it. The
 // bar is measured into --l13-out-bottom-height with every other bottom band,
 // so this is the same sum the exploration tab uses.
@@ -1760,6 +1773,14 @@ body.layout-small.tab-switch-in #tab-header h2 {
 // map tab: the tab bar is right above it and says "map", so the heading is a
 // row of screen spent repeating it - and on this tab the rows are the map's
 body.layout-small.tab-switch-map #tab-header h2 {
+	display: none;
+}
+
+// projects tab: "Building projects" under a tab that says "projects", above a
+// subheader that says "Available projects". Three labels for one list, and the
+// two that survive are the tab the player pressed and the one that separates
+// available projects from built ones.
+body.layout-small.tab-switch-projects #tab-header h2 {
 	display: none;
 }
 
@@ -2204,13 +2225,12 @@ body.landscape-map #log-toasts {
 		width: 100%;
 	}
 
+	// The project tables are not in this list: their rows take a grid of their
+	// own further down (PROJECT ROWS), which every declaration here would lose
+	// to anyway. They keep the block display above, which the grid needs.
 	#out-improvements tr,
 	#in-improvements tr,
 	#recruits-container tr,
-	#in-improvements-level tr,
-	#in-improvements-colony tr,
-	#in-improvements-level-built tr,
-	#in-improvements-colony-built tr,
 	#trade-caravans-incoming-container tr,
 	#trade-caravans-outgoing-container tr {
 		display: flex;
@@ -2288,76 +2308,159 @@ body.landscape-map #log-toasts {
 		font-size: 0.85em;
 	}
 
-	// PROJECT ROWS: five columns - name, location, hide, map, and an action
-	// button that generates with an inline width:138px - cannot share a
-	// phone row. Flexed, the 5%-wide minwidth cells overflowed their boxes
-	// and the hide and map buttons painted over each other. Each row is a
-	// card instead: name, location under it, and the buttons on one line
-	// beneath with the action on the right edge.
-	#in-improvements-level tr,
-	#in-improvements-colony tr,
-	#in-improvements-level-built tr,
-	#in-improvements-colony-built tr {
+	// PROJECT ROWS: the name on the first line, its location on the second, the
+	// two meta controls at the end of that line, and the action button spanning
+	// both lines at the right edge. Four tracks, so every part of the row keeps
+	// a column of its own: content, hide, map, action.
+	//
+	// Five table columns - name, location, hide, map, and an action button that
+	// generates with an inline width:138px - cannot share a phone row. Flexed
+	// they overlapped; stacked as three lines they cost 113px each in a pane
+	// 306px tall, so two and a half projects filled the screen. Stacking also
+	// put `map` in a different place from row to row - 2px in on a project that
+	// cannot be hidden, 64px in on one that can, because `hide` led the same
+	// line - which is the part that read as sloppy rather than merely tall.
+	//
+	// Every row in this tab is a project row, so the tab container is the scope
+	// and the four tables do not each have to be named.
+	#container-tab-two-projects tr {
 		display: grid;
-		grid-template-columns: min-content min-content 1fr;
+		grid-template-columns: 1fr auto auto auto;
 		align-items: center;
-		column-gap: 8px;
-		row-gap: 4px;
-		padding: 8px 0;
+		column-gap: 6px;
+		row-gap: 1px;
+		// the left padding is where the current-level bar sits, on every row so
+		// that the text does not shift between marked and unmarked ones
+		padding: 6px 0 6px 8px;
 	}
 
-	#in-improvements-level tr + tr,
-	#in-improvements-colony tr + tr,
-	#in-improvements-level-built tr + tr,
-	#in-improvements-colony-built tr + tr {
+	#container-tab-two-projects tr + tr {
 		border-top: 1px solid var(--l13-mobile-border);
 	}
 
-	#in-improvements-level td.label,
-	#in-improvements-colony td.label,
-	#in-improvements-level-built td.label,
-	#in-improvements-colony-built td.label,
-	#in-improvements-level td.list-description,
-	#in-improvements-colony td.list-description,
-	#in-improvements-level-built td.list-description,
-	#in-improvements-colony-built td.list-description {
+	// the name leads the first line and takes what the controls leave
+	#container-tab-two-projects td.label {
+		grid-column: 1;
+		grid-row: 1;
+		width: auto;
+		min-width: 0;
+	}
+
+	// the location has the second line to itself, all four tracks of it. It
+	// shared the first attempt's second line with the two controls, which left
+	// it 180px and wrapped "between 11W 1N and 12W 1N on lvl 10" over three.
+	// Smaller and dimmer than the name, so the two lines read as one item
+	// rather than as two entries.
+	#container-tab-two-projects td.list-description {
 		grid-column: 1 / -1;
+		grid-row: 2;
+		width: auto;
+		min-width: 0;
+		font-size: @font-size-small;
+		opacity: 0.75;
+	}
+
+	// hide and map take a track each on the first line. The width override
+	// beats td.minwidth (5%), which is what let the buttons overlap when the
+	// row was flexed.
+	#container-tab-two-projects td.minwidth {
+		grid-row: 1;
 		width: auto;
 	}
 
-	// the width override beats td.minwidth (5%), which is what let the
-	// buttons overlap
-	#in-improvements-level td.minwidth,
-	#in-improvements-colony td.minwidth,
-	#in-improvements-level-built td.minwidth,
-	#in-improvements-colony-built td.minwidth {
-		width: auto;
+	// Each control is named to its own track rather than left to fall into the
+	// next free one. Auto-placement put `map` in the second track on a project
+	// that cannot be hidden and the third on one that can, which is the
+	// misalignment the stacked layout had, moved up a line.
+	#container-tab-two-projects td.minwidth:has(> button.hide-project) {
+		grid-column: 2;
+	}
+
+	#container-tab-two-projects td.minwidth:has(> button.navigation) {
+		grid-column: 3;
 	}
 
 	// a cell whose only button is hidden (built rows, projects that cannot
-	// be hidden) must leave the grid entirely, or it holds an empty button
-	// line under the card. jQuery hides the button with an inline display,
-	// so that is what there is to match on.
-	#in-improvements-level td.minwidth:has(> button[style*="display: none"]),
-	#in-improvements-level td.minwidth:has(> button[style*="display:none"]),
-	#in-improvements-colony td.minwidth:has(> button[style*="display: none"]),
-	#in-improvements-colony td.minwidth:has(> button[style*="display:none"]),
-	#in-improvements-level-built td.minwidth:has(> button[style*="display: none"]),
-	#in-improvements-level-built td.minwidth:has(> button[style*="display:none"]),
-	#in-improvements-colony-built td.minwidth:has(> button[style*="display: none"]),
-	#in-improvements-colony-built td.minwidth:has(> button[style*="display:none"]) {
+	// be hidden) must leave the grid entirely, or it holds an empty track
+	// open in the middle of the row. jQuery hides the button with an inline
+	// display, so that is what there is to match on.
+	#container-tab-two-projects td.minwidth:has(> button[style*="display: none"]),
+	#container-tab-two-projects td.minwidth:has(> button[style*="display:none"]) {
 		display: none;
 	}
 
-	// the action cell generates with an inline width:138px; let it size to
-	// content and keep it on the right edge of the button line
-	#in-improvements-level td.td-button,
-	#in-improvements-colony td.td-button,
-	#in-improvements-level-built td.td-button,
-	#in-improvements-colony-built td.td-button {
-		grid-column: 3;
+	// hide and map are peers of each other, so they carry the same box. `hide`
+	// is a btn-meta, chromeless by design where it stands alone; beside the
+	// boxed `map` it read as a caption rather than a control, and it stood 4px
+	// shorter than its neighbour. border-width alone restores the themed
+	// border colour, which btn-meta zeroes the width of and nothing else.
+	#container-tab-two-projects button.hide-project {
+		border-width: 1px;
+		min-height: 36px;
+		padding: 4px 8px;
+		background: var(--l13-mobile-button-bg);
+		text-transform: lowercase;
+	}
+
+	// the action closes the first line at the right edge. The cell generates
+	// with an inline width:138px, a third of the screen, so it is told to size
+	// to its button instead.
+	#container-tab-two-projects td.td-button {
+		grid-column: 4;
+		grid-row: 1;
 		justify-self: end;
 		width: auto !important;
+		// td.bg-reset fills this cell with the box colour, which showed as a
+		// lighter patch behind the button once the row became a card
+		background: none;
+	}
+
+	// HIDDEN PROJECTS: the heading and the control that undoes the hiding read
+	// as one line, and the count sits under them. `reset` floated right, which
+	// left it hanging half a line below the heading it belongs to, and the
+	// section had no space under it at all - "1 project hidden" sat directly
+	// against the "Built projects" heading of the next section.
+	#container-in-improvements-level-hidden {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: center;
+		column-gap: 6px;
+		margin-bottom: 14px;
+	}
+
+	// the markup order is control, heading, count; the line each one belongs on
+	// is stated rather than left to it
+	#container-in-improvements-level-hidden > .subheader {
+		grid-area: 1 / 1 / 2 / 2;
+	}
+
+	#container-in-improvements-level-hidden > #in-improvements-reset-hidden {
+		grid-area: 1 / 2 / 2 / 3;
+		float: none;
+	}
+
+	#container-in-improvements-level-hidden > p {
+		grid-area: 2 / 1 / 3 / 3;
+	}
+
+	// `reset` and the row controls are the only buttons on this tab, so they
+	// carry one box between them - see the note on `hide` above
+	#in-improvements-reset-hidden {
+		border-width: 1px;
+		min-height: 36px;
+		padding: 4px 8px;
+		background: var(--l13-mobile-button-bg);
+	}
+
+	// "on your level" was a full-width fill. Two projects on the same level
+	// put two filled rows next to each other, and the pair read as a panel
+	// drawn around them rather than as a mark on each - the built list showed
+	// exactly that, two staircases boxed together and a third outside. A bar on
+	// the leading edge belongs to its own row however many of them there are.
+	// inset rather than a border so it costs no layout.
+	#container-tab-two-projects tr.current {
+		background: none;
+		box-shadow: inset 3px 0 0 0 var(--l13-mobile-divider);
 	}
 
 	// outgoing caravan planner: stack the five widgets full-width

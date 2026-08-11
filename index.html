@@ -702,7 +702,11 @@
 					<div class="grid tabcontainer" id="container-tab-two-projects" data-tab="switch-projects" style="display:none">
 						<div class="unit whole">
 							<div class="actionbox" id="container-in-improvements-colony">
-								<div class="actionbox action-mirror">
+								<!-- the id is how UIOutProjectsSystem hides this bar: on a phone
+								     it is lifted out of this container and hung off the shell
+								     column, where the container's own display no longer
+								     reaches it (see updateActionMirrorPlacement) -->
+								<div class="actionbox action-mirror" id="in-launch-bar">
 									<button id="in-action-launch-top" class="action" action="launch">Launch</button>
 								</div>
 								<div class="subheader"><h3>Colony projects</h3></div>
