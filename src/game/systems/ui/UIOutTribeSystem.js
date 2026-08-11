@@ -76,7 +76,15 @@ define([
 			GlobalSignals.add(this, GlobalSignals.campBuiltSignal, this.onCampBuilt);
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
-			
+			GlobalSignals.add(this, GlobalSignals.openGoPopupSignal, this.onOpenGoPopup);
+			GlobalSignals.add(this, GlobalSignals.popupShownSignal, this.onPopupShown);
+			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
+
+			// the hotkey system acts on keyup, but the go popup must exist before the
+			// keyup so a fast "G13" keeps its digits - so the letter is caught on
+			// keydown here and the registered hotkey serves as the fallback
+			$(document).on("keydown.tribego", $.proxy(this.onDocumentKeyDown, this));
+
 			this.sortCampNodes();
 		},
 
@@ -84,6 +92,8 @@ define([
 			this.engine = null;
 			this.campNodes = null;
 			this.playerPosNodes = null;
+			$(document).off("keydown.tribego");
+			$(document).off("keydown.gopopup");
 			GlobalSignals.removeAll(this);
 		},
 		
@@ -94,6 +104,149 @@ define([
 			this.createLevel14Row();
 			for (let i = 1; i <= WorldConstants.CAMP_ORDINAL_GROUND; i++) {
 				this.createCampRow(i, this.getCampRowID(i));
+			}
+
+			$("#go-popup-close").click(function () {
+				GameGlobals.uiFunctions.popupManager.closePopup("go-popup");
+			});
+		},
+
+		// GO POPUP (hotkey G or T on this tab): type a level number, ENTER presses that camp's Go button
+
+		onDocumentKeyDown: function (e) {
+			let oe = e.originalEvent || e;
+			if (oe.repeat) return;
+			if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+			let code = oe.code;
+			if (code != "KeyG" && code != "KeyT") return;
+			if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
+			if (GameGlobals.gameState.uiStatus.currentTab != GameGlobals.uiFunctions.elementIDs.tabs.world) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			let tagName = e.target ? e.target.tagName : null;
+			if (tagName == "INPUT" || tagName == "TEXTAREA" || tagName == "SELECT") return;
+			this.onOpenGoPopup();
+		},
+
+		onOpenGoPopup: function () {
+			// the letter's keydown opens the popup and its keyup fires the registered
+			// hotkey fallback before the popup reads as open, so guard with a flag
+			if (this.isGoPopupOpen) return;
+			this.isGoPopupOpen = true;
+			this.goPopupValue = "";
+			this.goPopupPendingConfirm = false;
+			this.updateGoPopupValue();
+			$("#go-popup-desc").text("Type a level number, then press ENTER.");
+			GameGlobals.uiFunctions.showSpecialPopup("go-popup", { isDismissable: true });
+			// bound at open, not when the popup becomes visible: digits typed while
+			// the popup is still fading in must land in the value, not be dropped
+			$(document).on("keydown.gopopup", $.proxy(this.onGoPopupKeyDown, this));
+		},
+
+		onGoPopupKeyDown: function (e) {
+			let oe = e.originalEvent || e;
+			let code = oe.code;
+			let digit = null;
+			if (code.indexOf("Digit") == 0) digit = code.substring(5);
+			if (code.indexOf("Numpad") == 0 && code.length == 7) digit = code.substring(6);
+			if (digit != null && digit >= "0" && digit <= "9") {
+				e.preventDefault();
+				if (this.goPopupValue.length < 2) {
+					this.goPopupValue += digit;
+					this.updateGoPopupValue();
+				}
+				return;
+			}
+			if (code == "Backspace") {
+				e.preventDefault();
+				this.goPopupValue = this.goPopupValue.substring(0, this.goPopupValue.length - 1);
+				this.updateGoPopupValue();
+				return;
+			}
+			if (code == "Enter" || code == "NumpadEnter") {
+				e.preventDefault();
+				// closing before the fade-in marks the popup visible leaves it stuck
+				// (see the craft popup); remember the ENTER and act once it is shown
+				if (!this.isGoPopupInteractive()) {
+					this.goPopupPendingConfirm = true;
+					return;
+				}
+				this.confirmGoPopup();
+				return;
+			}
+		},
+
+		isGoPopupInteractive: function () {
+			if (!$("#go-popup").is(":visible")) return false;
+			if ($("#go-popup").attr("data-visible") != "true") return false;
+			if (GameGlobals.uiFunctions.popupManager.isClosing("go-popup")) return false;
+			return true;
+		},
+
+		updateGoPopupValue: function () {
+			$("#go-popup-value").text(this.goPopupValue.length > 0 ? this.goPopupValue : "–");
+		},
+
+		confirmGoPopup: function () {
+			let level = parseInt(this.goPopupValue, 10);
+			if (isNaN(level)) {
+				GameGlobals.uiFunctions.popupManager.closePopup("go-popup");
+				return;
+			}
+			let node = this.getCampNodeForLevel(level);
+			if (!node) {
+				$("#go-popup-desc").text("There is no camp on level " + level + ".");
+				this.goPopupValue = "";
+				this.updateGoPopupValue();
+				return;
+			}
+			let playerLevel = this.playerPosNodes.head.position.level;
+			if (playerLevel == level) {
+				$("#go-popup-desc").text("You are already on level " + level + ".");
+				this.goPopupValue = "";
+				this.updateGoPopupValue();
+				return;
+			}
+			let campOrdinal = GameGlobals.gameState.getCampOrdinal(level);
+			GameGlobals.uiFunctions.popupManager.closePopup("go-popup");
+			$("#out-action-move-camp-" + campOrdinal).click();
+		},
+
+		getCampNodeForLevel: function (level) {
+			for (var node = this.campNodes.head; node; node = node.next) {
+				if (node.entity.get(PositionComponent).level == level) return node;
+			}
+			return null;
+		},
+
+		// each Go button's chip shows the full key sequence for its row (G13).
+		// The level is world data, so the chip is set here and not in createCampRow,
+		// and the manual hint entry keeps updateHotkeyHints rewriting it, not clearing it
+		updateCampRowGoHint: function (rowID, level) {
+			let $goBtn = $("#camp-overview tr#" + rowID + " .camp-overview-btn button");
+			if ($goBtn.length < 1) return;
+			let goHint = "G" + level;
+			GameGlobals.uiFunctions.manualHotkeyHints[$goBtn.attr("action")] = goHint;
+			let $goHintElement = $goBtn.children(".hotkey-hint");
+			if ($goHintElement.length < 1) {
+				$goBtn.append("<div class='hotkey-hint hide-in-small-layout'></div>");
+				$goHintElement = $goBtn.children(".hotkey-hint");
+			}
+			if ($goHintElement.text() != goHint) $goHintElement.text(goHint);
+			$goHintElement.toggleClass("hidden", !GameGlobals.gameState.settings.hotkeysEnabled);
+		},
+
+		onPopupShown: function () {
+			if (!this.isGoPopupOpen) return;
+			if (!this.goPopupPendingConfirm) return;
+			this.goPopupPendingConfirm = false;
+			this.confirmGoPopup();
+		},
+
+		onPopupClosed: function (popupID) {
+			if (popupID == "go-popup") {
+				this.isGoPopupOpen = false;
+				this.goPopupPendingConfirm = false;
+				$(document).off("keydown.gopopup");
 			}
 		},
 
@@ -367,6 +520,8 @@ define([
 			$("#camp-overview tr#" + rowID + " .camp-overview-name .label").attr("description", camp.campName);
 			GameGlobals.uiFunctions.toggle("#camp-overview tr#" + rowID + " .camp-overview-camp-bubble .bubble", isAlert);
 			
+			this.updateCampRowGoHint(rowID, level);
+
 			$("#camp-overview tr#" + rowID + " .camp-overview-level-container").text(level);
 			$("#camp-overview tr#" + rowID + " .camp-overview-level-container").toggleClass("lvl-container-camp-normal", levelComponent.habitability >= 1);
 			$("#camp-overview tr#" + rowID + " .camp-overview-level-container").toggleClass("lvl-container-camp-outpost", levelComponent.habitability < 1);

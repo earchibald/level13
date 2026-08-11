@@ -732,6 +732,19 @@ define(['ash',
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
+				// R rests wherever the player is: the camp home on the in tab, a nap outside.
+				// One key, two tab-scoped actions; the second entry stays out of the hotkey list
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.in, false, false, "use_in_home");
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap", { isHiddenFromList: true });
+
+				// G asks for a level number and presses that camp's Go button. KeyG is free
+				// here because the collector binding is scoped to tabs.out; T is an alias.
+				// These keyup bindings are a fallback: UIOutTribeSystem also opens the popup
+				// on keydown, so digits typed right after the letter land in the popup
+				// instead of being dropped
+				this.registerHotkey("Go to camp on level", "KeyG", defaultModifier, tabs.world, false, false, () => GlobalSignals.openGoPopupSignal.dispatch());
+				this.registerHotkey("Go to camp on level", "KeyT", defaultModifier, tabs.world, false, false, () => GlobalSignals.openGoPopupSignal.dispatch(), { isHiddenFromList: true });
+
 				this.registerHotkey("Show map", "KeyP", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.map));
 				this.registerHotkey("Craft", "KeyK", defaultModifier, null, false, false, () => GlobalSignals.openCraftPopupSignal.dispatch());
 				this.registerHotkey("Manage inventory", "KeyI", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showInventoryContext());

@@ -274,3 +274,12 @@ button.btn-disabled .hotkey-hint {
 #out-action-move-camp.btn-disabled .hotkey-hint {
 	display: block !important;
 }
+
+// the tribe tab's Go chips carry three characters (G13); absolute in the corner
+// of a mini button they would cover the label, so they sit inline after it
+#camp-overview .hotkey-hint {
+	position: static;
+	display: inline-block;
+	margin-left: 4px;
+	vertical-align: 1px;
+}
