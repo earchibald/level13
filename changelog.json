@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m83",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "R rests, in camp and outside"
+                },
+                {
+                    "type": "UI",
+                    "summary": "On the Tribe tab, G or T asks for a level number and goes to that camp; the Go buttons show their key sequence"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m82",
             "requiredVersion": "0.6.1",
             "phase": "beta",
