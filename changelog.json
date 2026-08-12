@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m90",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Outside, health and the gear bonuses are on screen instead of behind the Adventurer button, which is hidden there because there is nothing left for it to reveal. When the sector has figures of its own to report they take the top and the adventurer's numbers move below them"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m89",
             "requiredVersion": "0.6.1",
             "phase": "beta",

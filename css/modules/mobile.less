@@ -784,7 +784,12 @@ body.layout-small.location-outside #mobile-header-camp-res {
 //
 // !important throughout: every one of these is toggled through jQuery
 // somewhere, which writes an inline display that would otherwise win.
-body.layout-small #container-equipment-stats-mobile,
+//
+// Every selector here is scoped to #mobile-header, the gear strip's included.
+// Outside, the strip and the health cell are moved out of the header and into
+// the pane (see THE ADVENTURER DOCK); an unscoped rule would follow them there
+// and hide them, where the whole point is that they show.
+body.layout-small #mobile-header #container-equipment-stats-mobile,
 body.layout-small #mobile-header .info-callout-target-small:has(> .stat-indicator-health),
 body.layout-small.location-inside #mobile-header .info-callout-target-small:has(> .stat-indicator-vision) {
 	display: none !important;
@@ -798,8 +803,90 @@ body.layout-small.adventurer-open #mobile-header .info-callout-target-small:has(
 
 // the gear numbers read as one wide row rather than a column of cells - the
 // strip rule further down already says how, this only turns it on
-body.layout-small.adventurer-open #container-equipment-stats-mobile {
+body.layout-small.adventurer-open #mobile-header #container-equipment-stats-mobile {
 	display: flex !important;
+}
+
+// THE ADVENTURER DOCK
+// Where health and the gear numbers are read outside. The chip above reveals
+// them in the header on every other tab; on the exploration tab they are moved
+// into the pane instead (UIOutHeaderSystem.updateAdventurerDockPlacement) and
+// the chip is hidden, because a control that reveals what is already on screen
+// is one more thing to press past.
+//
+// The pane is the band this layout has spent ten migrations emptying. What is
+// left there shows rarely - a collector to upgrade, a beacon to dismantle - and
+// the dock is the last element in it, so on those passes the content keeps the
+// top and these numbers fall below it.
+//
+// Empty is the undocked state, and an empty flex box would still hold its
+// margin open.
+#out-adventurer:empty {
+	display: none;
+}
+
+// flex-start, not stretch: a cell that stretched to the height of the gear
+// grid beside it would be a tall box with one line of text at the top of it.
+body.layout-small #out-adventurer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 4px;
+	margin-top: 4px;
+}
+
+// The cells keep the header's background and its quiet label, so reading them
+// does not feel like a different part of the game. What they do not keep is the
+// header's label-above-value stack: the header is a grid of narrow columns and
+// needs the height, this is one short row and the stack cost 23px of a band
+// that has 160.
+body.layout-small #out-adventurer > .info-callout-target-small {
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	background: var(--l13-mobile-bg);
+	box-sizing: border-box;
+}
+
+body.layout-small #out-adventurer .stat-indicator {
+	white-space: nowrap;
+}
+
+body.layout-small #out-adventurer .stat-indicator > .label {
+	display: inline;
+	font-size: 0.8rem;
+	opacity: 0.75;
+}
+
+body.layout-small #out-adventurer .stats-value-container {
+	display: inline;
+	margin-left: 3px;
+}
+
+// The gear numbers are an icon-and-number strip, as in the header. It takes a
+// row of its own: squeezing it in beside the health cell was tried and is a
+// loss - at 280px the chips wrap three deep instead of two, which costs more
+// height than the row it saves.
+body.layout-small #out-adventurer > .container-equipment-stats {
+	flex: 1 1 100%;
+	min-width: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	padding: 2px 4px;
+	background: var(--l13-mobile-bg);
+	box-sizing: border-box;
+}
+
+body.layout-small #out-adventurer .container-equipment-stats > * {
+	width: auto;
+	flex: 0 0 auto;
+}
+
+// invisible chrome must not stay tappable while the player is down - the cells
+// are callout targets, and .hidden-when-down only takes the opacity to 0
+body.vision-step-0 #out-adventurer {
+	pointer-events: none;
 }
 
 // The control is a chip at the right end of the location banner, not a cell in
@@ -1170,8 +1257,9 @@ body.layout-small #mobile-header .notification-player {
 	margin-top: 2px;
 }
 
-// in camp the fight/movement equipment stats are not actionable; save the row
-body.layout-small.location-inside #container-equipment-stats-mobile {
+// in camp the fight/movement equipment stats are not actionable; save the row.
+// Scoped to the header for the same reason as the rule above.
+body.layout-small.location-inside #mobile-header #container-equipment-stats-mobile {
 	display: none;
 }
 
@@ -1286,6 +1374,14 @@ body.layout-small.tab-switch-out #container-tab-two-out-actions {
 	order: 2;
 }
 
+// Being last in the markup is not enough here. The pane is a flex column and
+// its other children carry an explicit order, so the dock's default of 0 put it
+// ahead of both of them - it read as the top of the pane, and the room figures
+// appeared underneath the numbers they are meant to push down.
+body.layout-small.tab-switch-out #out-adventurer {
+	order: 3;
+}
+
 body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
 	order: 1;
 	// so the figures can be ordered ahead of the header they used to follow
@@ -1306,6 +1402,24 @@ body.layout-small.tab-switch-out #out-desc-stats {
 // an unscouted sector has no figures, and a rule of its own
 body.layout-small.tab-switch-out #out-desc-stats:empty {
 	display: none;
+}
+
+// With the figures gone and the sector h2 replaced by the banner chip, this
+// block is 16px of padding around two hidden elements - and it sits directly
+// above the adventurer dock, which is the one thing left in the pane. The band
+// is 160px, and those 16px were enough to push the last row of gear numbers off
+// the bottom of it.
+//
+// Keyed on :empty, the same condition that hides the figures: the moment a
+// sector has something to report the padding comes back with it, and the
+// numbers move down to make room. That is the intended order - real content
+// first, the adventurer under it.
+//
+// !important because the ≤568px block gives div.grid.tabcontainer > .unit its
+// padding with one, and no amount of specificity beats that.
+body.layout-small.tab-switch-out #container-tab-two-out > .unit:has(> #out-desc-stats:empty) {
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
 }
 
 body.layout-small.tab-switch-out #header-sector {

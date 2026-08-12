@@ -1465,6 +1465,18 @@ define([
 			let isSmallLayout = this.elements.body.hasClass("layout-small");
 			let isInCamp = GameGlobals.playerHelper.isInCamp();
 			let isInCampTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.camp;
+
+			// The shell layout - chrome, scrolling pane and map panel as one flex
+			// column the height of the viewport - is declared in mobile.less, and
+			// --l13-shell says whether it is in force. Asking the stylesheet beats
+			// re-deriving the media query here, which would drift from it.
+			let isShell = isSmallLayout && this.isShellLayout();
+			let isOutTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.out;
+
+			// Read in the pane rather than from behind the chip, but only where
+			// the pane is empty enough to hold them - see
+			// updateAdventurerDockPlacement.
+			let isAdventurerDocked = isShell && isOutTab && !isInCamp;
 			// Perks and debuffs show wherever the player is. They were suppressed
 			// in camp to save a header row, but an empty list costs no cell (see
 			// the :empty rule in mobile.less), so the row only appears when there
@@ -1479,7 +1491,12 @@ define([
 			// no way at all to read health or the gear numbers outside, where the
 			// header shows vision and stamina and nothing else. It is in the
 			// location banner now, which is the one row on screen on every tab.
-			GameGlobals.uiFunctions.toggle("#btn-adventurer", isSmallLayout);
+			//
+			// Except where the numbers are already on screen. Outside on the
+			// exploration tab they are docked in the pane, and a control that
+			// reveals what the player can already read is one more thing to
+			// press past.
+			GameGlobals.uiFunctions.toggle("#btn-adventurer", isSmallLayout && !isAdventurerDocked);
 			if (!isSmallLayout) this.elements.body.removeClass("adventurer-open");
 
 			// The room is where you are, not which tab you are looking at, so
@@ -1488,12 +1505,6 @@ define([
 			GameGlobals.uiFunctions.toggle("#btn-room", isSmallLayout && !isInCamp);
 
 			this.updateChromeGrouping(isSmallLayout);
-
-			// The shell layout - chrome, scrolling pane and map panel as one flex
-			// column the height of the viewport - is declared in mobile.less, and
-			// --l13-shell says whether it is in force. Asking the stylesheet beats
-			// re-deriving the media query here, which would drift from it.
-			let isShell = isSmallLayout && this.isShellLayout();
 
 			// The map panel is the only band that can hold anything else, and it
 			// exists on one tab and only once scout is unlocked - every other tab
@@ -1505,7 +1516,6 @@ define([
 			// before featureUnlockedSignal fires, so this pass already reads the
 			// new value, while the panel itself is still hidden until
 			// UIOutLevelSystem gets its turn.
-			let isOutTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.out;
 			let hasOutPanel = isShell && isOutTab && GameGlobals.gameState.unlockedFeatures.scout === true;
 
 			$("#unit-main").css("padding-top", isShell ? "0px" : "15px");
@@ -1517,6 +1527,7 @@ define([
 			this.updateOutActionsPlacement(isShell);
 			this.updateMapDockPlacement(isShell);
 			this.updateActionMirrorPlacement(isShell);
+			this.updateAdventurerDockPlacement(isAdventurerDocked);
 			this.updateFooterPlacement(isShell, hasOutPanel);
 
 			// The drawer is fixed over the bottom of the screen, and on the
@@ -1880,6 +1891,64 @@ define([
 		// good, so it moves: into the map panel on the exploration tab, where it
 		// costs no scroll at all, and into the pane on every other tab, where
 		// there is no panel and it scrolls with the page.
+		// Health and the gear bonuses are the two things the small header leaves
+		// out, and outside the Adventurer chip was the only way to reach them.
+		// The pane on the exploration tab is nearly empty - ten migrations have
+		// taken almost everything out of it - so they are read there instead.
+		//
+		// The elements move rather than being copied, the same as #out-desc. The
+		// header system writes values through references it cached at init, so a
+		// copy would be right once and stale from the next step onwards.
+		//
+		// The dock is the last element in the pane, which is the whole of the
+		// ordering rule: on the passes where the pane does have something to show
+		// - a collector to upgrade, a beacon to dismantle - that content keeps
+		// the top and these numbers fall below it.
+		getAdventurerDockParts: function () {
+			if (this.adventurerDockParts) return this.adventurerDockParts;
+			// built in this system's own init, so on the first pass they may not
+			// exist yet; do not cache an empty answer
+			let $health = $("#mobile-header-self").find(".stat-indicator-health").parent();
+			let $gear = $("#container-equipment-stats-mobile");
+			if ($health.length === 0 || $gear.length === 0) return null;
+			this.adventurerDockParts = [ $health, $gear ];
+			return this.adventurerDockParts;
+		},
+
+		updateAdventurerDockPlacement: function (shouldDock) {
+			let $dock = $("#out-adventurer");
+			if ($dock.length === 0) return;
+
+			// cached: once docked these are no longer under #mobile-header-self,
+			// so looking them up by where they started would find nothing and the
+			// undock would never run
+			let parts = this.getAdventurerDockParts();
+			if (!parts) return;
+
+			if (!this.adventurerDockMarkers) this.adventurerDockMarkers = [];
+
+			for (let i = 0; i < parts.length; i++) {
+				let $part = parts[i];
+
+				if (shouldDock) {
+					if ($part.parent().is($dock)) continue;
+					// a marker where it came from, so the header gets it back in
+					// its own place in the order rather than at the front
+					if (!this.adventurerDockMarkers[i]) {
+						this.adventurerDockMarkers[i] = document.createComment("adventurer");
+						$part.after(this.adventurerDockMarkers[i]);
+					}
+					$dock.append($part);
+					continue;
+				}
+
+				let marker = this.adventurerDockMarkers[i];
+				if (!marker) continue;
+				if ($part[0].nextSibling === marker) continue;
+				$(marker).before($part);
+			}
+		},
+
 		updateFooterPlacement: function (isShell, dockInPanel) {
 			let $footer = $("#footer");
 			if ($footer.length === 0) return;
