@@ -7322,6 +7322,7 @@ body.layout-small #footer {
   align-items: center;
   overflow: hidden;
   white-space: nowrap;
+  height: auto;
 }
 body.layout-small #footer #game-msg,
 body.layout-small #footer #cloud-sync-status,

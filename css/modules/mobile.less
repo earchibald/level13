@@ -1964,6 +1964,10 @@ body.layout-small #footer {
 	align-items: center;
 	overflow: hidden;
 	white-space: nowrap;
+	// the base sheet gives #footer `height: 100%`, sized for the desktop
+	// sticky-footer strip. Docked inside the scroll pane that makes the row
+	// as tall as the pane and it lands in the middle of the map tab.
+	height: auto;
 }
 
 // their content shows in the toast card instead. !important because
