@@ -1931,8 +1931,8 @@ body.layout-small #footer {
 }
 
 @media screen and (max-width: 568px) {
-	// at phone widths the footer wraps and flows after the content; the
-	// fixed-height sticky-footer spacer trick no longer fits
+	// at phone widths the footer flows after the content; the fixed-height
+	// sticky-footer spacer trick no longer fits
 	body[class] .sticky-footer {
 		height: auto;
 		min-height: 55px;
@@ -1946,15 +1946,135 @@ body.layout-small #footer {
 		display: none;
 	}
 
-	body.layout-small #footer {
-		flex-wrap: wrap;
-		height: auto;
-	}
-
 	ul#game-options,
 	ul#game-options-extended {
 		float: none;
 	}
+}
+
+// The phone footer is one fixed-height row: version at the left, More and
+// Save at the right. On the out tab this row shares the bottom panel with the
+// direction buttons, so a row that grows moves them under the player's thumb
+// mid-tap. Anything that could change its height mid-play is gone: the save
+// confirmation and the cloud status show in the toast card instead (see
+// NOTIFICATION TOAST), and More opens a popup instead of expanding inline.
+body.layout-small #footer {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+// their content shows in the toast card instead. !important because
+// uiFunctions.toggle writes an inline display on #cloud-sync-status
+body.layout-small #footer #game-msg,
+body.layout-small #footer #cloud-sync-status,
+body.layout-small #footer .options-separator {
+	display: none !important;
+}
+
+// the inline expansion is the desktop presentation; on the phone the same
+// list shows inside #more-options-popup, where it is not under #footer and
+// this rule cannot reach it
+body.layout-small #footer > ul#game-options-extended {
+	display: none !important;
+}
+
+body.layout-small #footer #game-version {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+body.layout-small #footer ul#game-options {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: auto;
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATION TOAST
+// Save and cloud confirmations: a card pinned to the top of the screen that
+// fades on its own (1250ms, UIFunctions.showToast), so nothing in the fixed
+// chrome ever changes size to announce anything. Unscoped: only the phone
+// routes messages here today, but the card is layout-neutral.
+
+#notification-toast {
+	position: fixed;
+	top: ~"calc(var(--l13-safe-top, env(safe-area-inset-top)) + 8px)";
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: 86vw;
+	padding: 7px 16px;
+	box-sizing: border-box;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 0.9rem;
+	line-height: 1.3;
+	text-transform: lowercase;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 11px;
+	// above the fixed chrome and the rotate notice; never interactive
+	z-index: 110;
+	pointer-events: none;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+#notification-toast.visible {
+	opacity: 1;
+	visibility: visible;
+	transition: opacity 0.15s ease;
+}
+
+// ---------------------------------------------------------------------------
+// OPTIONS POPUP
+// The footer's extended list, one full-width button per row. The list node is
+// moved here by showMoreOptionsPopup and moved back by showGameOptions, so
+// these rules only ever apply on the phone path.
+
+#more-options-popup {
+	min-width: 220px;
+}
+
+#more-options-popup-options ul#game-options-extended {
+	display: block;
+	float: none;
+	margin: 0;
+}
+
+// the ul in the selector: the base sheet sets these li table-cell with an
+// ID of its own, so the row rule here has to carry two IDs to win
+#more-options-popup-options ul#game-options-extended li {
+	display: block;
+	margin: 0 0 8px 0;
+}
+
+#more-options-popup-options ul#game-options-extended .options-separator {
+	display: none;
+}
+
+#more-options-popup-options button.btn-meta {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	min-height: 40px;
+	padding: 8px 12px;
+	background: var(--l13-mobile-button-bg);
+	border: 1px solid var(--l13-mobile-border);
+	// btn-meta squares its corners with an !important of its own
+	border-radius: 11px !important;
+}
+
+// the touch hit halo btn-meta buttons carry would overlap in a stacked
+// column; these buttons are full-width rows and need no halo
+#more-options-popup-options button.btn-meta::after {
+	content: none;
 }
 
 // ---------------------------------------------------------------------------

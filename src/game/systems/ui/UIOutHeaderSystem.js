@@ -1143,6 +1143,22 @@ define([
 				this.elements.gameMsg.text(Text.t(gameMsgKey));
 				this.lastGameMsg = gameMsgKey;
 			}
+
+			// On the phone the footer is a fixed row and #game-msg is hidden there,
+			// so the save confirmation goes to the toast card at the top instead.
+			// Boot writes lastDefaultSaveTimestamp without saving anything, so the
+			// first observed value only arms the tracker.
+			if (saveSystem && saveSystem.lastDefaultSaveTimestamp > 0) {
+				if (!this.lastToastedSaveTimestamp) {
+					this.lastToastedSaveTimestamp = saveSystem.lastDefaultSaveTimestamp;
+				} else if (saveSystem.lastDefaultSaveTimestamp != this.lastToastedSaveTimestamp) {
+					this.lastToastedSaveTimestamp = saveSystem.lastDefaultSaveTimestamp;
+					if (this.elements.body.hasClass("layout-small")) {
+						let toastKey = saveSystem.error ? saveSystem.error : "ui.meta.game_saved_message";
+						GameGlobals.uiFunctions.showToast(Text.t(toastKey));
+					}
+				}
+			}
 		},
 
 		updateNotifications: function () {

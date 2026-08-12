@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m84" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m84" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m84" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m85" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m85" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m85" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -861,11 +861,11 @@
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.player_stats_button_label" id="btn-stats"></button></li>
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.game_data_button_label" id="btn-importexport"></button></li>
 				<li><button class="btn-meta" id="btn-reload">reload</button></li>
-				<li><span>:</span></li>
+				<li><button class="btn-meta text-key" data-text-key="ui.meta.restart_button_label" id="btn-restart"></button></li>
+				<li class="options-separator"><span>:</span></li>
 			</ul>
 			<ul id="game-options">
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.more_options_button_label" id="btn-more"></button>
-				<li><button class="btn-meta text-key" data-text-key="ui.meta.restart_button_label" id="btn-restart"></button></li>
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.quick_save_button_label" id="btn-save"></button></li>
 			</ul>
 		</div>
@@ -878,6 +878,11 @@
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
+
+	<!-- transient notification card: save and cloud confirmations, top of screen, auto-fades.
+	     Shown/hidden with a class, never inline display, so nothing can fight the CSS. -->
+
+	<div id="notification-toast" role="status" aria-live="polite"></div>
 
 	<!-- The two things that hang under the fixed chrome on a phone. They share
 	     one column so they stack instead of covering each other - the room
@@ -1026,6 +1031,14 @@
 			</div>
 		</div>
 		
+		<div id="more-options-popup" role="dialog" class="popup hidden-by-default popup-ingame" style="display:none" aria-labelledby="more-options-popup-header" aria-modal="true">
+			<h3 id="more-options-popup-header">Options</h3>
+			<div id="more-options-popup-options"></div>
+			<div class="buttonbox">
+				<button id="more-options-popup-close" class="button-popup-default">Close</button>
+			</div>
+		</div>
+
 		<div id="manage-save-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display:none" aria-labelledby="manage-save-popup-header" aria-modal="true">
 			<h3 id="manage-save-popup-header">Manage saves</h3>
 			<p id="manage-save-info">Note that the game is still in alpha and updates can break old saves.</p>

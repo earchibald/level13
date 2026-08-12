@@ -324,6 +324,11 @@ define([
 
 		onCloudSyncStateChanged: function (state, message) {
 			this.updateCloudSyncStatus();
+			// the phone hides #cloud-sync-status (the footer is a fixed row), so a
+			// completed mirror confirms itself with the toast card at the top instead
+			if (state == "synced" && $("body").hasClass("layout-small")) {
+				GameGlobals.uiFunctions.showToast("Saved to cloud");
+			}
 			// only failures and conflicts are worth interrupting for. A toast every two
 			// minutes for a working sync would train the player to ignore all of them,
 			// including these. There is no dedicated toast channel in this game, so this

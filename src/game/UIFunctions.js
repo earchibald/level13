@@ -118,8 +118,25 @@ define(['ash',
 				});
 				$("#btn-more").click(function (e) {
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					// the phone footer is a fixed row; the options open as a popup there
+					// so the row never changes height under the player's thumb
+					if ($("body").hasClass("layout-small")) {
+						uiFunctions.showMoreOptionsPopup();
+						return;
+					}
 					let wasVisible = $("#game-options-extended").is(":visible");
 					uiFunctions.showGameOptions(!wasVisible);
+				});
+				$("#more-options-popup-close").click(function (e) {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					uiFunctions.popupManager.closePopup("more-options-popup");
+				});
+				// any option chosen closes the options popup. The option button's own
+				// handler runs first (direct binding fires before the bubbled one) and
+				// the overlay counter carries the overlay across the swap, so whatever
+				// the option opens lands on top cleanly.
+				$("#more-options-popup-options").on("click", "button", function (e) {
+					uiFunctions.popupManager.closePopup("more-options-popup");
 				});
 				$("#btn-importexport").click(function (e) {
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
@@ -2687,9 +2704,50 @@ define(['ash',
 			},
 
 			showGameOptions: function (show) {
-				$("#game-options-extended").toggle(show);
+				// the phone may have carried the list off into the options popup;
+				// the inline toggle only makes sense with the list back in the footer
+				let $list = $("#game-options-extended");
+				if (!$list.parent().is("#footer")) $("#footer").append($list);
+				$list.toggle(show);
 				$("#btn-more").text(show ? Text.t("ui.meta.more_options_button_label") : Text.t("ui.meta.more_options_button_label"));
-				GlobalSignals.elementToggledSignal.dispatch($("#game-options-extended"), show);
+				GlobalSignals.elementToggledSignal.dispatch($list, show);
+			},
+
+			// The phone footer is a fixed row that must not grow, so More opens the
+			// extended options as a popup instead of expanding them inline. The list
+			// node moves in whole - the footer and the log pill already travel the
+			// same way - so every button keeps its bindings.
+			showMoreOptionsPopup: function () {
+				let $list = $("#game-options-extended");
+				$("#more-options-popup-options").append($list);
+				$list.show();
+				this.showSpecialPopup("more-options-popup", { isMeta: true, isDismissable: true });
+			},
+
+			// Save and cloud confirmations on the phone: a card at the top of the
+			// screen that fades on its own. Class-toggled, never inline display.
+			// A call while a toast is up replaces the text and restarts the clock.
+			// Timed on requestAnimationFrame, not setTimeout: a throttled tab can
+			// hold a timer for a minute, but rAF stops and resumes with the frames
+			// the player actually sees, so the card never sits there stale.
+			showToast: function (text) {
+				let $toast = $("#notification-toast");
+				if ($toast.length === 0) return;
+				$toast.text(text);
+				$toast.addClass("visible");
+				this.toastShownTimestamp = performance.now();
+				if (this.isToastTicking) return;
+				this.isToastTicking = true;
+				let uiFunctions = this;
+				let tick = function () {
+					if (performance.now() - uiFunctions.toastShownTimestamp >= 1250) {
+						$("#notification-toast").removeClass("visible");
+						uiFunctions.isToastTicking = false;
+					} else {
+						requestAnimationFrame(tick);
+					}
+				};
+				requestAnimationFrame(tick);
 			},
 
 			showResultFlyout: function (resultVO) {
