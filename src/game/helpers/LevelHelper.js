@@ -1397,6 +1397,35 @@ define([
 			return result;
 		},
 
+		// The supply tooltips outside: where the nearest drink or meal actually is.
+		// One nearest-first pass over the current level, collecting two answers:
+		// the nearest sector that gives the resource outright (a spring, a built
+		// collector) and the nearest that only could (collectable resource, the
+		// collector not built). A guaranteed sector ends the pass - a potential
+		// site farther away than a sure thing is never worth showing. Sectors the
+		// player can only scavenge are neither: a gamble is not a source.
+		findNearestKnownSupplySectors: function (pos, resourceName) {
+			let result = { guaranteed: null, guaranteedType: null, potential: null };
+			let isWater = resourceName == resourceNames.water;
+			let improvementName = isWater ? improvementNames.collector_water : improvementNames.collector_food;
+			this.forEverySectorFromLocation(pos, (sector) => {
+				if (!GameGlobals.sectorHelper.hasSectorKnownResource(sector, resourceName, 1)) return false;
+				let featuresComponent = sector.get(SectorFeaturesComponent);
+				let improvementsComponent = sector.get(SectorImprovementsComponent);
+				let hasCollector = improvementsComponent.getCount(improvementName) > 0;
+				if (hasCollector || (isWater && featuresComponent.hasSpring)) {
+					result.guaranteed = sector;
+					result.guaranteedType = hasCollector ? "collector" : "spring";
+					return true;
+				}
+				if (!result.potential && featuresComponent.resourcesCollectable.getResource(resourceName) >= 1) {
+					result.potential = sector;
+				}
+				return false;
+			}, true);
+			return result;
+		},
+
 		findNearestLocaleSector: function (pos, localeType) {
 			let result = null;
 			this.forEverySectorFromLocation(pos, (sector) => {

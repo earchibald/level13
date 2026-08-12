@@ -16,6 +16,8 @@ define([
 	'game/constants/PerkConstants',
 	'game/constants/UpgradeConstants',
 	'game/constants/PlayerStatConstants',
+	'game/constants/PositionConstants',
+	'game/constants/TextConstants',
 	'game/systems/SaveSystem',
 	'game/nodes/player/PlayerStatsNode',
 	'game/nodes/PlayerLocationNode',
@@ -38,7 +40,7 @@ define([
 	MathUtils,
 	UIList, 
 	GameGlobals, GlobalSignals, 
-	ColorConstants, GameConstants, CampConstants, LevelConstants, UIConstants, ExplorerConstants, ItemConstants, FightConstants, PerkConstants, UpgradeConstants, PlayerStatConstants,
+	ColorConstants, GameConstants, CampConstants, LevelConstants, UIConstants, ExplorerConstants, ItemConstants, FightConstants, PerkConstants, UpgradeConstants, PlayerStatConstants, PositionConstants, TextConstants,
 	SaveSystem,
 	PlayerStatsNode, PlayerLocationNode, TribeUpgradesNode, DeityNode,
 	BagComponent,
@@ -1023,8 +1025,66 @@ define([
 				this.lastCampResourceUpdate = now;
 			}
 
+			if (!inCamp) {
+				this.updateBagSupplyCallouts(playerPosition);
+			}
+
 			this.lastResourceUpdateInCamp = inCamp;
 			this.lastResourceUpdateLevel = playerPosition.level;
+		},
+
+		// The water and food chips outside: their tooltip answers "where is the
+		// nearest more of this". Cached by sector with a short clock, because the
+		// answer needs a level scan and a path per source and updateResources runs
+		// far more often than anyone reads a tooltip.
+		updateBagSupplyCallouts: function (playerPosition) {
+			if (!this.currentLocationNodes.head) return;
+
+			let posKey = playerPosition.level + "." + playerPosition.sectorX + "." + playerPosition.sectorY;
+			let timestamp = new Date().getTime();
+			if (this.supplyCalloutPosKey == posKey && timestamp - this.supplyCalloutTimestamp < 3000) return;
+			this.supplyCalloutPosKey = posKey;
+			this.supplyCalloutTimestamp = timestamp;
+
+			for (let name of [ resourceNames.water, resourceNames.food ]) {
+				let content = this.getSupplyCalloutContent(name, playerPosition);
+				UIConstants.updateCalloutContent("#resources-bag-mobile-" + name, content);
+				UIConstants.updateCalloutContent("#resources-bag-regular-" + name, content);
+			}
+		},
+
+		getSupplyCalloutContent: function (name, playerPosition) {
+			let content = TextConstants.getResourceDisplayName(name);
+			let isWater = name == resourceNames.water;
+			let playerSector = this.currentLocationNodes.head.entity;
+			let nearest = GameGlobals.levelHelper.findNearestKnownSupplySectors(playerPosition, name);
+
+			let describe = (label, sector) => {
+				let sectorPosition = sector.get(PositionComponent).getPosition();
+				if (playerPosition.sectorId() == sectorPosition.sectorId()) return label + ": here";
+				// same path settings as the map's distance readout
+				let path = GameGlobals.levelHelper.findPathTo(playerSector, sector, { skipBlockers: true, skipUnrevealed: true });
+				let distance = path ? path.length + (path.length == 1 ? " block" : " blocks") : "? blocks";
+				let direction = PositionConstants.getDirectionName(PositionConstants.getDirectionFrom(playerPosition, sectorPosition), false);
+				return label + ": " + distance + " " + direction;
+			};
+
+			let lines = [];
+			// the nearest of either kind comes back as the potential only when no
+			// guaranteed sector is closer, so listing potential first is honest:
+			// it is the closest water there is, the sure one is the fallback
+			if (nearest.potential) {
+				lines.push(describe(isWater ? "possible bucket spot" : "possible trap spot", nearest.potential));
+			}
+			if (nearest.guaranteed) {
+				let label = nearest.guaranteedType == "spring" ? "spring" : (isWater ? "bucket" : "trap");
+				lines.push(describe(label, nearest.guaranteed));
+			}
+			if (lines.length == 0) {
+				lines.push("no known source on this level");
+			}
+
+			return content + "<hr/>" + lines.join("<br/>");
 		},
 		
 		canHideResource: function (name) {
