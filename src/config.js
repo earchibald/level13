@@ -7,6 +7,13 @@ require.config({
 	baseUrl: 'src',
 
 	paths: {
+		// build/level13-app.js holds every module under src/, each define given
+		// its own name, so asking for level13-app brings the whole game in one
+		// request instead of three hundred. Anything the bundle happens to miss
+		// still resolves against src/ the old way. Rebuild with `node build.js`
+		// after changing anything under src/.
+		"level13-app": "../build/level13-app",
+
 		brejep: "../lib/brejep",
 		ash: "../lib/ash/ash.min",
 		jquery: "../lib/jquery",
@@ -27,6 +34,6 @@ require.config({
 		}
 	},
 	
-	urlArgs: "v=0.6.3.m88",
+	urlArgs: "v=0.6.3.m89",
 
 });

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m89",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "TWEAK",
+                    "summary": "The game now loads as one file instead of three hundred, so starting up is quicker and has far less chance of stalling on a slow or busy connection"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m88",
             "requiredVersion": "0.6.1",
             "phase": "beta",
