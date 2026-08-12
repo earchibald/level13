@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m88",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "A fresh load that stopped on the loading spinner now recovers by itself. The game asks for about three hundred separate files, and one of them coming back as a server error was enough to halt start-up; it now asks again for just the file that failed"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m87",
             "requiredVersion": "0.6.1",
             "phase": "beta",

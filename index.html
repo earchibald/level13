@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m87" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m87" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m87" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m88" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m88" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m88" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -1267,6 +1267,48 @@
 
 	<!-- RequireJS -->
 	<script data-main="src/config" src="lib/requirejs/require.min.js"></script>
+
+	<!-- A cold load asks for three hundred separate module files, and a release
+	     gives every one of them a new ?v=, so the first load after an upgrade
+	     sends all of them to the network at once. GitHub Pages answers one of
+	     them with a 503 often enough to matter, and requirejs treats a single
+	     failed script as fatal: the dependency chain never resolves, the app
+	     module never runs, and the page sits on the loading spinner with nothing
+	     but "Script error" in the console. Reloading by hand always fixed it,
+	     because by then every other file is cached and only the failed one is
+	     asked for again. Do that without the reload - ask again for just the
+	     file that failed. -->
+	<script>
+		(function () {
+			var MAX_ATTEMPTS = 3;
+			var RETRIABLE = { scripterror: true, timeout: true, load: true };
+			var attempts = {};
+
+			function retry(id, delay) {
+				window.setTimeout(function () {
+					console.warn("[boot] retrying " + id + " (attempt " + attempts[id] + " of " + MAX_ATTEMPTS + ")");
+					requirejs.undef(id);
+					requirejs([id], function () {});
+				}, delay);
+			}
+
+			require.onError = function (err) {
+				var ids = RETRIABLE[err.requireType] ? err.requireModules : null;
+				var retrying = false;
+				for (var i = 0; ids && i < ids.length; i++) {
+					var attempt = (attempts[ids[i]] || 0) + 1;
+					if (attempt > MAX_ATTEMPTS) continue;
+					attempts[ids[i]] = attempt;
+					retrying = true;
+					// The failure is a burst of requests meeting a rate limit, so
+					// asking again at once, all together, asks for the same answer.
+					// Back off, and stagger the files against each other.
+					retry(ids[i], attempt * 500 + i * 100);
+				}
+				if (!retrying) throw err;
+			};
+		})();
+	</script>
 
 	<!-- Service worker: offline play, and a home screen app that actually
 	     updates. Registered relative to the page so it works on a project
