@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m91",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The bucket and the trap upgrade from their own chips in the action bar. The arrow appears beside the collect actions as soon as the tribe has researched the upgrade, and goes again when that collector reaches its cap. It used to be a row of the Build table, which was easy to finish a game without ever reading"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The Build box outside no longer holds a band of empty space when it has nothing to show"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m90",
             "requiredVersion": "0.6.1",
             "phase": "beta",

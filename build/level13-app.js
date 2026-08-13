@@ -25297,14 +25297,13 @@ define([
 	MovementOptionsComponent, PositionComponent, CampComponent, SectorImprovementsComponent,
 	WorkshopComponent, SectorStatusComponent, EnemiesComponent
 ) {
-	// The bucket and the trap. Each has a row in the improvements table and a
-	// chip in the sector bar, and the two are driven from the same numbers.
+	// The bucket and the trap. Everything either one offers now lives on its chip
+	// in the sector bar: build it, empty it, and raise its capacity.
 	var COLLECTOR_DEFS = [
 		{
 			improvementName: improvementNames.collector_water,
 			resource: resourceNames.water,
 			buildAction: "build_out_collector_water",
-			rowID: "#out-improvements-collector-water",
 			buildID: "#out-action-build-bucket",
 			improveID: "#out-action-improve-bucket",
 			chipID: "#out-collector-chip-water",
@@ -25316,7 +25315,6 @@ define([
 			improvementName: improvementNames.collector_food,
 			resource: resourceNames.food,
 			buildAction: "build_out_collector_food",
-			rowID: "#out-improvements-collector-food",
 			buildID: "#out-action-build-trap",
 			improveID: "#out-action-improve-trap",
 			chipID: "#out-collector-chip-food",
@@ -25683,8 +25681,10 @@ define([
 
 			GameGlobals.uiFunctions.toggle("#table-out-actions-movement", GameGlobals.gameState.isFeatureUnlocked("move"));
 			GameGlobals.uiFunctions.toggle("#container-tab-two-out-actions h3", GameGlobals.gameState.isFeatureUnlocked("move"));
-			GameGlobals.uiFunctions.toggle("#out-improvements", GameGlobals.gameState.unlockedFeatures.vision);
-			GameGlobals.uiFunctions.toggle("#out-improvements table", GameGlobals.gameState.unlockedFeatures.vision);
+			// #out-improvements and its table are toggled by
+			// updateOutImprovementsList, which is the only code that knows whether
+			// any row in it has anything to say. The vision test moved there with
+			// them; it was never the whole condition.
 
 			this.updateOutActionsHeader();
 		},
@@ -26259,17 +26259,16 @@ define([
 			return enemyDesc + (hasHazards ? hazardDesc : notCampableDesc);
 		},
 
-		// What is on screen for the two collectors: the rows, the build and improve
-		// buttons, and whether each bar chip exists at all.
+		// What is on screen for the two collectors: which of the chip's buttons are
+		// offered, and whether each chip exists at all.
 		//
-		// Split from updateCollectorFills on purpose. This half decides visibility,
-		// so it must run with the code that recounts #header-out-improvements, or
-		// the heading and the rows drift apart. Returns the visible row count.
-		updateCollectorRows: function () {
-			if (!this.playerLocationNodes.head) return 0;
+		// Split from updateCollectorFills on purpose. This half asks the action
+		// helper what is visible, which is expensive; the fills change on every
+		// collect and every slow tick and cost nothing.
+		updateCollectorChips: function () {
+			if (!this.playerLocationNodes.head) return;
 
 			let improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
-			let numVisibleRows = 0;
 			let numChips = 0;
 
 			for (let i = 0; i < COLLECTOR_DEFS.length; i++) {
@@ -26281,28 +26280,12 @@ define([
 
 				// level < maxLevel, not maxLevel > 1: at the cap the game keeps the
 				// arrow visible and disabled, which would leave every finished
-				// collector with a permanently dead row
+				// collector with a permanently dead button
 				let showBuild = !isBuilt && GameGlobals.playerActionsHelper.isVisible(def.buildAction);
 				let showImprove = isBuilt && level < maxLevel;
-				// The build button is in the chip now, so the row is left with the
-				// upgrade and the name it upgrades. The two are the same condition:
-				// there is nothing to upgrade until there is something built.
-				let showRow = showImprove;
 
 				GameGlobals.uiFunctions.toggle(def.buildID, showBuild);
 				GameGlobals.uiFunctions.toggle(def.improveID, showImprove);
-				GameGlobals.uiFunctions.toggle(def.rowID, showRow);
-				if (showRow) numVisibleRows++;
-
-				// the label names the collector beside its improve arrow, so it is
-				// only worth resolving while the row is on screen
-				let showLabel = showRow && isBuilt;
-				let $label = $(def.rowID).find(".collector-row-label");
-				GameGlobals.uiFunctions.toggle($label, showLabel);
-				if (showLabel) {
-					// getImprovementDisplayName resolves the id from the name itself
-					$label.find("span").text(ImprovementConstants.getImprovementDisplayName(def.improvementName, level) + " · lvl " + level);
-				}
 
 				// Two states for one chip, and they cannot overlap: before it is
 				// built the chip is the icon and the button that builds it, after
@@ -26326,8 +26309,6 @@ define([
 			}
 
 			$("#out-sector-bar").toggleClass("has-collectors", numChips > 0);
-
-			return numVisibleRows;
 		},
 
 		// The stored/capacity numbers on the chips. These change on every collect
@@ -26353,12 +26334,10 @@ define([
 			if (GameGlobals.playerHelper.isInCamp()) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 			var uiFunctions = GameGlobals.uiFunctions;
-			var numVisible = this.updateCollectorRows();
+			var numVisible = 0;
+			this.updateCollectorChips();
 			this.updateCollectorFills();
 			$.each(this.elements.outImprovementsTR, function () {
-				// the collector rows are owned by updateCollectors
-				if ($(this).hasClass("collector-row")) return;
-
 				var actionName = $(this).attr("btn-action");
 
 				if (!actionName) {
@@ -26384,7 +26363,15 @@ define([
 					}
 				}
 			});
-			GameGlobals.uiFunctions.toggle("#header-out-improvements", numVisible > 0);
+			// The box keeps .actionbox's margin and padding when every row in it is
+			// hidden, so it goes with the heading rather than leaving a band of
+			// blank pane under it - the same rule updateOutActionsHeader follows.
+			// With the collectors gone to the sector bar this table is empty for
+			// most of a game, and that band was the only thing left of it.
+			let showImprovements = GameGlobals.gameState.unlockedFeatures.vision && numVisible > 0;
+			GameGlobals.uiFunctions.toggle("#header-out-improvements", showImprovements);
+			GameGlobals.uiFunctions.toggle("#out-improvements", showImprovements);
+			GameGlobals.uiFunctions.toggle("#out-improvements table", showImprovements);
 		},
 
 		// live values only - anything that changes what is visible belongs in

@@ -2494,26 +2494,14 @@ body.landscape-map #log-toasts {
 		display: block;
 	}
 
-	// COLLECTORS (bucket, trap): the collect actions, the fill level and the
-	// build button all live in the sector action bar now, so the row is a name
-	// and level plus the upgrade arrow - and it only exists at all once there is
-	// something built to upgrade.
-	//
-	// !important because these rows are shown and hidden through jQuery, which
-	// writes an inline `display` that would otherwise beat this and drop the row
-	// to `block`, stranding the arrow on its own line. The guard at the end of
-	// the file keeps the hide working.
-	#out-improvements tr#out-improvements-collector-water,
-	#out-improvements tr#out-improvements-collector-food {
-		display: flex !important;
-		align-items: center;
-		column-gap: 6px;
-		padding: 3px 0;
-		margin: 0;
-	}
+	// The collectors had two rows here - a name and level beside the upgrade
+	// arrow - and both are gone: everything a bucket or a trap offers is on its
+	// chip in the sector bar now, the upgrade included. The two forced-display
+	// rules they needed went with them, and so did their guards at the end of
+	// the file.
 
-	#out-improvements-collector-water > .collector-row-label,
-	#out-improvements-collector-food > .collector-row-label {
+	// the beacon row keeps this label, and it is the only one left
+	#out-improvements .collector-row-label {
 		flex: 1 1 auto;
 		min-width: 0;
 		white-space: nowrap;
@@ -3646,6 +3634,19 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
 	gap: 6px;
 }
 
+// The upgrade arrow is a glyph, not a word, so the 3em floor the chip's other
+// buttons need would cost it half its width in empty space - and the third
+// button is exactly what decides whether the two chips still share a row.
+// Narrower than the "1" beside it for the same reason, and it earns that: the
+// arrow is one character where the "1" is a digit that has to read as a count.
+// The 36px touch floor from btn-compact still applies, and its ::after halo
+// still reaches the full 44px.
+#out-sector-bar .collector-chip button.action-improve {
+	min-width: 2em;
+	padding-left: 6px;
+	padding-right: 6px;
+}
+
 // ---------------------------------------------------------------------------
 // LANDSCAPE MAP
 //
@@ -3860,10 +3861,10 @@ body.landscape-map.tab-switch-map #mainmap-sector-details-content {
 // inline `display` when it restores an element and an inline style beats a
 // stylesheet rule. But an important author declaration also beats jQuery's
 // inline `display: none`, so those elements could never be hidden again. The
-// game hides the bucket row in sectors where a bucket cannot be built, and
-// hides the map panel until scouting is unlocked - both showed anyway, the
-// bucket complete with a stale "busy moving" reason on a button for an action
-// that was not offered here.
+// game hides the map panel until scouting is unlocked, and it showed anyway.
+// The bucket row taught the same lesson before it left for the sector bar: it
+// stood in sectors where no bucket could be built, complete with a stale "busy
+// moving" reason on a button for an action that was not offered there.
 //
 // So match the inline hide itself. The attribute selector raises specificity
 // over each forced rule, so this wins wherever that rule sits, in a media
@@ -3874,10 +3875,6 @@ body.landscape-map.tab-switch-map #mainmap-sector-details-content {
 // rules, because the reason for that !important is a defect report and the
 // explanation has to be next to the rule it justifies. If you are auditing
 // this list for completeness, that is the one it does not name.
-body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
-body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],
-body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display: none"],
-body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display:none"],
 body.layout-small #out-container-compass[style*="display: none"],
 body.layout-small #out-container-compass[style*="display:none"],
 // the forced rule for this one is written through its parent, so the guard has

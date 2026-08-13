@@ -7644,16 +7644,7 @@ body.landscape-map #log-toasts {
   #trade-caravans-outgoing-container td {
     display: block;
   }
-  #out-improvements tr#out-improvements-collector-water,
-  #out-improvements tr#out-improvements-collector-food {
-    display: flex !important;
-    align-items: center;
-    column-gap: 6px;
-    padding: 3px 0;
-    margin: 0;
-  }
-  #out-improvements-collector-water > .collector-row-label,
-  #out-improvements-collector-food > .collector-row-label {
+  #out-improvements .collector-row-label {
     flex: 1 1 auto;
     min-width: 0;
     white-space: nowrap;
@@ -8332,6 +8323,11 @@ body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
 #out-sector-bar .collector-chip {
   gap: 6px;
 }
+#out-sector-bar .collector-chip button.action-improve {
+  min-width: 2em;
+  padding-left: 6px;
+  padding-right: 6px;
+}
 html:has(> body.landscape-map),
 body.landscape-map {
   height: var(--l13-viewport-height);
@@ -8438,10 +8434,6 @@ body.landscape-map.tab-switch-map #mainmap-sector-details-content {
   margin: 0;
   overflow-y: auto;
 }
-body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display: none"],
-body.layout-small #out-improvements tr#out-improvements-collector-water[style*="display:none"],
-body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display: none"],
-body.layout-small #out-improvements tr#out-improvements-collector-food[style*="display:none"],
 body.layout-small #out-container-compass[style*="display: none"],
 body.layout-small #out-container-compass[style*="display:none"],
 body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions[style*="display: none"],
