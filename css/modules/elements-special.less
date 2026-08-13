@@ -845,6 +845,39 @@ div.grid-content {
     text-align: left;
 }
 
+// outside and camp side by side; the two lists have little in common and read
+// far better next to each other than as one alphabet soup down the page
+// #settings-popup-body scrolls, and a scroll container does not pass its content's
+// preferred width up, so the popup would sit at the 30% every popup starts at and
+// wrap the two columns back into one. The width has to be asked for here instead.
+// & is body.dark / body.sunlit: the phone hides the hotkey list altogether, and
+// .fill-on-mobiles cannot override a min-width
+&:not(.layout-small) #settings-popup {
+    min-width: 500px;
+}
+
+#hotkeys-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+// the basis is what asks the popup for its width: the popup is only 30% wide until
+// something inside wants more, and two columns of the old width left every second
+// row wrapping. min-width 0 lets them shrink anyway on a narrow window, and
+// flex-wrap drops them back to one column rather than squeezing both to nothing
+.hotkeys-column {
+    flex: 1 1 220px;
+    min-width: 0;
+    text-align: left;
+}
+
+.hotkeys-column-header {
+    font-weight: bold;
+    margin: 8px 0 2px 0;
+}
+
 // MOBILE OVERLAY
 
 #mobile-overlay {
@@ -911,6 +944,54 @@ div.grid-content {
 #craft-popup-obsolete-container.selected {
 	border-color: @color-border-strong;
 	background: @color-bg-box-1;
+}
+
+// BUILDINGS POPUP (hotkey B in camp)
+
+#buildings-popup-list {
+	min-width: 280px;
+	max-height: 55vh;
+	overflow-y: auto;
+	text-align: left;
+	margin: 10px 0;
+}
+
+.buildings-popup-row {
+	padding: 2px 6px;
+	cursor: pointer;
+	border: 1px solid transparent;
+}
+
+.buildings-popup-row.selected {
+	border-color: @color-border-strong;
+	background: @color-bg-box-1;
+}
+
+.buildings-popup-header {
+	font-weight: bold;
+	margin-top: 4px;
+}
+
+.buildings-popup-header .header-count {
+	color: @color-text-meta;
+	font-weight: normal;
+}
+
+.buildings-popup-item-costs {
+	margin-left: 8px;
+	color: @color-text-meta;
+	font-size: @font-size-small;
+}
+
+.buildings-popup-item-unavailable .buildings-popup-item-name {
+	color: @color-text-meta;
+}
+
+// brief highlight when trying to build without sufficient resources
+.buildings-popup-row.buildings-popup-flash .buildings-popup-item-name,
+.buildings-popup-row.buildings-popup-flash span.action-cost-blocker {
+	color: @color-global-warning;
+	font-weight: bold;
 }
 
 // GO TO CAMP POPUP (hotkey G or T on the Tribe tab)

@@ -47,7 +47,11 @@ define([
 		},
 
         initElements: function () {
-            this.settingsPopupHotkeysList = UIList.create(this, $("#hotkeys-list"), this.createHotkeyListItem, this.updateHotkeyListItem, this.isHotkeyListItemDataSame);
+            this.settingsPopupHotkeyLists = {
+                out: UIList.create(this, $("#hotkeys-list-out"), this.createHotkeyListItem, this.updateHotkeyListItem, this.isHotkeyListItemDataSame),
+                in: UIList.create(this, $("#hotkeys-list-in"), this.createHotkeyListItem, this.updateHotkeyListItem, this.isHotkeyListItemDataSame),
+                any: UIList.create(this, $("#hotkeys-list-any"), this.createHotkeyListItem, this.updateHotkeyListItem, this.isHotkeyListItemDataSame),
+            };
 
             let sys = this;
 			$("#settings-checkbox-sfx-enabled").change(() => sys.onSettingToggled());
@@ -137,8 +141,16 @@ define([
             GameGlobals.uiFunctions.toggle($("#language-selection"), this.showLanguageSelection);
         },
         
+        // a phone has no keyboard, so the whole section is nothing but a wall of text
+        // between the settings and the Close button
         updateHotkeyList: function () {
-            let hotkeyEntries = [];
+            let isSmallLayout = $("body").hasClass("layout-small");
+            GameGlobals.uiFunctions.toggle("#hotkeys-list", !isSmallLayout);
+            if (isSmallLayout) return;
+
+            let tabs = GameGlobals.uiFunctions.elementIDs.tabs;
+            let entries = { out: [], in: [], any: [] };
+
             for (let code in GameGlobals.uiFunctions.hotkeys) {
                 for (let i = 0; i < GameGlobals.uiFunctions.hotkeys[code].length; i++) {
                     let hotkey = GameGlobals.uiFunctions.hotkeys[code][i];
@@ -150,15 +162,29 @@ define([
                     if (modifier == "ctrlKey") modifier = "Ctrl";
                     if (modifier == "altKey") modifier = "Alt";
                     let hotkeyValue = "";
-                    if (modifier) hotkeyValue += modifier + " + ";
+                    // ? and ^ are what the modifier already prints on the key, so
+                    // "Shift + ?" would name the same press twice
+                    if (modifier && !hotkey.displayKeyIncludesModifier) hotkeyValue += modifier + " + ";
                     hotkeyValue += hotkey.displayKey;
                     let isDev = hotkey.isDev;
                     let displayName = hotkey.description;
                     let isDisabled = !GameGlobals.gameState.settings.hotkeysEnabled;
-                    hotkeyEntries.push({ displayName: displayName, value: hotkeyValue, isDisabled: isDisabled, isDev: isDev });
+                    entries[this.getHotkeyColumn(hotkey, tabs)].push({ displayName: displayName, value: hotkeyValue, isDisabled: isDisabled, isDev: isDev });
                 }
             }
-			UIList.update(this.settingsPopupHotkeysList, hotkeyEntries);
+
+            for (let column in this.settingsPopupHotkeyLists) {
+                UIList.update(this.settingsPopupHotkeyLists[column], entries[column]);
+                GameGlobals.uiFunctions.toggle($("#hotkeys-list-" + column).parent(), entries[column].length > 0);
+            }
+        },
+
+        // the map, the tribe tab and the embark screen are all part of being out there,
+        // so they join the outside column rather than earning one of their own
+        getHotkeyColumn: function (hotkey, tabs) {
+            if (hotkey.tab == tabs.in) return "in";
+            if (hotkey.tab) return "out";
+            return "any";
         },
 
         createHotkeyListItem: function () {

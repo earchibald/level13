@@ -2899,6 +2899,24 @@ body.dark .hotkey-list-item-label {
   min-width: 35%;
   text-align: left;
 }
+body.dark:not(.layout-small) #settings-popup {
+  min-width: 500px;
+}
+body.dark #hotkeys-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+body.dark .hotkeys-column {
+  flex: 1 1 220px;
+  min-width: 0;
+  text-align: left;
+}
+body.dark .hotkeys-column-header {
+  font-weight: bold;
+  margin: 8px 0 2px 0;
+}
 body.dark #mobile-overlay {
   position: fixed;
   top: 0;
@@ -2951,6 +2969,43 @@ body.dark #craft-popup-obsolete-container {
 body.dark #craft-popup-obsolete-container.selected {
   border-color: #555;
   background: #282a28;
+}
+body.dark #buildings-popup-list {
+  min-width: 280px;
+  max-height: 55vh;
+  overflow-y: auto;
+  text-align: left;
+  margin: 10px 0;
+}
+body.dark .buildings-popup-row {
+  padding: 2px 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+body.dark .buildings-popup-row.selected {
+  border-color: #555;
+  background: #282a28;
+}
+body.dark .buildings-popup-header {
+  font-weight: bold;
+  margin-top: 4px;
+}
+body.dark .buildings-popup-header .header-count {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: normal;
+}
+body.dark .buildings-popup-item-costs {
+  margin-left: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+body.dark .buildings-popup-item-unavailable .buildings-popup-item-name {
+  color: rgba(255, 255, 255, 0.5);
+}
+body.dark .buildings-popup-row.buildings-popup-flash .buildings-popup-item-name,
+body.dark .buildings-popup-row.buildings-popup-flash span.action-cost-blocker {
+  color: #e64646;
+  font-weight: bold;
 }
 body.dark #go-popup {
   text-align: center;
@@ -5740,6 +5795,24 @@ body.sunlit .hotkey-list-item-label {
   min-width: 35%;
   text-align: left;
 }
+body.sunlit:not(.layout-small) #settings-popup {
+  min-width: 500px;
+}
+body.sunlit #hotkeys-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+body.sunlit .hotkeys-column {
+  flex: 1 1 220px;
+  min-width: 0;
+  text-align: left;
+}
+body.sunlit .hotkeys-column-header {
+  font-weight: bold;
+  margin: 8px 0 2px 0;
+}
 body.sunlit #mobile-overlay {
   position: fixed;
   top: 0;
@@ -5792,6 +5865,43 @@ body.sunlit #craft-popup-obsolete-container {
 body.sunlit #craft-popup-obsolete-container.selected {
   border-color: #999;
   background: #fff;
+}
+body.sunlit #buildings-popup-list {
+  min-width: 280px;
+  max-height: 55vh;
+  overflow-y: auto;
+  text-align: left;
+  margin: 10px 0;
+}
+body.sunlit .buildings-popup-row {
+  padding: 2px 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+body.sunlit .buildings-popup-row.selected {
+  border-color: #999;
+  background: #fff;
+}
+body.sunlit .buildings-popup-header {
+  font-weight: bold;
+  margin-top: 4px;
+}
+body.sunlit .buildings-popup-header .header-count {
+  color: rgba(0, 0, 0, 0.5);
+  font-weight: normal;
+}
+body.sunlit .buildings-popup-item-costs {
+  margin-left: 8px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+}
+body.sunlit .buildings-popup-item-unavailable .buildings-popup-item-name {
+  color: rgba(0, 0, 0, 0.5);
+}
+body.sunlit .buildings-popup-row.buildings-popup-flash .buildings-popup-item-name,
+body.sunlit .buildings-popup-row.buildings-popup-flash span.action-cost-blocker {
+  color: #e64646;
+  font-weight: bold;
 }
 body.sunlit #go-popup {
   text-align: center;

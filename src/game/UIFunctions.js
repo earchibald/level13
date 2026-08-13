@@ -754,6 +754,20 @@ define(['ash',
 				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.in, false, false, "use_in_home");
 				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap", { isHiddenFromList: true });
 
+				// the camp buildings a player uses every visit. All three letters are taken
+				// outside (Move S, Back to camp) or on the tribe tab (Go to camp), so they are
+				// scoped to tabs.in and the two sets never meet
+				this.registerHotkey("Sit down", "KeyS", defaultModifier, tabs.in, false, false, "use_in_campfire");
+				this.registerHotkey("Treatment", "KeyT", defaultModifier, tabs.in, false, false, "use_in_hospital");
+
+				// ^ is Shift and 6, and it is the shape printed on the improve button.
+				// The plain 6 stays the tab selector: triggerHotkey skips a hotkey with no
+				// modifier whenever one is held, so the two readings of the key never collide.
+				// displayKeyIncludesModifier stops the badge and the list saying "Shift + ^"
+				this.registerHotkey("Improve campfire", "Digit6", "shiftKey", tabs.in, false, false, "improve_in_campfire", { displayKey: "^", displayKeyIncludesModifier: true });
+
+				this.registerHotkey("Buildings", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
+
 				// G asks for a level number and presses that camp's Go button. KeyG is free
 				// here because the collector binding is scoped to tabs.out; T is an alias.
 				// These keyup bindings are a fallback: UIOutTribeSystem also opens the popup
@@ -841,7 +855,7 @@ define(['ash',
 				this.registerHotkey("Confirm", "NumpadEnter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerEnterButton(), { isHiddenFromList: true, activeCondition: hasPopupEnterAction });
 
 				// same path as more > settings; the popup contains the hotkey list
-				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?" });
+				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?", displayKeyIncludesModifier: true });
 			},
 
 			registerHotkey: function (description, code, modifier, tab, isUniversal, isDev, cb, options) {
@@ -888,8 +902,11 @@ define(['ash',
 					isUniversal: isUniversal,
 					isDev: isDev,
 					isHiddenFromList: options.isHiddenFromList || false,
-					action: action, 
-					cb: cb 
+					// the display key is the character the modifier already produces (? for
+					// Shift and /, ^ for Shift and 6), so naming the modifier again reads wrong
+					displayKeyIncludesModifier: options.displayKeyIncludesModifier || false,
+					action: action,
+					cb: cb
 				};
 				this.hotkeys[code].push(hotkey);
 			},
@@ -911,7 +928,7 @@ define(['ash',
 				let hotkey = this.getActionHotkey(action);
 				if (hotkey) {
 					let modifier = this.getActualHotkeyModifier(hotkey.modifier);
-					let prefix = modifier == "shiftKey" ? "&#8679;" : "";
+					let prefix = modifier == "shiftKey" && !hotkey.displayKeyIncludesModifier ? "&#8679;" : "";
 					return prefix + hotkey.displayKeyShort;
 				}
 				if (this.contextHotkeyActions.indexOf(action) >= 0) return "&#9166;";

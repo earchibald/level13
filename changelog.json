@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m92",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-13",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Camp has hotkeys of its own: S sits down at the campfire, T takes treatment at the hospital, ^ improves the campfire and B opens the buildings you can put up. Outside and camp barely share a key, so the same letter can mean one thing in each place"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The hotkey list in settings reads as three groups, Outside, In camp and Anywhere, instead of one long row. On a phone it is hidden, since there is no keyboard to press"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m91",
             "requiredVersion": "0.6.1",
             "phase": "beta",
