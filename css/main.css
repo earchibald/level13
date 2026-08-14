@@ -140,10 +140,6 @@ canvas {
   -o-transition: none;
   transition: none;
 }
-.vision-step-0 {
-  @is-low-vision : 0 < 3;
-  @is-high-vision : 0 > 9;
-}
 .vision-step-0 #grid-main {
   opacity: 0.5;
 }
@@ -170,10 +166,6 @@ canvas {
 .vision-step-0 #grid-main #mainmap-sector-details-content td,
 .vision-step-0 #grid-main #log span {
   opacity: 0.5;
-}
-.vision-step-1 {
-  @is-low-vision : 1 < 3;
-  @is-high-vision : 1 > 9;
 }
 .vision-step-1 #grid-main {
   opacity: 0.59;
@@ -202,10 +194,6 @@ canvas {
 .vision-step-1 #grid-main #log span {
   opacity: 0.6;
 }
-.vision-step-2 {
-  @is-low-vision : 2 < 3;
-  @is-high-vision : 2 > 9;
-}
 .vision-step-2 #grid-main {
   opacity: 0.68;
 }
@@ -232,10 +220,6 @@ canvas {
 .vision-step-2 #grid-main #mainmap-sector-details-content td,
 .vision-step-2 #grid-main #log span {
   opacity: 0.7;
-}
-.vision-step-3 {
-  @is-low-vision : 3 < 3;
-  @is-high-vision : 3 > 9;
 }
 .vision-step-3 #grid-main {
   opacity: 0.77;
@@ -264,10 +248,6 @@ canvas {
 .vision-step-3 #grid-main #log span {
   opacity: 0.8;
 }
-.vision-step-4 {
-  @is-low-vision : 4 < 3;
-  @is-high-vision : 4 > 9;
-}
 .vision-step-4 #grid-main {
   opacity: 0.86;
 }
@@ -294,10 +274,6 @@ canvas {
 .vision-step-4 #grid-main #mainmap-sector-details-content td,
 .vision-step-4 #grid-main #log span {
   opacity: 0.9;
-}
-.vision-step-5 {
-  @is-low-vision : 5 < 3;
-  @is-high-vision : 5 > 9;
 }
 .vision-step-5 #grid-main {
   opacity: 0.95;
@@ -326,10 +302,6 @@ canvas {
 .vision-step-5 #grid-main #log span {
   opacity: 1;
 }
-.vision-step-6 {
-  @is-low-vision : 6 < 3;
-  @is-high-vision : 6 > 9;
-}
 .vision-step-6 #grid-main {
   opacity: 1;
 }
@@ -356,10 +328,6 @@ canvas {
 .vision-step-6 #grid-main #mainmap-sector-details-content td,
 .vision-step-6 #grid-main #log span {
   opacity: 1;
-}
-.vision-step-7 {
-  @is-low-vision : 7 < 3;
-  @is-high-vision : 7 > 9;
 }
 .vision-step-7 #grid-main {
   opacity: 1;
@@ -388,10 +356,6 @@ canvas {
 .vision-step-7 #grid-main #log span {
   opacity: 1;
 }
-.vision-step-8 {
-  @is-low-vision : 8 < 3;
-  @is-high-vision : 8 > 9;
-}
 .vision-step-8 #grid-main {
   opacity: 1;
 }
@@ -419,10 +383,6 @@ canvas {
 .vision-step-8 #grid-main #log span {
   opacity: 1;
 }
-.vision-step-9 {
-  @is-low-vision : 9 < 3;
-  @is-high-vision : 9 > 9;
-}
 .vision-step-9 #grid-main {
   opacity: 1;
 }
@@ -449,10 +409,6 @@ canvas {
 .vision-step-9 #grid-main #mainmap-sector-details-content td,
 .vision-step-9 #grid-main #log span {
   opacity: 1;
-}
-.vision-step-10 {
-  @is-low-vision : 10 < 3;
-  @is-high-vision : 10 > 9;
 }
 .vision-step-10 #grid-main {
   opacity: 1;
