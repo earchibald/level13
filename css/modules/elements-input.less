@@ -136,6 +136,19 @@ select {
 	min-width: 5em;
 }
 
+// .info-callout-target zeroes border/margin/padding and sets cursor: help;
+// interactive controls used as tooltip targets keep their normal styling
+select.info-callout-target {
+	border-width: 1px;
+	margin: 0px 5px;
+	padding: 1px 3px;
+	cursor: pointer;
+}
+
+button.info-callout-target {
+	cursor: pointer;
+}
+
 .select-container {
     width: 100%;
     display: flex;

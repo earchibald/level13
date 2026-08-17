@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m93" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m93" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m93" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m94" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m94" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m94" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -244,10 +244,10 @@
 						<div class="unit whole" id="tab-header">
 						<button id="btn-header-rename" class="context btn-meta tabelement tab-options text-key" data-tab="switch-in" data-text-key="ui.camp.rename_camp_button_label" style="display:none"></button>
 						<div class="tabelement" data-tab="switch-map" style="display:none;">
-							<select id="select-header-mapstyle" class="context tab-options"></select>
-							<select id="select-header-mapmode" class="context tab-options"></select>
-							<select id="select-header-level" class="context tab-options"></select>
-							<button id="btn-download-map" class="btn-meta context tab-options">download</button>
+							<select id="select-header-mapstyle" class="context tab-options info-callout-target info-callout-target-small" description="Map display style"></select>
+							<select id="select-header-mapmode" class="context tab-options info-callout-target info-callout-target-small" description="Choose what information the map highlights"></select>
+							<select id="select-header-level" class="context tab-options info-callout-target info-callout-target-small" description="Level to show on the map"></select>
+							<button id="btn-download-map" class="btn-meta context tab-options info-callout-target info-callout-target-small" description="Save the level map as an image">download</button>
 						</div>
 						<h2 class="noninteractive">&nbsp;</h2>
 						</div>
@@ -630,25 +630,25 @@
 								<div id="mainmap-ascii-legend" class="lvl13-box-1"></div>
 							</div>
 							<div id="mainmap-sector-details" class="lvl13-box-1" style="margin: 5px; padding: 5px;">
-								<button id="btn-mainmap-sector-details-next" aria-label="Next sector" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-next" aria-label="Next sector" class="context btn-glyph info-callout-target info-callout-target-small" description="Select the next sector">
 									<img src="img/eldorado/icon-next-dark.png" class="img-themed" data-src-sunlit="img/eldorado/icon-next.png" />
 								</button>
-								<button id="btn-mainmap-sector-details-previous" aria-label="Previous sector" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-previous" aria-label="Previous sector" class="context btn-glyph info-callout-target info-callout-target-small" description="Select the previous sector">
 									<img src="img/eldorado/icon-previous-dark.png" class="img-themed" data-src-sunlit="img/eldorado/icon-previous.png" />
 								</button>
-								<button id="btn-mainmap-sector-details-camp" aria-label="Camp sector" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-camp" aria-label="Camp sector" class="context btn-glyph info-callout-target info-callout-target-small" description="Select the camp sector">
 									<img src="img/map/map-camp-sunlit.png" class="img-themed" data-src-sunlit="img/map/map-camp.png" />
 								</button>
-								<button id="btn-mainmap-sector-details-unknown" aria-label="Unvisited sectors" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-unknown" aria-label="Unvisited sectors" class="context btn-glyph info-callout-target info-callout-target-small" description="Select an unvisited sector">
 									<img src="img/map/map-unvisited-sunlit.png" class="img-themed" data-src-sunlit="img/map/map-unvisited.png" />
 								</button>
-								<button id="btn-mainmap-sector-details-unscouted" aria-label="Unscouted sectors" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-unscouted" aria-label="Unscouted sectors" class="context btn-glyph info-callout-target info-callout-target-small" description="Select an unscouted point of interest">
 									<img src="img/map/map-interest-sunlit.png" class="img-themed" data-src-sunlit="img/map/map-interest.png" />
 								</button>
-								<button id="btn-mainmap-sector-details-investigate" aria-label="Sectors which can be investigated" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-investigate" aria-label="Sectors which can be investigated" class="context btn-glyph info-callout-target info-callout-target-small" description="Select a sector that can be investigated">
 									<img src="img/map/map-investigate-sunlit.png" class="img-themed" data-src-sunlit="img/map/map-investigate.png" />
 								</button>
-								<button id="btn-mainmap-sector-details-ingredients" aria-label="Sectors with ingredients" class="context btn-glyph">
+								<button id="btn-mainmap-sector-details-ingredients" aria-label="Sectors with ingredients" class="context btn-glyph info-callout-target info-callout-target-small" description="Select a sector with ingredients">
 									<img src="img/map/map-ingredient-sunlit.png" class="img-themed" data-src-sunlit="img/map/map-ingredient.png" />
 								</button>
 								<div id="mainmap-sector-details-content-empty">

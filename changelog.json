@@ -1,6 +1,35 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m94",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-16",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Enter that confirms a popup no longer carries on into the game and fires the action behind it"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A movement or screen transition that never finishes now gives up after a few seconds instead of leaving the game frozen and swallowing clicks"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The map controls and the sector detail buttons explain themselves on hover"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Changing the map level or the map mode no longer leaves a stale tooltip behind"
+                },
+                {
+                    "type": "TWEAK",
+                    "summary": "The map overlay and the tab numbers are only redrawn when something about them has actually changed"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m93",
             "requiredVersion": "0.6.1",
             "phase": "beta",

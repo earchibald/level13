@@ -1265,6 +1265,9 @@ body.dark div.popup-overlay-meta {
 body.dark .tab-options {
   float: right;
 }
+body.dark #tab-header .callout-container {
+  float: right;
+}
 body.dark .stepper {
   text-align: center;
   min-width: 70px;
@@ -2150,6 +2153,15 @@ body.dark select {
   margin: 0px 5px;
   padding: 1px 3px;
   min-width: 5em;
+}
+body.dark select.info-callout-target {
+  border-width: 1px;
+  margin: 0px 5px;
+  padding: 1px 3px;
+  cursor: pointer;
+}
+body.dark button.info-callout-target {
+  cursor: pointer;
 }
 body.dark .select-container {
   width: 100%;
@@ -4164,6 +4176,9 @@ body.sunlit div.popup-overlay-meta {
 body.sunlit .tab-options {
   float: right;
 }
+body.sunlit #tab-header .callout-container {
+  float: right;
+}
 body.sunlit .stepper {
   text-align: center;
   min-width: 70px;
@@ -5049,6 +5064,15 @@ body.sunlit select {
   margin: 0px 5px;
   padding: 1px 3px;
   min-width: 5em;
+}
+body.sunlit select.info-callout-target {
+  border-width: 1px;
+  margin: 0px 5px;
+  padding: 1px 3px;
+  cursor: pointer;
+}
+body.sunlit button.info-callout-target {
+  cursor: pointer;
 }
 body.sunlit .select-container {
   width: 100%;

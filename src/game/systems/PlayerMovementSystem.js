@@ -43,7 +43,20 @@ define([
 		},
 		
 		update: function (time) {
+			this.checkStuckMovement();
 			this.startPendingMovement();
+		},
+
+		// movement completion depends on chained setTimeouts; throttled timers (background tab)
+		// or an exception mid-chain leave isTransitioning stuck, which freezes most UI updates
+		// and silently swallows action clicks - force completion instead of staying stuck
+		checkStuckMovement: function () {
+			if (this.currentMovementTarget == null) return;
+			if (!this.movementStartTimestamp) return;
+			let elapsed = new Date().getTime() - this.movementStartTimestamp;
+			if (elapsed < 5000) return;
+			log.w("player movement seems stuck; force completing", this);
+			this.completePlayerMovement(this.currentMovementTarget, true, false);
 		},
 		
 		startPendingMovement: function () {
@@ -96,6 +109,7 @@ define([
 		startPlayerMovement: function (oldPosition, position, blockUI) {
 			log.i("start player movement from [" + oldPosition + "] to: [" + position + "]", this);
 			this.currentMovementTarget = position;
+			this.movementStartTimestamp = new Date().getTime();
 			if (blockUI) GameGlobals.gameState.uiStatus.isTransitioning = true;
 			GlobalSignals.playerMoveStartedSignal.dispatch(position);
 		},
@@ -144,8 +158,9 @@ define([
 			let player = this.playerPositionNodes.head.entity;
 
 			log.i("finish player movement to: [" + position + "]", this);
-			player.remove(MovementComponent);
+			if (player.has(MovementComponent)) player.remove(MovementComponent);
 			this.currentMovementTarget = null;
+			this.movementStartTimestamp = null;
 
 			if (blockUI) GameGlobals.gameState.uiStatus.isTransitioning = false;
 			GlobalSignals.playerMoveCompletedSignal.dispatch(position);

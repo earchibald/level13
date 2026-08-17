@@ -74,7 +74,12 @@ define([
 
 		update: function (time) {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			if (GameGlobals.gameState.uiStatus.isTransitioning) return;
+			if (GameGlobals.gameState.uiStatus.isTransitioning) {
+				// most update systems pause during transitions, so a stuck flag freezes the UI;
+				// this check is the recovery path
+				GameGlobals.uiFunctions.checkStuckTransition();
+				return;
+			}
 			
 			if (this.elementsVisibilityChanged) {
 				this.updateVisibleButtonsList();

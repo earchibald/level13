@@ -31722,10 +31722,6 @@ define(['ash',
 					$(this).append("<span class='tab-hotkey-number' aria-hidden='true'></span>");
 				});
 
-				GlobalSignals.popupClosedSignal.add(function () {
-					uiFunctions.lastPopupClosedTimestamp = new Date().getTime();
-				});
-
 				// Collapsible divs
 				this.registerCollapsibleContainerListeners("");
 
@@ -31819,6 +31815,7 @@ define(['ash',
 					);
 				});
 				
+				$(document).on("keydown", this.onKeyDown);
 				$(document).on("keyup", this.onKeyUp);
 			},
 
@@ -32830,6 +32827,7 @@ define(['ash',
 				this.currentTransition = transition;
 
 				$("body").toggleClass("ui-transition", true);
+				transition.startTimestamp = new Date().getTime();
 				if (blockUI) GameGlobals.gameState.uiStatus.isTransitioning = true;
 				GlobalSignals.transitionStartedSignal.dispatch();
 
@@ -32935,6 +32933,33 @@ define(['ash',
 				}
 			},
 
+			// transitions complete via chained setTimeouts, which throttled timers or an exception
+			// can break; a stuck isTransitioning freezes most UI updates and swallows clicks
+			checkStuckTransition: function () {
+				if (!GameGlobals.gameState.uiStatus.isTransitioning) {
+					this.transitionStuckSince = null;
+					return;
+				}
+				let transition = this.currentTransition;
+				if (transition) {
+					if (!transition.startTimestamp) return;
+					if (new Date().getTime() - transition.startTimestamp < 5000) return;
+					log.w("ui transition seems stuck; force completing");
+					this.completeTransition();
+					return;
+				}
+				// no ui transition object: movement transitions have their own watchdog,
+				// so a flag stuck this long with neither in progress is an orphan
+				if (!this.transitionStuckSince) {
+					this.transitionStuckSince = new Date().getTime();
+					return;
+				}
+				if (new Date().getTime() - this.transitionStuckSince < 8000) return;
+				log.w("ui stuck in transitioning state; force clearing");
+				this.transitionStuckSince = null;
+				GameGlobals.gameState.uiStatus.isTransitioning = false;
+			},
+
 			completeTransition: function () {
 				let transition = this.currentTransition;
 
@@ -32944,7 +32969,7 @@ define(['ash',
 
 				if (!transition) return;
 
-				clearTimeout(transition.timeoutID);
+				clearTimeout(transition.currentTimeoutID);
 
 				this.transitionElementsComplete(transition.elements);
 				
@@ -33381,7 +33406,18 @@ define(['ash',
 				this.updateStepperButtons("#" + $(input).parent().attr("id"));
 			},
 			
+			onKeyDown: function (e) {
+				// remember per key whether a popup consumed the press; the popup may be gone by keyup
+				// (Enter clicks the focused popup button on keydown, and the close signal is async)
+				let uiFunctions = GameGlobals.uiFunctions;
+				if (!uiFunctions.keyDownHadPopup) uiFunctions.keyDownHadPopup = {};
+				uiFunctions.keyDownHadPopup[e.originalEvent.code] = uiFunctions.popupManager.hasOpenPopup();
+			},
+
 			onKeyUp: function (e) {
+				let uiFunctions = GameGlobals.uiFunctions;
+				let hadPopupOnKeyDown = uiFunctions.keyDownHadPopup && uiFunctions.keyDownHadPopup[e.originalEvent.code];
+				if (uiFunctions.keyDownHadPopup) uiFunctions.keyDownHadPopup[e.originalEvent.code] = false;
 				if (e.originalEvent.isTextInput) return;
 				// number inputs (steppers) don't set isTextInput; never treat typing in a field as a hotkey
 				let targetTagName = e.target ? e.target.tagName : null;
@@ -33399,22 +33435,22 @@ define(['ash',
 				// and the hotkey would read the tab that is on its way out
 				let isButtonLike = $(e.target).is("button, a, [tabindex]") && !$(e.target).is("#switch-tabs li.selected");
 				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && isButtonLike) return;
-				if (!GameGlobals.uiFunctions.triggerHotkey(code, e)) return;
+				if (!uiFunctions.triggerHotkey(code, e, hadPopupOnKeyDown)) return;
 			},
 
-			triggerHotkey: function (code, modifiers) {
+			triggerHotkey: function (code, modifiers, hadPopupOnKeyDown) {
 				if (!this.hotkeys[code]) return false;
 				let currentTab = GameGlobals.gameState.uiStatus.currentTab;
 				let hasPopups = GameGlobals.uiFunctions.popupManager.hasOpenPopup();
 				let hasModifier = modifiers.shiftKey || modifiers.altKey || modifiers.ctrlKey || modifiers.metaKey;
-				// a popup dismissed on keydown (Enter clicks the focused button) must not leak the keyup to game hotkeys
-				let msSincePopupClosed = new Date().getTime() - (this.lastPopupClosedTimestamp || 0);
 
 				for (let i = 0; i < this.hotkeys[code].length; i++) {
 					let hotkey = this.hotkeys[code][i];
 					if (hotkey.tab && hotkey.tab !== currentTab) continue;
 					if (!hotkey.isUniversal && hasPopups) continue;
-					if (!hotkey.isUniversal && msSincePopupClosed < 300) continue;
+					// a key pressed while a popup was open belongs to the popup, even if the popup
+					// closed before keyup (Enter confirms on keydown and the close signal is async)
+					if (!hotkey.isUniversal && hadPopupOnKeyDown) continue;
 					if (hotkey.activeCondition && !hotkey.activeCondition()) continue;
 					if (!GameGlobals.gameState.settings.hotkeysEnabled && !hotkey.isUniversal) continue;
 
@@ -34175,9 +34211,16 @@ define(['ash',
 			},
 
 			updateTabHotkeyNumbers: function () {
-				$("#switch-tabs li .tab-hotkey-number").text("");
-				if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
+				let hotkeysEnabled = GameGlobals.gameState.settings.hotkeysEnabled;
 				let visibleTabElements = $("#switch-tabs li").filter("[data-visible=true]");
+
+				// runs on every tab visibility update (frequent); skip the DOM writes when unchanged
+				let signature = hotkeysEnabled + "|" + visibleTabElements.toArray().map(e => e.id).join(",");
+				if (this.tabHotkeyNumbersSignature == signature) return;
+				this.tabHotkeyNumbersSignature = signature;
+
+				$("#switch-tabs li .tab-hotkey-number").text("");
+				if (!hotkeysEnabled) return;
 				for (let i = 0; i < visibleTabElements.length && i < 9; i++) {
 					$(visibleTabElements[i]).find(".tab-hotkey-number").text(i + 1);
 				}
@@ -51705,6 +51748,18 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 		},
 
 		rebuildOverlay: function (map, overlayId, options, visibleSectors, dimensions, sectorSelectedCallback) {
+			// the overlay is rebuilt often (every inventory change reschedules the minimap);
+			// skip the DOM churn when nothing that affects the cells has changed
+			let signatureParts = [ overlayId, options.mapPosition.level, options.mapPosition.sectorX, options.mapPosition.sectorY, options.mapMode,
+				dimensions.minVisibleX, dimensions.maxVisibleX, dimensions.minVisibleY, dimensions.maxVisibleY, this.getSectorSize(options.centered) ];
+			for (let key in visibleSectors) {
+				signatureParts.push(key + ":" + this.getSectorStatus(visibleSectors[key]));
+			}
+			let signature = signatureParts.join("|");
+			if (!this.overlaySignatures) this.overlaySignatures = {};
+			if (this.overlaySignatures[overlayId] == signature) return;
+			this.overlaySignatures[overlayId] = signature;
+
 			var $overlay = $("#" + overlayId);
 			$overlay.empty();
 			$overlay.css("width", dimensions.canvasWidth + "px");
@@ -51776,6 +51831,17 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 		rebuildMapHintOverlay: function (mapPosition, mapHints, dimensions) {
 			let $overlay = $("#minimap-background-overlay");
 			if ($overlay.length == 0) return;
+
+			// same churn guard as rebuildOverlay
+			let signatureParts = [ mapPosition.level, mapPosition.sectorX, mapPosition.sectorY ];
+			for (let i = 0; i < mapHints.length; i++) {
+				let pos = mapHints[i].position;
+				signatureParts.push(mapHints[i].id + ":" + pos.level + "." + pos.sectorX + "." + pos.sectorY);
+			}
+			let signature = signatureParts.join("|");
+			if (this.mapHintOverlaySignature == signature) return;
+			this.mapHintOverlaySignature = signature;
+
 			$overlay.empty();
 
 			let cellSize = 14;
@@ -61497,7 +61563,12 @@ define([
 
 		update: function (time) {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			if (GameGlobals.gameState.uiStatus.isTransitioning) return;
+			if (GameGlobals.gameState.uiStatus.isTransitioning) {
+				// most update systems pause during transitions, so a stuck flag freezes the UI;
+				// this check is the recovery path
+				GameGlobals.uiFunctions.checkStuckTransition();
+				return;
+			}
 			
 			if (this.elementsVisibilityChanged) {
 				this.updateVisibleButtonsList();
@@ -69374,6 +69445,8 @@ define([
 		},
 
 		onLevelSelectorChanged: function () {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			let level = parseInt($("#select-header-level").val());
 			if (this.selectedLevel === level) return;
 			this.selectLevel(level);
@@ -69381,6 +69454,8 @@ define([
 		},
 		
 		onMapModeSelectorChanged: function () {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			let mapMode = $("#select-header-mapmode").val();
 			if (this.selectedMapMode === mapMode) return;
 			this.selectMapMode(mapMode);
@@ -75576,7 +75651,20 @@ define([
 		},
 		
 		update: function (time) {
+			this.checkStuckMovement();
 			this.startPendingMovement();
+		},
+
+		// movement completion depends on chained setTimeouts; throttled timers (background tab)
+		// or an exception mid-chain leave isTransitioning stuck, which freezes most UI updates
+		// and silently swallows action clicks - force completion instead of staying stuck
+		checkStuckMovement: function () {
+			if (this.currentMovementTarget == null) return;
+			if (!this.movementStartTimestamp) return;
+			let elapsed = new Date().getTime() - this.movementStartTimestamp;
+			if (elapsed < 5000) return;
+			log.w("player movement seems stuck; force completing", this);
+			this.completePlayerMovement(this.currentMovementTarget, true, false);
 		},
 		
 		startPendingMovement: function () {
@@ -75629,6 +75717,7 @@ define([
 		startPlayerMovement: function (oldPosition, position, blockUI) {
 			log.i("start player movement from [" + oldPosition + "] to: [" + position + "]", this);
 			this.currentMovementTarget = position;
+			this.movementStartTimestamp = new Date().getTime();
 			if (blockUI) GameGlobals.gameState.uiStatus.isTransitioning = true;
 			GlobalSignals.playerMoveStartedSignal.dispatch(position);
 		},
@@ -75677,8 +75766,9 @@ define([
 			let player = this.playerPositionNodes.head.entity;
 
 			log.i("finish player movement to: [" + position + "]", this);
-			player.remove(MovementComponent);
+			if (player.has(MovementComponent)) player.remove(MovementComponent);
 			this.currentMovementTarget = null;
+			this.movementStartTimestamp = null;
 
 			if (blockUI) GameGlobals.gameState.uiStatus.isTransitioning = false;
 			GlobalSignals.playerMoveCompletedSignal.dispatch(position);
