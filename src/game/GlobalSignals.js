@@ -20,12 +20,17 @@ define(['ash',], function (Ash) {
 		popupClosingSignal: new Ash.Signals.Signal(),
 		popupClosedSignal: new Ash.Signals.Signal(),
 		openCraftPopupSignal: new Ash.Signals.Signal(),
+		openBuildingsPopupSignal: new Ash.Signals.Signal(),
+		openGoPopupSignal: new Ash.Signals.Signal(),
 		elementToggledSignal: new Ash.Signals.Signal(),
 		elementCreatedSignal: new Ash.Signals.Signal(),
 		buttonStateChangedSignal: new Ash.Signals.Signal(),
 		windowResizedSignal: new Ash.Signals.Signal(),
 		popupResizedSignal: new Ash.Signals.Signal(),
 		layoutChangedSignal: new Ash.Signals.Signal(),
+		// the mobile log drawer opened or closed: it decides where the log pill
+		// can live, so the layout has to be re-run
+		logDrawerToggledSignal: new Ash.Signals.Signal(),
 		updateButtonsSignal: new Ash.Signals.Signal(),
 		clearBubblesSignal: new Ash.Signals.Signal(),
 		markLogMessagesSeenSignal: new Ash.Signals.Signal(),
@@ -114,6 +119,7 @@ define(['ash',], function (Ash) {
 		triggerSignal: new Ash.Signals.Signal(),
 		settingsChangedSignal: new Ash.Signals.Signal(),
 		changelogLoadedSignal: new Ash.Signals.Signal(),
+		cloudSyncStateChangedSignal: new Ash.Signals.Signal(),
 
 		add: function (system, signal, listener, priority) {
 			priority = priority || GlobalSignals.PRIORITY_DEFAULT;

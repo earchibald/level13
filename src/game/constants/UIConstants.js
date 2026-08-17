@@ -27,6 +27,20 @@ define(['ash',
 		SCROLL_INDICATOR_SIZE: 5,
 
 		SMALL_LAYOUT_THRESHOLD: 850,  // make sure this corresponds to something in gridism.css
+
+		// A landscape touch screen no taller than this is a phone on its side, and
+		// gets the fullscreen map (see isLandscapeMapLayout and LANDSCAPE MAP in
+		// mobile.less). Keep in step with the max-height in that stylesheet.
+		LANDSCAPE_MAP_MAX_HEIGHT: 480,
+
+		// True when the PRIMARY pointer is a touch screen. Touchscreen laptops with
+		// a mouse/trackpad report a fine pointer and keep the desktop hover UI.
+		// Overridable with ?touch=1 / ?touch=0 for testing.
+		isTouchScreen: function () {
+			if (window.location.search.indexOf("touch=1") >= 0) return true;
+			if (window.location.search.indexOf("touch=0") >= 0) return false;
+			return window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+		},
 		
 		UNLOCKABLE_FEATURE_WORKER_AUTO_ASSIGNMENT: "workerAutoAssignment",
 		UNLOCKABLE_FEATURE_MAP_MODES: "mapModes",
@@ -892,12 +906,14 @@ define(['ash',
 			}
 		},
 
-		updateResourceIndicatorCallout: function (id, name, changeSources) {
+		updateResourceIndicatorCallout: function (id, name, changeSources, value, storage) {
 			let content = "";
+			let total = 0;
 			var source;
 			for (let i in changeSources) {
 				source = changeSources[i];
 				if (source.amount != 0) {
+					total += source.amount;
 					content += this.getResourceAccumulationSourceText(source) + "<br/>";
 				}
 			}
@@ -907,10 +923,48 @@ define(['ash',
 			if (content.length <= 0) {
 				content = displayName + " (no change)";
 			} else {
-				content = displayName + "<br/>" + content;
+				// the sources are credits and debits; whether the store grows or
+				// drains is their sum, and that was the one number the card never
+				// showed. On a phone it is also the only place the rate appears,
+				// because the chips themselves have no room for it.
+				content = displayName + "<br/>" + content + "<hr/>" + this.getResourceNetChangeText(total);
+				let forecast = this.getResourceForecastText(total, value, storage);
+				if (forecast.length > 0) content += "<br/>" + forecast;
 			}
 
 			this.updateCalloutContent(id,  content);
+		},
+
+		// How long the current rate has left to run. The net rate answers "which
+		// way is this going"; the question a player in camp is actually asking is
+		// whether the store empties before they get back, or fills and starts
+		// throwing the surplus away. Callers with no amount and no cap to give -
+		// the tribe tab's per-camp rows - get nothing rather than a wrong number.
+		getResourceForecastText: function (total, value, storage) {
+			if (typeof value !== "number" || typeof storage !== "number") return "";
+			if (storage <= 0) return "";
+
+			if (total > 0) {
+				if (value >= storage) return "full";
+				return "full in " + this.getTimeToNum((storage - value) / total);
+			}
+
+			if (total < 0) {
+				// getTimeToNum takes the absolute value, so the negative rate is
+				// safe to divide by directly
+				if (value <= 0) return "<span class='warning'>empty</span>";
+				return "<span class='warning'>empty in " + this.getTimeToNum(value / total) + "</span>";
+			}
+
+			return "";
+		},
+
+		getResourceNetChangeText: function (total) {
+			let divisor = Math.abs(total) < 0.0001 ? 100000 : 10000;
+			let rounded = Math.round(total * divisor) / divisor;
+			let sign = rounded > 0 ? "+" : "";
+			let text = "net: " + sign + rounded + "/s";
+			return rounded < 0 ? "<span class='warning'>" + text + "</span>" : text;
 		},
 		
 		getResourceAccumulationSourceText: function (source) {

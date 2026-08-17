@@ -21,6 +21,7 @@ define([
 	'game/helpers/PlayerActionResultsHelper',
 	'game/helpers/ResourcesHelper',
 	'game/helpers/SaveHelper',
+	'game/helpers/GistSaveHelper',
 	'game/helpers/SectorHelper',
 	'game/helpers/StoryHelper',
 	'game/helpers/TribeBalancingHelper',
@@ -53,6 +54,7 @@ define([
 	PlayerActionResultsHelper,
 	ResourcesHelper,
 	SaveHelper,
+	GistSaveHelper,
 	SectorHelper,
 	StoryHelper,
 	TribeBalancingHelper,
@@ -95,6 +97,7 @@ define([
 				GameGlobals.playerHelper = new PlayerHelper(engine);
 				GameGlobals.resourcesHelper = new ResourcesHelper(engine);
 				GameGlobals.saveHelper = new SaveHelper();
+				GameGlobals.gistSaveHelper = new GistSaveHelper();
 				GameGlobals.sectorHelper = new SectorHelper(engine);
 				GameGlobals.storyHelper = new StoryHelper(engine);
 				GameGlobals.tribeHelper = new TribeHelper(engine);

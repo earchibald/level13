@@ -113,9 +113,6 @@ button.btn-glyph-big {
 	padding-right: 0;
 }
 
-.layout-small button.btn-glyph-big {
-	min-width: 2em;
-}
 
 button.btn-meta {
 	width: auto;
@@ -281,4 +278,22 @@ button.btn-disabled .hotkey-hint {
 #out-action-move-down.btn-disabled .hotkey-hint,
 #in-action-leave.btn-disabled .hotkey-hint {
 	display: block !important;
+}
+
+// sitting down at the campfire is disabled whenever the rumour pool is empty, which
+// is most of a camp visit, so the badge would almost never be on screen. Same reading
+// as back to camp: keep it, and let the hotkey explain the requirements.
+// .hide-in-small-layout still carries visibility: hidden on a phone, so forcing
+// display here does not put the badge back on a compact button
+button[action='use_in_campfire'].btn-disabled .hotkey-hint {
+	display: block !important;
+}
+
+// the tribe tab's Go chips carry three characters (G13); absolute in the corner
+// of a mini button they would cover the label, so they sit inline after it
+#camp-overview .hotkey-hint {
+	position: static;
+	display: inline-block;
+	margin-left: 4px;
+	vertical-align: 1px;
 }

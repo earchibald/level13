@@ -35,6 +35,11 @@ define([
 		update: function (time) {
 			if (GameGlobals.gameState.isPaused) return;
 			if (GameGlobals.gameState.isLaunched) return;
+			// The player has no location for the first few ticks of a load, and a
+			// tick that lands in that window throws here and puts the "you found a
+			// bug" popup over the loading game. updateNodes below already guards
+			// the same node; this half never did.
+			if (!this.playerLocationNodes.head) return;
 
 			let sectorImprovements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 			this.updateSector(time, sectorImprovements);

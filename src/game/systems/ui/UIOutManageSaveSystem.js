@@ -85,9 +85,79 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 				system.openExport();
 			});
+			$("#btn-save-list-options-cloud-save").click(function (e) {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				system.cloudSaveSelectedSlot();
+			});
+			$("#btn-save-list-options-cloud-load").click(function (e) {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				system.cloudLoadSelectedSlot();
+			});
 		},
 
 		update: function () { },
+
+		updateCloudButtons: function () {
+			let slotID = this.selectedSaveSlot;
+			let helper = GameGlobals.gistSaveHelper;
+			let show = !!slotID && helper.isConfigured() && helper.isMirroredSlot(slotID);
+			GameGlobals.uiFunctions.toggle("#btn-save-list-options-cloud-save", show);
+			GameGlobals.uiFunctions.toggle("#btn-save-list-options-cloud-load", show);
+		},
+
+		cloudSaveSelectedSlot: function () {
+			let slotID = this.selectedSaveSlot;
+			if (!slotID) return;
+			// the raw compressed string, exactly what localStorage holds and what the gist wants
+			let data = this.getSaveSystem().getDataFromSlot(slotID);
+			if (!data) {
+				GameGlobals.uiFunctions.popupManager.closePopup("manage-save-popup");
+				GameGlobals.uiFunctions.showInfoPopup("Cloud save", "That slot is empty.", "OK", null, null, false, true);
+				return;
+			}
+			GameGlobals.gistSaveHelper.saveSlot(slotID, data).then(function (result) {
+				let msg = result.ok ? "Saved to GitHub." : ("Could not save: " + result.error);
+				// popups do not stack: anything raised while manage-save-popup is open is
+				// queued behind it and never seen, so close it before reporting
+				GameGlobals.uiFunctions.popupManager.closePopup("manage-save-popup");
+				GameGlobals.uiFunctions.showInfoPopup("Cloud save", msg, "OK", null, null, false, true);
+			});
+		},
+
+		// loading overwrites a local slot, so the player sees both timestamps first
+		cloudLoadSelectedSlot: function () {
+			let slotID = this.selectedSaveSlot;
+			if (!slotID) return;
+			let system = this;
+			GameGlobals.gistSaveHelper.loadSlot(slotID).then(function (result) {
+				// popups do not stack, so close this one before raising the next
+				GameGlobals.uiFunctions.popupManager.closePopup("manage-save-popup");
+				if (!result.ok) {
+					GameGlobals.uiFunctions.showInfoPopup("Cloud load", "Could not load: " + result.error, "OK", null, null, false, true);
+					return;
+				}
+				let localData = system.getSaveSlotData(slotID);
+				let localDate = localData && localData.date ? system.getDateDisplayString(localData.date) : "empty";
+				let msg = "Overwrite this slot with the cloud save?<br/><br/>";
+				// same formatter and timezone as the local time beside it, so the two can
+				// actually be compared by eye
+				let cloudDate = result.updatedAt ? system.getDateDisplayString(new Date(result.updatedAt)) : "unknown";
+				msg += "<span class='p-meta'>cloud: " + cloudDate + "<br/>local: " + localDate + "</span>";
+				GameGlobals.uiFunctions.showConfirmation(msg, function () {
+					// go through loadState, the same path import and the Load button use: it
+					// dispatches restartGameSignal, which is what actually rebuilds the world.
+					// Writing the slot and reloading is NOT equivalent and left the world
+					// partially stale - right position, wrong inventory
+					let saveSystem = system.getSaveSystem();
+					let saveJSON = saveSystem.getSaveJSONfromCompressed(result.data);
+					if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
+						GameGlobals.uiFunctions.showInfoPopup("Cloud load", "That cloud save could not be read.", "OK", null, null, false, true);
+						return;
+					}
+					system.loadState(saveJSON);
+				}, false, true);
+			});
+		},
 
 		refresh: function () {
 			this.showImport = false;
@@ -159,6 +229,7 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 			}
 
 			$("#save-list-options-info").html(slotInfoText);
+			this.updateCloudButtons();
 			GameGlobals.uiFunctions.toggle($("#btn-save-list-options-save"), showSave);
 			GameGlobals.uiFunctions.toggle($("#btn-save-list-options-load"), showLoad);
 			GameGlobals.uiFunctions.toggle($("#btn-save-list-options-export"), showExport);

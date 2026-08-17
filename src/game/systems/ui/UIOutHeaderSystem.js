@@ -16,6 +16,8 @@ define([
 	'game/constants/PerkConstants',
 	'game/constants/UpgradeConstants',
 	'game/constants/PlayerStatConstants',
+	'game/constants/PositionConstants',
+	'game/constants/TextConstants',
 	'game/systems/SaveSystem',
 	'game/nodes/player/PlayerStatsNode',
 	'game/nodes/PlayerLocationNode',
@@ -38,7 +40,7 @@ define([
 	MathUtils,
 	UIList, 
 	GameGlobals, GlobalSignals, 
-	ColorConstants, GameConstants, CampConstants, LevelConstants, UIConstants, ExplorerConstants, ItemConstants, FightConstants, PerkConstants, UpgradeConstants, PlayerStatConstants,
+	ColorConstants, GameConstants, CampConstants, LevelConstants, UIConstants, ExplorerConstants, ItemConstants, FightConstants, PerkConstants, UpgradeConstants, PlayerStatConstants, PositionConstants, TextConstants,
 	SaveSystem,
 	PlayerStatsNode, PlayerLocationNode, TribeUpgradesNode, DeityNode,
 	BagComponent,
@@ -62,6 +64,13 @@ define([
 		deityNodes: null,
 		tribeNodes: null,
 		currentLocationNodes: null,
+		baselinePortraitHeight: null,
+		lastViewportHeight: null,
+		lastViewportWidth: null,
+
+		// one status bar, and never more - see updateSafeAreaTop
+		MAX_SAFE_TOP: 60,
+		pendingGameShownRefresh: false,
 		engine: null,
 		
 		previousShownCampResAmount: {},
@@ -70,6 +79,8 @@ define([
 		
 		currentThemeTransitionID: null,
 		currentThemeTransitionTargetValue: null,
+
+		tabBeforeLandscapeMap: null, // the tab to go back to when the phone comes upright
 
 		pendingResourceUpdateTime: null, // if not null, a resource update has been queued (can be used to trigger update immediately or after a delay)
 		pendingResourceBarUpdateTime: null, 
@@ -157,6 +168,7 @@ define([
 			GlobalSignals.slowUpdateSignal.add(function () { sys.slowUpdate(); });
 			GlobalSignals.visualUpdateSignal.add(function () { sys.visualUpdate(); });
 			GlobalSignals.changelogLoadedSignal.add(function () { sys.updateGameVersion(); });
+			GlobalSignals.logDrawerToggledSignal.add(function () { sys.updateLayout(); });
 			GlobalSignals.add(this, GlobalSignals.playerMoveStartedSignal, this.onPlayerMoveStarted);
 			GlobalSignals.add(this, GlobalSignals.playerLocationChangedSignal, this.onPlayerLocationChanged);
 			GlobalSignals.add(this, GlobalSignals.playerPositionChangedSignal, this.onPlayerPositionChanged);
@@ -171,6 +183,7 @@ define([
 			GlobalSignals.add(this, GlobalSignals.launchCompletedSignal, this.onLaunchCompleted);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
 			GlobalSignals.add(this, GlobalSignals.windowResizedSignal, this.onWindowResized);
+			GlobalSignals.add(this, GlobalSignals.featureUnlockedSignal, this.onFeatureUnlocked);
 
 			this.generateStatsCallouts();
 			this.updateGameVersion();
@@ -179,9 +192,37 @@ define([
 			
 			this.updateLayoutMode();
 			this.updateLayout();
+
+			// the fixed header and tab bar grow and shrink as rows and tabs show
+			// and hide; the content padding that clears them must follow along
+			if (window.ResizeObserver) {
+				this.headerResizeObserver = new ResizeObserver(function () { sys.updateLayout(); });
+				let headerElement = document.getElementById("mobile-header");
+				let tabsElement = document.getElementById("grid-switch");
+				// the minimap pins to the bottom on the exploration tab, so its
+				// height is a layout metric too (see mobile.less)
+				let mapElement = document.getElementById("out-container-compass");
+				// The bar's height changes with the sector: scout leaves, a collector
+				// chip appears. Nothing else resizes, so it is a layout metric of
+				// its own.
+				//
+				// This also runs a second layout pass whenever the bar resizes.
+				// The bounce damps itself. updateLayout can change the bar's padding
+				// through out-map-hidden, but the next pass's toggleClass is a no-op.
+				// Do not "optimise" the second pass away - see updateBottomChromeState.
+				let barElement = document.getElementById("out-sector-bar");
+				if (headerElement) this.headerResizeObserver.observe(headerElement);
+				if (tabsElement) this.headerResizeObserver.observe(tabsElement);
+				if (mapElement) this.headerResizeObserver.observe(mapElement);
+				if (barElement) this.headerResizeObserver.observe(barElement);
+			}
 		},
 
 		removeFromEngine: function (engine) {
+			if (this.headerResizeObserver) {
+				this.headerResizeObserver.disconnect();
+				this.headerResizeObserver = null;
+			}
 			GlobalSignals.removeAll(this);
 			this.engine = null;
 			this.playerStatsNodes = null;
@@ -235,12 +276,24 @@ define([
 				
 				let bonusName = UIConstants.getItemBonusName(bonusType);
 				let icons = UIConstants.getIconOrFallback(ItemConstants.getItemBonusIcons(bonusType));
+				// The gear stats are an icon and a number and nothing else - no
+				// label, unlike every other stat in the header - so what they mean
+				// has to come from a tooltip. updateItemStats has always computed
+				// that text and handed it to updateCalloutContent, which walks up
+				// to the nearest .info-callout-target to put it in; there was
+				// never one here, so the text went nowhere on either layout.
+				//
+				// Wrapping is enough: generateInfoCallouts("body") runs from
+				// uiFunctions.init, which is after the ui systems are added, so it
+				// builds the callout for these along with everything else.
 				let div = "";
+				div += "<div class='info-callout-target info-callout-target-small'>";
 				div += "<div class='stats-equipment-" + bonusKey + " stat-indicator stat-indicator-secondary'>";
 				div += "<img class='stat-icon img-themed' src='" + icons.dark + "' data-src-sunlit='" + icons.sunlit + "' alt='" + bonusName + "'/>";
 				div += "<span class='value'/>";
 				div += "</div>";
-				
+				div += "</div>";
+
 				$(".container-equipment-stats").append(div);
 			}
 		
@@ -323,9 +376,22 @@ define([
 		},
 
 		update: function (time) {
+			// Before the guards below, and not behind a signal: see
+			// pollViewportGeometry for why nothing else asks.
+			this.pollViewportGeometry();
+
 			if (!this.currentLocationNodes.head) return;
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			
+
+			// Both guards above have passed, so the world is there and the
+			// game is showing - which is the state onGameShown wanted and did
+			// not get. Cleared first, so the re-run cannot set it again and
+			// loop.
+			if (this.pendingGameShownRefresh) {
+				this.pendingGameShownRefresh = false;
+				this.onGameShown();
+			}
+
 			if (GameGlobals.gameState.isLaunchCompleted) {
 				this.updateEndingView();
 				return;
@@ -380,7 +446,6 @@ define([
 			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
 			if (!this.currentLocationNodes.head) return;
 			
-			let isSmallLayout = this.elements.body.hasClass("layout-small");
 			var playerPosition = this.playerStatsNodes.head.entity.get(PositionComponent);
 			var isInCamp = playerPosition.inCamp;
 			var campComponent = this.currentLocationNodes.head.entity.get(CampComponent);
@@ -395,12 +460,17 @@ define([
 			var isResting = this.isResting();
 			var isHealing = busyComponent && busyComponent.getLastActionName() == "use_in_hospital";
 
-			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorVision, !isSmallLayout || !isInCamp);
+			// Vision and health are always in the markup and always current, and
+			// which of them the small layout puts on screen is a css decision:
+			// the camp header leaves both out and the adventurer button reveals
+			// them. Toggling them off here instead would empty the values behind
+			// the button as well, which is the one place they are wanted.
+			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorVision, true);
 			this.elements.valVision.text(shownVision + " / " + maxVision);
 			this.updateStatsCallout("Makes exploration safer and scavenging more effective", this.elements.statIndicatorVision, playerStatsNode.vision.accSources);
 			this.updateChangeIndicator(this.elements.changeIndicatorVision, maxVision - shownVision, shownVision < maxVision);
 
-			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorHealth, !isSmallLayout);
+			GameGlobals.uiFunctions.toggle(this.elements.statIndicatorHealth, true);
 			this.elements.valHealth.text(Math.round(playerStatsNode.stamina.health));
 			this.updateHealthStatCallout("Determines maximum stamina", this.elements.statIndicatorHealth);
 			let healthAccumulation = playerStatsNode.stamina.healthAccumulation;
@@ -524,7 +594,9 @@ define([
 			let now = GameGlobals.gameState.gameTime;
 			let previousValue = this.previousStats[stat] || 0;
 			let previousUpdate = this.previousStatsUpdates[stat] || 0;
-			let suffix = isSmallLayout ? "" : " / " + currentLimit;
+			// the small-layout header used to drop the limit to save width; the
+			// stacked cell layout has room for it and the cap is what matters
+			let suffix = currentLimit > 0 ? " / " + currentLimit : "";
 		
 			$container.children(".value").toggleClass("warning", isAtLimit);
 
@@ -615,6 +687,9 @@ define([
 		},
 
 		updateItems: function (forced, inCamp) {
+			// several callers omit the flag; without this the camp header shows
+			// the outside item list
+			if (typeof inCamp === "undefined") inCamp = GameGlobals.playerHelper.isInCamp();
 			GameGlobals.uiFunctions.toggle("#list-header-items-mobile", !inCamp);
 			if (inCamp) return;
 
@@ -654,6 +729,8 @@ define([
 		
 		updateExplorers: function () {
 			let inCamp = GameGlobals.playerHelper.isInCamp();
+			// the mobile header list would otherwise keep stale party chips in camp
+			GameGlobals.uiFunctions.toggle("#list-header-explorers-mobile", !inCamp);
 			if (inCamp) return;
 			
 			let explorersComponent = this.playerStatsNodes.head.explorers;
@@ -921,7 +998,9 @@ define([
 						now
 					);
 					if (showResourceAcc) {
-						UIConstants.updateResourceIndicatorCallout(elemIDCamp, name, showResourceAcc.getSources(name));
+						// the amount and the cap are what turn the net rate into a
+						// time to full or a time to empty
+						UIConstants.updateResourceIndicatorCallout(elemIDCamp, name, showResourceAcc.getSources(name), currentAmount, storageCap);
 					}
 					this.previousShownCampResAmount[name] = currentAmount;
 				} else {
@@ -946,8 +1025,66 @@ define([
 				this.lastCampResourceUpdate = now;
 			}
 
+			if (!inCamp) {
+				this.updateBagSupplyCallouts(playerPosition);
+			}
+
 			this.lastResourceUpdateInCamp = inCamp;
 			this.lastResourceUpdateLevel = playerPosition.level;
+		},
+
+		// The water and food chips outside: their tooltip answers "where is the
+		// nearest more of this". Cached by sector with a short clock, because the
+		// answer needs a level scan and a path per source and updateResources runs
+		// far more often than anyone reads a tooltip.
+		updateBagSupplyCallouts: function (playerPosition) {
+			if (!this.currentLocationNodes.head) return;
+
+			let posKey = playerPosition.level + "." + playerPosition.sectorX + "." + playerPosition.sectorY;
+			let timestamp = new Date().getTime();
+			if (this.supplyCalloutPosKey == posKey && timestamp - this.supplyCalloutTimestamp < 3000) return;
+			this.supplyCalloutPosKey = posKey;
+			this.supplyCalloutTimestamp = timestamp;
+
+			for (let name of [ resourceNames.water, resourceNames.food ]) {
+				let content = this.getSupplyCalloutContent(name, playerPosition);
+				UIConstants.updateCalloutContent("#resources-bag-mobile-" + name, content);
+				UIConstants.updateCalloutContent("#resources-bag-regular-" + name, content);
+			}
+		},
+
+		getSupplyCalloutContent: function (name, playerPosition) {
+			let content = TextConstants.getResourceDisplayName(name);
+			let isWater = name == resourceNames.water;
+			let playerSector = this.currentLocationNodes.head.entity;
+			let nearest = GameGlobals.levelHelper.findNearestKnownSupplySectors(playerPosition, name);
+
+			let describe = (label, sector) => {
+				let sectorPosition = sector.get(PositionComponent).getPosition();
+				if (playerPosition.sectorId() == sectorPosition.sectorId()) return label + ": here";
+				// same path settings as the map's distance readout
+				let path = GameGlobals.levelHelper.findPathTo(playerSector, sector, { skipBlockers: true, skipUnrevealed: true });
+				let distance = path ? path.length + (path.length == 1 ? " block" : " blocks") : "? blocks";
+				let direction = PositionConstants.getDirectionName(PositionConstants.getDirectionFrom(playerPosition, sectorPosition), false);
+				return label + ": " + distance + " " + direction;
+			};
+
+			let lines = [];
+			// the nearest of either kind comes back as the potential only when no
+			// guaranteed sector is closer, so listing potential first is honest:
+			// it is the closest water there is, the sure one is the fallback
+			if (nearest.potential) {
+				lines.push(describe(isWater ? "possible bucket spot" : "possible trap spot", nearest.potential));
+			}
+			if (nearest.guaranteed) {
+				let label = nearest.guaranteedType == "spring" ? "spring" : (isWater ? "bucket" : "trap");
+				lines.push(describe(label, nearest.guaranteed));
+			}
+			if (lines.length == 0) {
+				lines.push("no known source on this level");
+			}
+
+			return content + "<hr/>" + lines.join("<br/>");
 		},
 		
 		canHideResource: function (name) {
@@ -1066,6 +1203,22 @@ define([
 				this.elements.gameMsg.text(Text.t(gameMsgKey));
 				this.lastGameMsg = gameMsgKey;
 			}
+
+			// On the phone the footer is a fixed row and #game-msg is hidden there,
+			// so the save confirmation goes to the toast card at the top instead.
+			// Boot writes lastDefaultSaveTimestamp without saving anything, so the
+			// first observed value only arms the tracker.
+			if (saveSystem && saveSystem.lastDefaultSaveTimestamp > 0) {
+				if (!this.lastToastedSaveTimestamp) {
+					this.lastToastedSaveTimestamp = saveSystem.lastDefaultSaveTimestamp;
+				} else if (saveSystem.lastDefaultSaveTimestamp != this.lastToastedSaveTimestamp) {
+					this.lastToastedSaveTimestamp = saveSystem.lastDefaultSaveTimestamp;
+					if (this.elements.body.hasClass("layout-small")) {
+						let toastKey = saveSystem.error ? saveSystem.error : "ui.meta.game_saved_message";
+						GameGlobals.uiFunctions.showToast(Text.t(toastKey));
+					}
+				}
+			}
 		},
 
 		updateNotifications: function () {
@@ -1117,26 +1270,815 @@ define([
 			}
 		},
 
+		// Unlocking scout shows the map panel and unlocking vision shows the scout
+		// button, so both change the shell column's shape and the height the log
+		// pill has to clear. Nothing else reruns the layout at that moment.
+		//
+		// Every other unlock leaves the column alone, and updateLayout is five
+		// placement passes, a measure and a queued re-measure.
+		onFeatureUnlocked: function (featureID) {
+			if (featureID !== "scout" && featureID !== "vision") return;
+			this.updateLayout();
+		},
+
+		// A sideways phone used to get a "turn me upright" notice, because the
+		// portrait column does not fold: it is a stack of full-width bands and
+		// there is no room for them in 393px of height. One screen does want the
+		// width though - the map - so landscape hands the whole viewport to it.
+		//
+		// Held to phones. A short window on a desktop is just a small window, and
+		// a tablet in landscape has the height for the ordinary layout.
+		isLandscapeMapLayout: function () {
+			if (!UIConstants.isTouchScreen()) return false;
+
+			let width = $(window).width();
+			let height = $(window).height();
+			if (width <= height) return false;
+			if (height > UIConstants.LANDSCAPE_MAP_MAX_HEIGHT) return false;
+
+			// nothing to turn the phone for until the map exists
+			return this.hasMapForLandscape();
+		},
+
+		// Whether the player has a map, asked of the game state.
+		//
+		// This used to read data-visible on #switch-map. That attribute is written by
+		// UIOutTabBarSystem, so it is only true once THAT system has run - and on a
+		// load from a save the layout passes run before it does. A phone already
+		// sideways, or turned while the world was still loading, read "no map", showed
+		// the rotate notice, and kept showing it: the mode only re-asks when something
+		// changes, and the map button appearing is not a change anything reports.
+		//
+		// The same condition UIOutTabBarSystem uses, from the same place, so the tab
+		// button and the landscape mode can no longer disagree about whether there is
+		// a map. Reading :visible instead would be worse still - landscape hides the
+		// whole tab bar, so the computed display says nothing about the player at all.
+		hasMapForLandscape: function () {
+			if (GameGlobals.uiMapHelper && GameGlobals.uiMapHelper.isMapRevealed) return true;
+			// hasItem reads the player node without checking it exists, and this is
+			// asked during startup, before there is one
+			if (!this.playerStatsNodes || !this.playerStatsNodes.head) return false;
+			return GameGlobals.playerHelper.hasItem("equipment_map");
+		},
+
+		// Landscape is the map tab and nothing else, so it switches to that tab
+		// rather than reproducing the map somewhere new. Everything the portrait
+		// map tab already does - the whole-column map, the details, the map
+		// system's own setup in onTabChanged - comes along with it. The tab the
+		// player was on comes back when the phone does.
+		updateLandscapeMapMode: function (isLandscapeMap) {
+			let mapTabID = GameGlobals.uiFunctions.elementIDs.tabs.map;
+			let currentTabID = GameGlobals.gameState.uiStatus.currentTab;
+			// No tab yet means the game is still starting up. Setting the class now
+			// would leave the mode on with the map tab never opened and no tab to
+			// come back to; updateLayout asks again once there is one.
+			if (!currentTabID) return;
+
+			let wasLandscapeMap = this.elements.body.hasClass("landscape-map");
+			if (wasLandscapeMap === isLandscapeMap) return;
+
+			this.elements.body.toggleClass("landscape-map", isLandscapeMap);
+
+			if (isLandscapeMap) {
+				this.tabBeforeLandscapeMap = currentTabID === mapTabID ? null : currentTabID;
+				if (currentTabID !== mapTabID) GameGlobals.uiFunctions.showTab(mapTabID);
+				return;
+			}
+
+			let previousTabID = this.tabBeforeLandscapeMap;
+			this.tabBeforeLandscapeMap = null;
+			// if something else moved the player off the map while sideways, that
+			// is where they meant to be - leave them there
+			if (previousTabID && currentTabID === mapTabID) GameGlobals.uiFunctions.showTab(previousTabID);
+		},
+
+		// The reserve for the status bar, measured rather than read.
+		//
+		// This device reports env(safe-area-inset-top) as 0 and iOS lays the
+		// web view out below the status bar instead. A rotation can leave the
+		// view laid out fullscreen without the inset ever changing, and the
+		// chrome comes to rest behind the clock until the page is reloaded.
+		//
+		// So take the larger of two numbers: what env() says, and how much the
+		// portrait viewport has grown since the session's first portrait
+		// frame. Growth in portrait is the band iOS used to leave for the
+		// status bar and has stopped leaving, which is exactly what has to be
+		// reserved.
+		updateSafeAreaTop: function () {
+			let probe = document.getElementById("safe-area-probe");
+			let measured = 0;
+			if (probe) {
+				measured = parseFloat(window.getComputedStyle(probe).paddingTop) || 0;
+			}
+
+			let isPortrait = window.innerHeight >= window.innerWidth;
+			let screenHeight = window.screen ? window.screen.height : 0;
+
+			// There are exactly two states, and the screen height tells them
+			// apart outright: either iOS is keeping a band at the top for the
+			// status bar, and the viewport is shorter than the screen, or it
+			// has stopped and the viewport is the whole screen.
+			//
+			// The baseline is the TALLEST portrait viewport seen that was
+			// still shorter than the screen - the normal layout, with the band
+			// in it. Measured in the simulator: the first portrait frame
+			// reports the whole screen, 852, and the viewport settles to its
+			// real value only once the chrome is laid out. Reading a baseline
+			// from that frame is what the screen-height test rejects.
+			//
+			// It was "smallest seen" before, which needed no screen height but
+			// took any transient short frame as normal for the rest of the
+			// session - and this is now polled every tick, so transient frames
+			// are seen where they used to be missed.
+			if (isPortrait && screenHeight > 0 && window.innerHeight < screenHeight) {
+				if (this.baselinePortraitHeight === null || window.innerHeight > this.baselinePortraitHeight) {
+					this.baselinePortraitHeight = window.innerHeight;
+				}
+			}
+
+			// Held to the installed app. In a browser tab the address bar
+			// collapsing also grows the viewport, and that must not be read as
+			// a lost status bar.
+			let growth = 0;
+			let isStandalone = this.elements.body.hasClass("standalone");
+			let coversWholeScreen = screenHeight > 0 && window.innerHeight >= screenHeight;
+			if (isStandalone && isPortrait && coversWholeScreen && this.baselinePortraitHeight !== null) {
+				growth = screenHeight - this.baselinePortraitHeight;
+			}
+
+			// A status bar is about 60px and never more, so nothing this is
+			// compensating for can need more than that. The cap is what makes
+			// a moving baseline safe: whatever else grows or shrinks the
+			// viewport - a keyboard, a toolbar, something not thought of - the
+			// worst this can do is reserve one status bar of empty space,
+			// never a screenful.
+			growth = Math.min(growth, this.MAX_SAFE_TOP);
+
+			document.documentElement.style.setProperty("--l13-safe-top", Math.max(measured, growth) + "px");
+
+			// The other half of the same problem, and the half that was missed.
+			//
+			// When iOS stops leaving a band for the status bar, the view is laid out over
+			// the whole screen but the page can go on sizing itself to the height it had
+			// before. `height: 100%` then resolves short, and the app column stops a
+			// status bar's worth above the bottom of the screen with the background
+			// showing through - which is what the reserve above was compensating for at
+			// the top while nothing put the bottom right.
+			//
+			// So the shell takes its height from a measured number rather than a
+			// percentage. This is recomputed on every viewport change, so unlike the
+			// baseline above it cannot go stale: whatever iOS does next, the next frame
+			// corrects it.
+			document.documentElement.style.setProperty("--l13-viewport-height", window.innerHeight + "px");
+		},
+
 		updateLayoutMode: function () {
 			let wasSmallLayout = this.elements.body.hasClass("layout-small");
-			let isSmallLayout =  $(window).width() <= UIConstants.SMALL_LAYOUT_THRESHOLD;
+			// the map layout is a small-layout thing, and a phone is wider than
+			// the threshold when it is on its side (an iPhone 16 is 852pt), so it
+			// has to say so itself
+			let isLandscapeMap = this.isLandscapeMapLayout();
+			let isSmallLayout = isLandscapeMap || $(window).width() <= UIConstants.SMALL_LAYOUT_THRESHOLD;
 			this.elements.body.toggleClass("layout-small", isSmallLayout);
 			this.elements.body.toggleClass("layout-regular", !isSmallLayout);
 			GameGlobals.uiFunctions.toggle(".debug-info", GameConstants.isDebugVersion);
+			this.updateLandscapeMapMode(isLandscapeMap);
 			if (wasSmallLayout == isSmallLayout) return;
 			GlobalSignals.layoutChangedSignal.dispatch();
 			this.updateResources(true);
 		},
 
 		updateLayout: function () {
+			// a rotation arrives here, and the reserve has to be right before
+			// the placement passes below read any geometry
+			this.updateSafeAreaTop();
+			// The landscape map mode also asks whether the player has a map, and no
+			// resize announces that. A phone that opens the game already sideways
+			// asked once, before the tab bar had a map button on it, and nothing
+			// asked again - so the rotate notice stayed up for the session. This
+			// runs on the tab bar's own resize among other things, which is exactly
+			// when the button appears.
+			if (this.isLandscapeMapLayout() !== this.elements.body.hasClass("landscape-map")) {
+				this.updateLayoutMode();
+			}
+
 			let isSmallLayout = this.elements.body.hasClass("layout-small");
 			let isInCamp = GameGlobals.playerHelper.isInCamp();
 			let isInCampTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.camp;
-			GameGlobals.uiFunctions.toggle("#mobile-header-status", isSmallLayout && !isInCamp);
+
+			// The shell layout - chrome, scrolling pane and map panel as one flex
+			// column the height of the viewport - is declared in mobile.less, and
+			// --l13-shell says whether it is in force. Asking the stylesheet beats
+			// re-deriving the media query here, which would drift from it.
+			let isShell = isSmallLayout && this.isShellLayout();
+			let isOutTab = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.out;
+
+			// Read in the pane rather than from behind the chip, but only where
+			// the pane is empty enough to hold them - see
+			// updateAdventurerDockPlacement.
+			let isAdventurerDocked = isShell && isOutTab && !isInCamp;
+			// Perks and debuffs show wherever the player is. They were suppressed
+			// in camp to save a header row, but an empty list costs no cell (see
+			// the :empty rule in mobile.less), so the row only appears when there
+			// is something to say - and a debuff is exactly the thing that has to
+			// say it without being asked for.
+			GameGlobals.uiFunctions.toggle("#mobile-header-status", isSmallLayout);
 			GameGlobals.uiFunctions.toggle("#mobile-header-camp-res", isSmallLayout && isInCamp);
-			let padding = isSmallLayout ? Math.ceil($("#mobile-header").height()) + 20 : 15;
-			$("#unit-main").css("padding-top", padding + "px");
-			$("#log-container").css("padding-top", (padding + 10) + "px");
+
+			// The rest of the adventurer - health, the gear numbers, and vision
+			// where camp leaves it out - is read deliberately rather than watched,
+			// so it sits behind a button. The button was a camp thing, which left
+			// no way at all to read health or the gear numbers outside, where the
+			// header shows vision and stamina and nothing else. It is in the
+			// location banner now, which is the one row on screen on every tab.
+			//
+			// Except where the numbers are already on screen. Outside on the
+			// exploration tab they are docked in the pane, and a control that
+			// reveals what the player can already read is one more thing to
+			// press past.
+			GameGlobals.uiFunctions.toggle("#btn-adventurer", isSmallLayout && !isAdventurerDocked);
+			if (!isSmallLayout) this.elements.body.removeClass("adventurer-open");
+
+			// The room is where you are, not which tab you are looking at, so
+			// the chip stays put across tabs rather than reflowing the banner
+			// on every switch. In camp the banner already names the camp.
+			GameGlobals.uiFunctions.toggle("#btn-room", isSmallLayout && !isInCamp);
+
+			this.updateChromeGrouping(isSmallLayout);
+
+			// The map panel is the only band that can hold anything else, and it
+			// exists on one tab and only once scout is unlocked - every other tab
+			// hides it outright, and before scout the game hides it itself.
+			// Parking the footer or the log pill in it at any other time would
+			// take save, restart and the log off the screen for good.
+			//
+			// unlockedFeatures rather than a visibility test: the flag is set
+			// before featureUnlockedSignal fires, so this pass already reads the
+			// new value, while the panel itself is still hidden until
+			// UIOutLevelSystem gets its turn.
+			let hasOutPanel = isShell && isOutTab && GameGlobals.gameState.unlockedFeatures.scout === true;
+
+			$("#unit-main").css("padding-top", isShell ? "0px" : "15px");
+			$("#log-container").css("padding-top", isShell ? "25px" : "25px");
+			this.updateLocationHeaderPlacement(isShell);
+			this.updateRoomPanelPlacement(isShell);
+			this.updateOutControlsPlacement(isShell);
+			this.updateSectorBarPlacement(isShell);
+			this.updateOutActionsPlacement(isShell);
+			this.updateMapDockPlacement(isShell);
+			this.updateActionMirrorPlacement(isShell);
+			this.updateAdventurerDockPlacement(isAdventurerDocked);
+			this.updateFooterPlacement(isShell, hasOutPanel);
+
+			// The drawer is fixed over the bottom of the screen, and on the
+			// exploration tab the map panel it docks into is itself a fixed,
+			// z-indexed band. A stacking context cannot be escaped from the
+			// inside, so a docked pill is painted under the drawer whatever
+			// z-index it is given - and the pill is the only way to close the
+			// drawer. Float it while the drawer is open; the drawer's bottom
+			// padding is already sized to keep that corner clear.
+			let isLogDrawerOpen = this.elements.body.hasClass("log-drawer-open");
+			this.updateLogButtonPlacement(hasOutPanel && !isLogDrawerOpen);
+
+			// nothing above needs a height: the column sorts that out. The floating
+			// log pill is the one thing still positioned against the bottom chrome,
+			// which is whichever bands the current tab ends with.
+			this.updateBottomChromeState(isShell);
+			this.updateTopChromeState(isShell);
+
+			// the panel was just rebuilt in this same pass, so a height read now
+			// can be one layout behind; read it again on the next frame
+			if (!this.isRemeasureScheduled && typeof window.requestAnimationFrame == "function") {
+				let sys = this;
+				this.isRemeasureScheduled = true;
+				window.requestAnimationFrame(function () {
+					sys.isRemeasureScheduled = false;
+					sys.updateMeasurements();
+				});
+			}
+		},
+
+		// the property is declared on body, not on the root, so it has to be read
+		// from body - custom properties only inherit downwards
+		isShellLayout: function () {
+			if (!document.body) return false;
+			let flag = window.getComputedStyle(document.body).getPropertyValue("--l13-shell");
+			return flag.trim() === "1";
+		},
+
+		// the bands the shell column ends with: the action bar and the map panel
+		// on the exploration tab, a pinned action bar on the tabs that have one.
+		// The log pill has to clear whichever are there.
+		getBottomChromeHeight: function (isShell) {
+			if (!isShell) return 0;
+			let height = 0;
+			$("#out-sector-bar, #out-container-compass, #unit-main > .action-mirror").each(function () {
+				let $el = $(this);
+				if (!$el.is(":visible")) return;
+				height += Math.ceil($el.outerHeight());
+			});
+			return height;
+		},
+
+		// The class and the height are two views of one fact, so they are set
+		// together. updateLayout runs inside the featureUnlockedSignal dispatch,
+		// BEFORE UIOutLevelSystem reveals the map panel, so the first pass reads
+		// the map as still hidden and the next-frame pass is what gets it right.
+		// Both callers therefore run both halves.
+		updateBottomChromeState: function (isShell) {
+			$("#unit-main").toggleClass("out-map-hidden", isShell && !$("#out-container-compass").is(":visible"));
+			document.documentElement.style.setProperty("--l13-out-bottom-height", this.getBottomChromeHeight(isShell) + "px");
+		},
+
+		// The two overlays that hang under the fixed chrome - the log toasts and
+		// the room panel - have to know where it ends, and #mobile-chrome is
+		// built at runtime by updateChromeGrouping, so no stylesheet can measure
+		// it. Published beside the bottom height and re-read on the same
+		// next-frame pass, for the same reason: the chrome is often rebuilt in
+		// the pass that reads it.
+		updateTopChromeState: function (isShell) {
+			let height = 0;
+			if (isShell) {
+				let $chrome = $("#mobile-chrome");
+				if ($chrome.length > 0 && $chrome.is(":visible")) {
+					height = Math.ceil($chrome.outerHeight());
+				}
+			}
+			document.documentElement.style.setProperty("--l13-chrome-height", height + "px");
+		},
+
+		// iOS moves the standalone viewport without always firing a resize.
+		// Coming back from the app switcher, or settling after a rotation, the
+		// view is simply laid out over the status bar on some later frame and
+		// window.innerHeight is different - with no event. The chrome then
+		// sits behind the clock for the rest of the session, which is why
+		// opening settings and closing it again put it right by hand: that
+		// path happens to re-measure.
+		//
+		// Two integer reads per tick, and the measuring pass only runs when
+		// one of them has changed. This is the only signal that arrives in
+		// every one of those cases.
+		pollViewportGeometry: function () {
+			let height = window.innerHeight;
+			let width = window.innerWidth;
+			if (height === this.lastViewportHeight && width === this.lastViewportWidth) return;
+			this.lastViewportHeight = height;
+			this.lastViewportWidth = width;
+			// A rotation is a viewport change, and on iOS it is often the ONLY sign
+			// of one - the resize event onWindowResized listens for does not always
+			// arrive. Measuring is not enough: which way up the phone is decides
+			// .landscape-map, and that class is what chooses between the fullscreen
+			// map and the rotate notice. Without this a sideways phone kept the
+			// portrait layout laid out sideways, and a phone turned back upright
+			// kept the fullscreen map.
+			//
+			// A mode change moves elements between the header and the banner, so it
+			// takes the whole pass; a viewport that only grew or shrank needs the
+			// measurements and nothing else.
+			if (this.isLandscapeMapLayout() !== this.elements.body.hasClass("landscape-map")) {
+				this.updateLayout();
+				return;
+			}
+			this.updateMeasurements();
+		},
+
+		// the measuring half of updateLayout, without any of the DOM moves, so it
+		// is safe to run again from a frame callback
+		updateMeasurements: function () {
+			// before anything measures the chrome: the chrome's height depends
+			// on the padding this sets
+			this.updateSafeAreaTop();
+			let isShell = this.elements.body.hasClass("layout-small") && this.isShellLayout();
+			this.updateBottomChromeState(isShell);
+			this.updateTopChromeState(isShell);
+		},
+
+		// Which level you are on is the one thing on screen that does not change
+		// while you read, and inside the pane it scrolled away with everything
+		// else. It goes at the top of the chrome instead, above the stats, where
+		// it reads as the page title and stays put. That costs a band of the
+		// column, which is why the small layout also cuts the band down to about
+		// a line - see LOCATION TITLE in mobile.less.
+		updateLocationHeaderPlacement: function (shouldDock) {
+			let $header = $("#grid-location");
+			if ($header.length === 0) return;
+
+			if (shouldDock) {
+				let $chrome = $("#mobile-chrome");
+				if ($chrome.length === 0) return;
+				if ($header.parent().is($chrome)) return;
+
+				// a marker where it came from, so the desktop layout gets it back in
+				// its own place in the order rather than at the front
+				if (!this.locationHeaderMarker) {
+					this.locationHeaderMarker = document.createComment("grid-location");
+					$header.after(this.locationHeaderMarker);
+				}
+				$chrome.prepend($header);
+				return;
+			}
+
+			if (!this.locationHeaderMarker) return;
+			// Already home. Testing the marker and not the chrome on purpose:
+			// updateChromeGrouping tears the chrome down before this runs, and
+			// leaves the title wherever the chrome used to be - which is not the
+			// same as putting it back.
+			if ($header[0].nextSibling === this.locationHeaderMarker) return;
+			$(this.locationHeaderMarker).before($header);
+		},
+
+		// The room description is a panel over the top of the page on a phone,
+		// not a block in the middle of the scroll. The element itself moves, and
+		// is not copied, so every existing write from UIOutLevelSystem still
+		// lands and nothing there has to know about the panel.
+		updateRoomPanelPlacement: function (shouldDock) {
+			let $desc = $("#out-desc");
+			if ($desc.length === 0) return;
+
+			if (shouldDock) {
+				let $panel = $("#room-panel");
+				if ($panel.length === 0) return;
+				if ($desc.parent().is($panel)) return;
+
+				// a marker where it came from, so the regular layout gets it
+				// back in its own place in the order rather than at the front
+				if (!this.roomPanelMarker) {
+					this.roomPanelMarker = document.createComment("out-desc");
+					$desc.after(this.roomPanelMarker);
+				}
+				$panel.append($desc);
+				return;
+			}
+
+			if (!this.roomPanelMarker) return;
+			if ($desc[0].nextSibling === this.roomPanelMarker) return;
+			$(this.roomPanelMarker).before($desc);
+			// through toggleRoomPanel, not by clearing the class here: the chip's
+			// aria-expanded is the other half of "the panel is open", and a
+			// resize with it open would otherwise leave the chip claiming a
+			// panel that is no longer on screen
+			GameGlobals.uiFunctions.toggleRoomPanel(false);
+		},
+
+		// The action bar is the top half of the bottom chrome. Like the map panel
+		// it is lifted out of the pane and hung off #unit-main, so the pane's own
+		// scrolling cannot take it with it. It has to land BEFORE the map panel:
+		// the css that removes the panel's top edge, so the two read as one block,
+		// uses an adjacent-sibling selector.
+		updateSectorBarPlacement: function (shouldDock) {
+			let $bar = $("#out-sector-bar");
+			let $unit = $("#unit-main");
+			if ($bar.length === 0 || $unit.length === 0) return;
+
+			let isDocked = $bar.parent().is($unit);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				// a marker where it came from, so the desktop layout gets it back in
+				// its own place in the order rather than at the front
+				if (!this.sectorBarMarker) {
+					this.sectorBarMarker = document.createComment("out-sector-bar");
+					$bar.after(this.sectorBarMarker);
+				}
+				let $map = $("#out-container-compass");
+				// the map may already be docked from an earlier pass, in which case
+				// appending would put the bar after it
+				if ($map.length > 0 && $map.parent().is($unit)) {
+					$map.before($bar);
+				} else {
+					$unit.append($bar);
+				}
+			} else if (this.sectorBarMarker) {
+				$(this.sectorBarMarker).before($bar);
+			}
+		},
+
+		// Everything the exploration tab offers below the description is
+		// situational: the Search actions, whoever happens to be standing here,
+		// and the locales this sector leads to. Each one sat where it had to be
+		// scrolled to, and each one is empty most of the time. They join the bar.
+		//
+		// None of them costs a permanent row. The game already shows only the few
+		// buttons that apply to where the player is standing and hides each box
+		// outright when none do, and they rarely coincide - so the bar's wrap is
+		// what carries them. They dock in the order they are used: what you do to
+		// the sector, who is here, where you can go on to, then the collectors.
+		//
+		// Each box keeps a comment marker where it came from, so the desktop
+		// layout gets it back under its own heading rather than at the end of the
+		// tab. The bar's has-* classes are what make each row visible, so undock
+		// clears them all: otherwise the desktop layout gets a bar naming rows it
+		// no longer holds, until the level system next recounts.
+		OUT_DOCK_BOXES: [
+			{ id: "#out-actions", marker: "outActionsMarker", barClass: "has-finds" },
+			{ id: "#out-characters", marker: "outCharactersMarker", barClass: "has-characters" },
+			{ id: "#out-locales", marker: "outLocalesMarker", barClass: "has-locales" },
+		],
+
+		updateOutActionsPlacement: function (shouldDock) {
+			let $bar = $("#out-sector-bar");
+			if ($bar.length === 0) return;
+
+			for (let i = 0; i < this.OUT_DOCK_BOXES.length; i++) {
+				let def = this.OUT_DOCK_BOXES[i];
+				this.updateOutBoxPlacement(def, shouldDock, $bar);
+				if (!shouldDock) $bar.removeClass(def.barClass);
+			}
+		},
+
+		updateOutBoxPlacement: function (def, shouldDock, $bar) {
+			let $box = $(def.id);
+			if ($box.length === 0) return;
+
+			let isDocked = $box.parent().is($bar);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				if (!this[def.marker]) {
+					this[def.marker] = document.createComment(def.id);
+					$box.after(this[def.marker]);
+				}
+				let $collectors = $("#out-sector-bar-collectors");
+				if ($collectors.length > 0) $collectors.before($box);
+				else $bar.append($box);
+			} else if (this[def.marker]) {
+				$(this[def.marker]).before($box);
+			}
+		},
+
+		// Safari clips a position: fixed element that lives inside a scrolling
+		// container, so the map panel disappeared outright once the tab content
+		// became its own scroller. Lift the panel out of the pane and hang it off
+		// #unit-main instead: it is fixed, so its parent costs it no layout, and
+		// out there nothing can clip it.
+		updateMapDockPlacement: function (shouldDock) {
+			let $map = $("#out-container-compass");
+			let $unit = $("#unit-main");
+			if ($map.length === 0 || $unit.length === 0) return;
+
+			let isDocked = $map.parent().is($unit);
+			if (shouldDock === isDocked) return;
+
+			if (shouldDock) {
+				if (!this.mapHome) this.mapHome = $map.parent()[0];
+				$unit.append($map);
+			} else if (this.mapHome) {
+				$(this.mapHome).append($map);
+			}
+		},
+
+		// The pinned action bar belonging to the tab that is on screen. Which tabs
+		// have one is the markup's business, not a list kept in here: the element
+		// carries .action-mirror and its tab container carries the tab id.
+		getCurrentActionMirror: function () {
+			let currentTab = GameGlobals.gameState.uiStatus.currentTab;
+			let marker = this.actionMirrorMarker;
+			return $(".action-mirror").filter(function () {
+				let $container = $(this).closest(".tabcontainer");
+
+				// a docked bar hangs off #unit-main and has no tab container left
+				// to be found by, so it read as "belongs to no tab" and the pass
+				// below sent it home - then the next pass docked it again. Its
+				// marker still holds the place it came from, so ask that instead.
+				// Without this the bar spends every other layout pass back inside
+				// the pane as a fixed element, over the foot of the scrolling page
+				if ($container.length === 0 && marker && marker.parentNode) {
+					$container = $(marker.parentNode).closest(".tabcontainer");
+				}
+
+				return $container.data("tab") === currentTab;
+			}).first();
+		},
+
+		// Safari clips a position: fixed element that lives inside a scrolling
+		// container - the same bug that made the map panel vanish. The pinned
+		// action bars are the same shape, fixed and inside the pane, and on a
+		// phone that left the embark page's "Go" half off the bottom of the
+		// screen and untappable, with nothing to scroll to now that the page's
+		// own copy of it is gone.
+		//
+		// So they get the map panel's treatment: lifted out of the pane and hung
+		// off #unit-main as a static band of the shell column, where there is no
+		// fixed positioning to lose and nothing above it that can clip it.
+		updateActionMirrorPlacement: function (shouldDock) {
+			let $unit = $("#unit-main");
+			if ($unit.length === 0) return;
+
+			let $wanted = shouldDock ? this.getCurrentActionMirror() : $();
+			let $docked = $unit.children(".action-mirror");
+
+			// one bar at a time: the tab changed under it, or the shell went away
+			if ($docked.length > 0 && !$docked.is($wanted)) {
+				if (this.actionMirrorMarker) $(this.actionMirrorMarker).before($docked);
+			}
+
+			if ($wanted.length === 0) return;
+			if ($wanted.parent().is($unit)) return;
+
+			// a marker where it came from, so it goes back to its own place in its
+			// own tab rather than the front of it. The old one has done its job
+			// above, and each bar has a different home.
+			if (this.actionMirrorMarker) $(this.actionMirrorMarker).remove();
+			this.actionMirrorMarker = document.createComment("action-mirror");
+			$wanted.after(this.actionMirrorMarker);
+			$unit.append($wanted);
+		},
+
+		// The strip along the bottom of the map panel: the footer at the left, the
+		// log pill at the right. Built on demand, like the map column, and placed
+		// by grid area rather than by document order - updateOutControlsPlacement
+		// appends to the same panel and would otherwise decide what comes last.
+		getOutPanelMeta: function () {
+			let $panel = $("#out-container-compass");
+			if ($panel.length === 0) return null;
+
+			let $meta = $("#out-panel-meta");
+			if ($meta.length === 0) $meta = $("<div id='out-panel-meta'></div>");
+			if (!$meta.parent().is($panel)) $panel.append($meta);
+
+			return $meta;
+		},
+
+		// The footer is where save, restart and the version live, and it sat after
+		// the scrolling page. With the document locked that is off-screen for
+		// good, so it moves: into the map panel on the exploration tab, where it
+		// costs no scroll at all, and into the pane on every other tab, where
+		// there is no panel and it scrolls with the page.
+		// Health and the gear bonuses are the two things the small header leaves
+		// out, and outside the Adventurer chip was the only way to reach them.
+		// The pane on the exploration tab is nearly empty - ten migrations have
+		// taken almost everything out of it - so they are read there instead.
+		//
+		// The elements move rather than being copied, the same as #out-desc. The
+		// header system writes values through references it cached at init, so a
+		// copy would be right once and stale from the next step onwards.
+		//
+		// The dock is the last element in the pane, which is the whole of the
+		// ordering rule: on the passes where the pane does have something to show
+		// - a collector to upgrade, a beacon to dismantle - that content keeps
+		// the top and these numbers fall below it.
+		getAdventurerDockParts: function () {
+			if (this.adventurerDockParts) return this.adventurerDockParts;
+			// built in this system's own init, so on the first pass they may not
+			// exist yet; do not cache an empty answer
+			let $health = $("#mobile-header-self").find(".stat-indicator-health").parent();
+			let $gear = $("#container-equipment-stats-mobile");
+			if ($health.length === 0 || $gear.length === 0) return null;
+			this.adventurerDockParts = [ $health, $gear ];
+			return this.adventurerDockParts;
+		},
+
+		updateAdventurerDockPlacement: function (shouldDock) {
+			let $dock = $("#out-adventurer");
+			if ($dock.length === 0) return;
+
+			// cached: once docked these are no longer under #mobile-header-self,
+			// so looking them up by where they started would find nothing and the
+			// undock would never run
+			let parts = this.getAdventurerDockParts();
+			if (!parts) return;
+
+			if (!this.adventurerDockMarkers) this.adventurerDockMarkers = [];
+
+			for (let i = 0; i < parts.length; i++) {
+				let $part = parts[i];
+
+				if (shouldDock) {
+					if ($part.parent().is($dock)) continue;
+					// a marker where it came from, so the header gets it back in
+					// its own place in the order rather than at the front
+					if (!this.adventurerDockMarkers[i]) {
+						this.adventurerDockMarkers[i] = document.createComment("adventurer");
+						$part.after(this.adventurerDockMarkers[i]);
+					}
+					$dock.append($part);
+					continue;
+				}
+
+				let marker = this.adventurerDockMarkers[i];
+				if (!marker) continue;
+				if ($part[0].nextSibling === marker) continue;
+				$(marker).before($part);
+			}
+		},
+
+		updateFooterPlacement: function (isShell, dockInPanel) {
+			let $footer = $("#footer");
+			if ($footer.length === 0) return;
+
+			let $target = null;
+			if (dockInPanel) {
+				$target = this.getOutPanelMeta();
+			} else if (isShell) {
+				$target = $("#grid-switch-content");
+			} else if (this.footerHome) {
+				$target = $(this.footerHome);
+			}
+
+			if (!$target || $target.length === 0) return;
+			if ($footer.parent().is($target)) return;
+
+			// remember where it came from, so the desktop layout gets it back
+			// in its own place rather than a guessed one
+			if (!this.footerHome) this.footerHome = $footer.parent()[0];
+			$target.append($footer);
+		},
+
+		// The log pill floated over the scrolling pane, which on a phone means it
+		// covers whatever is under it. On the exploration tab there is a panel to
+		// put it in, so it goes there and stops overlapping anything. Every other
+		// tab has no panel, so it floats as before.
+		updateLogButtonPlacement: function (dockInPanel) {
+			let $button = $("#btn-log-toggle");
+			if ($button.length === 0) return;
+
+			let $target = null;
+			if (dockInPanel) {
+				$target = this.getOutPanelMeta();
+			} else if (this.logButtonHome) {
+				$target = $(this.logButtonHome);
+			}
+
+			if (!$target || $target.length === 0) return;
+			if ($button.parent().is($target)) return;
+
+			if (!this.logButtonHome) this.logButtonHome = $button.parent()[0];
+			$target.append($button);
+		},
+
+		// The stats bar and the tab bar are one block of chrome, but they were two
+		// separately positioned fixed elements, with the tab bar placed from a
+		// measurement of the header's height. Any lag in that measurement - the
+		// header gaining a row on entering camp, say - left the tab bar sitting
+		// too high, and its first row disappeared behind the header. Putting both
+		// in one fixed wrapper means the tab bar is always exactly below the
+		// header with nothing to measure, however many rows either of them grows.
+		updateChromeGrouping: function (shouldGroup) {
+			let $header = $("#mobile-header");
+			let $tabs = $("#grid-switch");
+			if ($header.length === 0 || $tabs.length === 0) return;
+
+			let $chrome = $("#mobile-chrome");
+			let isGrouped = $chrome.length > 0 && $header.parent().is($chrome);
+			if (shouldGroup === isGrouped) return;
+
+			if (shouldGroup) {
+				if ($chrome.length === 0) {
+					$chrome = $("<div id='mobile-chrome'></div>");
+					// it is the element updateLayout measures, so watch it too
+					if (this.headerResizeObserver) this.headerResizeObserver.observe($chrome[0]);
+				}
+				$header.before($chrome);
+				$chrome.append($header);
+				$chrome.append($tabs);
+			} else {
+				// back where they came from: header first, tab bar above the
+				// tab content it labels
+				$chrome.before($header);
+				$("#grid-switch-content").before($tabs);
+				// Whatever else was parked in here - the level title - is put
+				// back by its own placement method later in this same pass, but
+				// only if it is still in the document to be found. Removing the
+				// wrapper around it would take it out for good.
+				$chrome.before($chrome.children());
+				$chrome.remove();
+			}
+		},
+
+		// The compass and "back to camp" are what you reach for between every
+		// move, and they lived in the middle of a scrolling tab. When the minimap
+		// is pinned to the bottom of the screen they move into that panel, beside
+		// the map, and out of the scroll entirely. They fit in the column next to
+		// a 224px map, so the panel is no taller for it.
+		updateOutControlsPlacement: function (shouldMove) {
+			let $controls = $("#out-container-compass-actions");
+			if ($controls.length === 0) return;
+
+			let $map = $("#out-container-compass");
+			if ($map.length === 0) return;
+
+			let isMoved = $controls.parent().is($map);
+			if (shouldMove === isMoved) return;
+
+			if (shouldMove) {
+				// the map and its readout become one column, so the panel is a
+				// plain two-child row that cannot wrap the controls underneath
+				let $column = $("#out-map-column");
+				if ($column.length === 0) {
+					$column = $("<div id='out-map-column'></div>");
+					$map.prepend($column);
+				}
+				$column.append($map.children("#minimap-background-container"));
+				$column.append($map.children(".infobox"));
+				$map.append($controls);
+			} else {
+				$("#container-tab-two-out-actions").prepend($controls);
+				let $column = $("#out-map-column");
+				if ($column.length > 0) {
+					$map.append($column.children());
+					$column.remove();
+				}
+			}
 		},
 
 		updateTabVisibility: function () {
@@ -1351,7 +2293,9 @@ define([
 			this.currentThemeTransitionID = setTimeout(function () {
 				sys.elements.body.toggleClass("sunlit", newValue);
 				sys.elements.body.toggleClass("dark", !newValue);
-				
+				// keep the browser chrome color in sync with the theme (mobile)
+				$("meta[name='theme-color']").attr("content", newValue ? "#fbfbfb" : "#202220");
+
 				sys.updatePageBackgroundColor();
 				sys.updateVisionStatus();
 				sys.updateThemedIcons();
@@ -1518,6 +2462,13 @@ define([
 
 		onInventoryChanged: function () {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			// picking up the map is what turns a sideways phone from the rotate notice
+			// into the fullscreen map, and it is the only moment that says so. The
+			// notice covers the screen, so the player cannot tap anything to make the
+			// ordinary layout passes run and ask again.
+			if (this.isLandscapeMapLayout() !== this.elements.body.hasClass("landscape-map")) {
+				this.updateLayout();
+			}
 			this.queueResourceUpdate();
 			this.queueResourceBarUpdate();
 			this.updateCurrency();
@@ -1591,6 +2542,15 @@ define([
 		},
 		
 		onGameShown: function () {
+			// A batch of one-shot passes, several of which bail while the
+			// player's location node does not exist yet - and on a load from a
+			// save it does not. The banner is the one that shows: it kept the
+			// placeholder from index.html until the player changed tab. Ask
+			// update() to run the batch again once the world is there.
+			if (!this.currentLocationNodes.head) {
+				this.pendingGameShownRefresh = true;
+			}
+
 			this.updateTabVisibility();
 			this.queueResourceBarUpdate();
 			this.updateStaminaWarningLimit();

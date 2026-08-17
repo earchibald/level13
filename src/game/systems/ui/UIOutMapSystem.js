@@ -46,6 +46,8 @@ define([
 		MAP_STYLE_CANVAS: "canvas",
 		MAP_STYLE_ASCII: "ascii",
 
+		wasLandscape: null, // null until the first resize, so a load is not a rotation
+
 		constructor: function () {
 			this.initElements();
 			this.updateHeight();
@@ -57,8 +59,6 @@ define([
 			$("#select-header-mapmode").on("change", $.proxy(this.onMapModeSelectorChanged, this));
 			$("#select-header-mapstyle").on("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.enableScrollingForMap("mainmap");
-			this._onMapMouseWheel = $.proxy(this.onMapMouseWheel, this);
-			$("#mainmap-container").on("wheel", this._onMapMouseWheel);
 			// delegated so the handlers survive the overlay being rebuilt (on zoom, level change etc)
 			this._onSectorHoverIn = $.proxy(this.onSectorHoverIn, this);
 			this._onSectorHoverMove = $.proxy(this.onSectorHoverMove, this);
@@ -71,6 +71,15 @@ define([
 			$("#minimap-background-overlay").on("mouseenter", ".map-hint-cell", this._onSectorHoverIn);
 			$("#minimap-background-overlay").on("mousemove", ".map-hint-cell", this._onSectorHoverMove);
 			$("#minimap-background-overlay").on("mouseleave", ".map-hint-cell", this._onSectorHoverOut);
+			// touch parity: tap shows the minimap tooltips (hover does not exist);
+			// the main map needs no tap tooltip since tap opens the details panel
+			if (UIConstants.isTouchScreen()) {
+				this._onSectorTapTooltip = $.proxy(this.onSectorTapTooltip, this);
+				this._onDocumentTapHideTooltip = $.proxy(this.onDocumentTapHideTooltip, this);
+				$("#minimap-overlay").on("click", ".map-overlay-cell", this._onSectorTapTooltip);
+				$("#minimap-background-overlay").on("click", ".map-hint-cell", this._onSectorTapTooltip);
+				$(document).on("click", this._onDocumentTapHideTooltip);
+			}
 			this.playerPositionNodes = engine.getNodeList(PlayerPositionNode);
 			this.playerLocationNodes = engine.getNodeList(PlayerLocationNode);
 			GlobalSignals.add(this, GlobalSignals.playerPositionChangedSignal, this.hideSectorTooltip);
@@ -87,7 +96,6 @@ define([
 			$("#select-header-mapmode").off("change", $.proxy(this.onMapModeSelectorChanged, this));
 			$("#select-header-mapstyle").off("change", $.proxy(this.onMapStyleSelectorChanged, this));
 			GameGlobals.uiMapHelper.disableScrollingForMap("mainmap");
-			if (this._onMapMouseWheel) $("#mainmap-container").off("wheel", this._onMapMouseWheel);
 			this.hideSectorTooltip();
 			if (this._onMapScroll) $("#mainmap-container").off("scroll", this._onMapScroll);
 			$("#mainmap-overlay, #minimap-overlay").off("mouseenter", ".map-overlay-cell", this._onSectorHoverIn);
@@ -96,6 +104,14 @@ define([
 			$("#minimap-background-overlay").off("mouseenter", ".map-hint-cell", this._onSectorHoverIn);
 			$("#minimap-background-overlay").off("mousemove", ".map-hint-cell", this._onSectorHoverMove);
 			$("#minimap-background-overlay").off("mouseleave", ".map-hint-cell", this._onSectorHoverOut);
+			if (this._onSectorTapTooltip) {
+				$("#minimap-overlay").off("click", ".map-overlay-cell", this._onSectorTapTooltip);
+				$("#minimap-background-overlay").off("click", ".map-hint-cell", this._onSectorTapTooltip);
+				$(document).off("click", this._onDocumentTapHideTooltip);
+			}
+			if (this._onDocumentTapDeselectSector) {
+				$(document).off("click", this._onDocumentTapDeselectSector);
+			}
 			this.playerPositionNodes = null;
 			this.playerLocationNodes = null;
 		},
@@ -119,6 +135,85 @@ define([
 			$("#btn-mainmap-sector-details-investigate").click($.proxy(this.selectInvestigateSector, this));
 			
 			$("#btn-mainmap-sector-path").click($.proxy(this.showSectorPath, this));
+			$("#btn-mainmap-sector-details-close").click($.proxy(this.deselectSector, this));
+
+			// A tap anywhere closes the sector panel, the way the minimap's
+			// tooltip already behaves. Delegated on the document rather than
+			// bound to the map, so a tap on any other part of the screen
+			// closes it too.
+			//
+			// Two exceptions, both by containment rather than by
+			// stopPropagation on the cells: the cells' own handler is shared
+			// with the minimap and must not change, and a tap inside the panel
+			// is for the "(directions)" link or to scroll, not to close.
+			this._onDocumentTapDeselectSector = $.proxy(this.onDocumentTapDeselectSector, this);
+			$(document).on("click", this._onDocumentTapDeselectSector);
+
+			$("#btn-mainmap-zoom-in").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.onZoomButton(1);
+			}, this));
+			$("#btn-mainmap-zoom-out").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.onZoomButton(-1);
+			}, this));
+
+			this.initTouchZoom();
+		},
+
+		// pinch-to-zoom on the map canvas (the container has touch-action: none)
+		initTouchZoom: function () {
+			let sys = this;
+			let container = $("#mainmap-container")[0];
+			if (!container) return;
+			// tells CanvasConstants to keep touch-action: none even when the canvas
+			// fits, so pinch gestures are never claimed by native page scrolling
+			container.dataset.touchZoom = "true";
+			let pinch = { active: false, startDist: 0 };
+			let getTouchDistance = function (e) {
+				let dx = e.touches[0].pageX - e.touches[1].pageX;
+				let dy = e.touches[0].pageY - e.touches[1].pageY;
+				return Math.sqrt(dx * dx + dy * dy);
+			};
+			container.addEventListener("touchstart", function (e) {
+				if (e.touches.length == 2) {
+					pinch.active = true;
+					pinch.startDist = getTouchDistance(e);
+				} else {
+					pinch.active = false;
+				}
+			}, { passive: true });
+			container.addEventListener("touchmove", function (e) {
+				if (!pinch.active || e.touches.length != 2) return;
+				if (sys.selectedMapStyle != sys.MAP_STYLE_CANVAS) return;
+				if (!sys.playerPositionNodes || !sys.playerPositionNodes.head) return;
+				e.preventDefault();
+				if (pinch.startDist <= 0) return;
+				let dist = getTouchDistance(e);
+				let ratio = dist / pinch.startDist;
+				let midX = (e.touches[0].pageX + e.touches[1].pageX) / 2;
+				let midY = (e.touches[0].pageY + e.touches[1].pageY) / 2;
+				if (ratio > 1.25) {
+					sys.hideSectorTooltip();
+					sys.zoomMap(1, midX, midY);
+					pinch.startDist = dist;
+				} else if (ratio < 0.8) {
+					sys.hideSectorTooltip();
+					sys.zoomMap(-1, midX, midY);
+					pinch.startDist = dist;
+				}
+			}, { passive: false });
+			container.addEventListener("touchend", function (e) {
+				if (e.touches.length < 2) pinch.active = false;
+			});
+		},
+
+		onZoomButton: function (steps) {
+			if (this.selectedMapStyle != this.MAP_STYLE_CANVAS) return;
+			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
+			this.hideSectorTooltip();
+			// null focal point = zoom on the container center
+			this.zoomMap(steps, null, null);
 		},
 
 		update: function (time) {
@@ -134,6 +229,17 @@ define([
 		},
 		
 		updateHeight: function () {
+			// On the small layout the map tab is the whole column - the stylesheet
+			// gives the map whatever is left of it, in portrait and in the
+			// landscape map mode alike. A height measured here would only fight
+			// that, and it would win: it is written inline. Landscape is where it
+			// showed, because a sideways phone is 393pt tall and the chrome
+			// allowance left the map its 198pt floor.
+			if ($("body").hasClass("layout-small")) {
+				$("#mainmap-container").css("maxHeight", "");
+				return;
+			}
+
 			var maxHeight = Math.max(198, $(window).height() - 380);
 			$("#mainmap-container").css("maxHeight", maxHeight + "px");
 		},
@@ -216,6 +322,93 @@ define([
 			GameGlobals.uiMapHelper.setSelectedSector(this.map, this.selectedSector);
 			this.updateSector();
 		},
+
+		// KEYBOARD CURSOR
+		// The map is driven with the same eight directions the player walks with. One press
+		// is one cell: the cursor never scans across a gap looking for the next drawn sector,
+		// because a press that jumps an arbitrary distance reads as the cursor teleporting.
+
+		canSelectSectorAt: function (level, x, y) {
+			let sector = GameGlobals.levelHelper.getSectorByPosition(level, x, y);
+			if (!sector) return false;
+			// a blank cell is blank on purpose - landing on one would confirm a sector is
+			// there, which is exactly what the map is withholding
+			let status = GameGlobals.uiMapHelper.getSectorStatus(sector);
+			if (status == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_INVISIBLE) return false;
+			return true;
+		},
+
+		moveSelectionInDirection: function (direction) {
+			if (!this.selectedSector) {
+				// nothing selected yet, so start where the player is
+				return this.selectPlayerSectorIfOnLevel();
+			}
+
+			let currentPos = this.selectedSector.get(PositionComponent);
+			if (!currentPos) return false;
+
+			let nextPos = PositionConstants.getNeighbourPosition(currentPos, direction);
+			if (!this.canSelectSectorAt(currentPos.level, nextPos.sectorX, nextPos.sectorY)) return false;
+
+			this.selectSector(currentPos.level, nextPos.sectorX, nextPos.sectorY);
+			this.scrollSelectionIntoView();
+			return true;
+		},
+
+		selectPlayerSectorIfOnLevel: function () {
+			if (!this.playerPositionNodes.head) return false;
+			let playerPos = this.playerPositionNodes.head.position;
+			// the level selector can be showing a level the player is not on, and there is
+			// nothing of theirs to select there
+			if (this.selectedLevel != playerPos.level) return false;
+			if (!this.canSelectSectorAt(playerPos.level, playerPos.sectorX, playerPos.sectorY)) return false;
+			this.selectSector(playerPos.level, playerPos.sectorX, playerPos.sectorY);
+			this.scrollSelectionIntoView();
+			return true;
+		},
+
+		// a click can only reach a cell that is already on screen, so nothing needed this
+		// until the keyboard could move the selection somewhere the player is not looking
+		scrollSelectionIntoView: function () {
+			if (!this.selectedSector) return;
+			let pos = this.selectedSector.get(PositionComponent);
+			if (!pos) return;
+			let $container = $("#mainmap-container");
+			if ($container.length == 0) return;
+			// scope to the main map: the minimap draws cells with the same data attributes,
+			// and its copy is not displayed, so measuring it would give nonsense
+			let $cell = $container.find(".map-overlay-cell[data-level='" + pos.level + "'][data-x='" + pos.sectorX + "'][data-y='" + pos.sectorY + "']");
+			if ($cell.length == 0) return;
+
+			// measure with bounding rects rather than position(): the cell's offset parent is
+			// the scrolled content, not the container, so position() is already content
+			// relative and adding scrollLeft would count the scroll twice
+			let cellRect = $cell[0].getBoundingClientRect();
+			let containerRect = $container[0].getBoundingClientRect();
+
+			let deltaLeft = cellRect.left - containerRect.left;
+			if (deltaLeft < 0) {
+				$container.scrollLeft($container.scrollLeft() + deltaLeft);
+			} else if (deltaLeft + cellRect.width > containerRect.width) {
+				$container.scrollLeft($container.scrollLeft() + deltaLeft + cellRect.width - containerRect.width);
+			}
+
+			let deltaTop = cellRect.top - containerRect.top;
+			if (deltaTop < 0) {
+				$container.scrollTop($container.scrollTop() + deltaTop);
+			} else if (deltaTop + cellRect.height > containerRect.height) {
+				$container.scrollTop($container.scrollTop() + deltaTop + cellRect.height - containerRect.height);
+			}
+		},
+
+		// Drops the selection, which is what hides the details - updateSector
+		// toggles the content block on whether there is a selected sector. Same
+		// two steps selectLevel takes, so the map redraws without its highlight.
+		deselectSector: function () {
+			this.selectedSector = null;
+			this.updateMap();
+			this.updateSector();
+		},
 		
 		selectMapMode: function (mapMode) {
 			// the map redraws under the cursor; don't leave a stale tooltip hanging
@@ -252,8 +445,13 @@ define([
 			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
 			
 			let sys = this;
-			
-			let sector = this.playerLocationNodes.head.entity;
+
+			// No read of the player's current sector here - the map is drawn from
+			// getCurrentMapPosition, which asks the player's position. There was a
+			// `playerLocationNodes.head.entity` on this line and nothing used it,
+			// and the node is empty until PlayerPositionSystem has run once: on a
+			// save whose last tab was the map, the first draw came before that and
+			// took the game down to the "you've found a bug" popup on every load.
 			let mapPosition = this.getCurrentMapPosition();
 			
 			let levelEntity = GameGlobals.levelHelper.getLevelEntityForPosition(mapPosition.level);
@@ -300,8 +498,13 @@ define([
 			let hasPath = hasSector && path && path.length > 0;
 			
 			let position = hasSector ? this.selectedSector.get(PositionComponent).getPosition() : null;
-			let playerPosition = this.playerLocationNodes.head.position.getPosition();
-			let levelDiff = hasSector ? Math.abs(position.level - playerPosition.level) : 0;
+			// The player's own position, not the position of the sector entity they
+			// are standing on. The two agree, but the sector node is empty until
+			// PlayerPositionSystem has run once - and with the map as the tab the
+			// game opens on, this runs before that and took the game down. It is
+			// also only needed when a sector is selected, which it never is here.
+			let hasPlayerPosition = this.playerPositionNodes && this.playerPositionNodes.head;
+			let levelDiff = hasSector && hasPlayerPosition ? Math.abs(position.level - this.playerPositionNodes.head.position.level) : 0;
 			
 			GameGlobals.uiFunctions.toggle($("#mainmap-sector-details-content-empty"), !hasSector);
 			GameGlobals.uiFunctions.toggle($("#mainmap-sector-details-content"), hasSector);
@@ -346,6 +549,10 @@ define([
 		},
 
 		onSectorHoverIn: function (e) {
+			// touch screens use the tap paths (details panel / tap tooltip); a tap's
+			// synthesized mouseenter must not schedule the hover tooltip, which would
+			// otherwise appear and stick (no mouseleave follows on touch)
+			if (UIConstants.isTouchScreen()) return;
 			let $cell = $(e.currentTarget);
 			let level = parseInt($cell.attr("data-level"));
 			let x = parseInt($cell.attr("data-x"));
@@ -366,6 +573,48 @@ define([
 		onSectorHoverMove: function (e) {
 			this.tooltipCursor = { x: e.clientX, y: e.clientY };
 			// once shown the pane stays put, so it does not jitter under the cursor
+		},
+
+		onDocumentTapDeselectSector: function (e) {
+			if (!this.selectedSector) return;
+			// Only while the map is the tab being looked at. deselectSector
+			// redraws the whole canvas and its overlay, and without this the
+			// tap that LEAVES the map would land that rebuild inside the first
+			// frame of the tab transition - work for a screen nobody is on.
+			if (GameGlobals.gameState.uiStatus.currentTab !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
+			let $target = $(e.target);
+			// a tap on a sector selects that one instead - its own handler has
+			// already run by the time this does
+			if ($target.closest(".map-overlay-cell").length > 0) return;
+			// and a tap inside the panel or on the jump buttons is not a
+			// request to close them
+			if ($target.closest("#mainmap-sector-details").length > 0) return;
+			// Nor is a tap on any of the map's other controls. The zoom
+			// buttons and the level and style selects are SIBLINGS of the
+			// panel rather than children of it, so containment in the panel
+			// does not cover them - and zooming in to look at the sector you
+			// just selected is exactly the moment the panel must survive.
+			if ($target.closest("#mainmap-zoom-controls, #grid-tab-header").length > 0) return;
+			this.deselectSector();
+		},
+
+		onSectorTapTooltip: function (e) {
+			let $cell = $(e.currentTarget);
+			let level = parseInt($cell.attr("data-level"));
+			let x = parseInt($cell.attr("data-x"));
+			let y = parseInt($cell.attr("data-y"));
+			let hintID = $cell.attr("data-hint-id");
+			let contextLabel = hintID ? this.MAP_HINT_LABELS[hintID] : null;
+
+			this.cancelSectorTooltip();
+			this.tooltipCursor = { x: e.clientX, y: e.clientY };
+			this.showSectorTooltip(level, x, y, contextLabel);
+			e.stopPropagation();
+		},
+
+		onDocumentTapHideTooltip: function (e) {
+			if ($(e.target).closest(".map-overlay-cell, .map-hint-cell, #map-sector-tooltip").length > 0) return;
+			this.hideSectorTooltip();
 		},
 
 		onSectorHoverOut: function (e) {
@@ -468,8 +717,18 @@ define([
 			let gap = this.SECTOR_TOOLTIP_CURSOR_GAP;
 			let margin = this.SECTOR_TOOLTIP_EDGE_MARGIN;
 
-			let viewportW = $(window).width();
-			let viewportH = $(window).height();
+			// the visual viewport is what the player can actually see: on a phone
+			// window.innerHeight includes the strip behind the browser toolbar
+			let viewportW = window.visualViewport ? window.visualViewport.width : $(window).width();
+			let viewportH = window.visualViewport ? window.visualViewport.height : $(window).height();
+
+			// the pinned header, tab bar and minimap are chrome, not free space
+			let topEdge = margin + GameGlobals.uiFunctions.getPinnedTopHeight();
+			let bottomEdge = viewportH - margin - GameGlobals.uiFunctions.getPinnedBottomHeight();
+
+			// a pane taller than the band between them scrolls rather than
+			// hanging off the screen
+			$tooltip.css("max-height", Math.max(80, Math.round(bottomEdge - topEdge)) + "px");
 
 			let width = $tooltip.outerWidth();
 			let height = $tooltip.outerHeight();
@@ -482,22 +741,11 @@ define([
 			if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
 
 			let top = cursor.y + gap;
-			if (top + height > viewportH - margin) top = cursor.y - gap - height;
-			if (top < margin) top = margin;
-			if (top + height > viewportH - margin) top = Math.max(margin, viewportH - margin - height);
+			if (top + height > bottomEdge) top = cursor.y - gap - height;
+			if (top < topEdge) top = topEdge;
+			if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
 
 			$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
-		},
-
-		onMapMouseWheel: function (e) {
-			if (this.selectedMapStyle != this.MAP_STYLE_CANVAS) return;
-			if (!this.playerPositionNodes || !this.playerPositionNodes.head) return;
-			this.hideSectorTooltip();
-			let originalEvent = e.originalEvent || e;
-			let deltaY = originalEvent.deltaY;
-			if (!deltaY) return;
-			e.preventDefault();
-			this.zoomMap(deltaY < 0 ? 1 : -1, originalEvent.pageX, originalEvent.pageY);
 		},
 
 		zoomMap: function (steps, pageX, pageY) {
@@ -1081,12 +1329,34 @@ define([
 			// the pane is positioned against the old viewport, so drop it rather than let it clip
 			this.hideSectorTooltip();
 			this.updateHeight();
+
+			// A rotation changes the shape of the map's box, not just its size,
+			// and leaves the view pointing at whatever the old geometry put
+			// there. Only a rotation: an iOS URL bar sliding away is a resize too,
+			// and moving the map out from under a player who just panned it would
+			// be worse than the offset.
+			let isLandscape = $(window).width() > $(window).height();
+			let didRotate = this.wasLandscape !== null && this.wasLandscape !== isLandscape;
+			this.wasLandscape = isLandscape;
+			if (!didRotate) return;
+
+			// next turn, because the layout that decides the new box is another
+			// listener on this same signal and may not have run yet
+			let sys = this;
+			setTimeout(function () {
+				if (GameGlobals.gameState.uiStatus.currentTab !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
+				sys.centerMap();
+			}, 0);
 		},
 
 		onTabChanged: function (tabID, tabProps) {
 			this.hideSectorTooltip();
 			if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
-			
+
+			// framing depends only on what sits above the pane, so do it before the
+			// map itself is built: the details still come into view if drawing fails
+			this.scrollTabContentToTop();
+
 			this.updateBubble();
 			this.updateHeader();
 			
@@ -1103,9 +1373,31 @@ define([
 			}
 			this.updateMap();
 			this.centerMap();
+
+			// start where the player is, as though they had clicked their own sector.
+			// selectLevel above has already cleared selectedSector, and the tabProps branch
+			// sets it when the caller asked for a specific sector - so this only fills in
+			// the plain case of opening the map with nothing chosen
+			if (!this.selectedSector) this.selectPlayerSectorIfOnLevel();
 			this.updateMapCompletionHint();
 		},
-		
+
+		// the room details sit under the map and land below the fold in a desktop
+		// window. Parking the tab content against the top of the frame scrolls the
+		// banner and the location header away and brings the details into view
+		scrollTabContentToTop: function () {
+			// on a phone the document is locked and the tab content is its own
+			// scroller (see APP SHELL in mobile.less), so the window has nothing to
+			// scroll. The map tab sets the pane to overflow: hidden rather than auto,
+			// so read the layout itself instead of inferring it from the overflow
+			if ($("body").hasClass("layout-small")) return;
+
+			let $pane = $("#grid-switch-content");
+			if ($pane.length == 0) return;
+
+			$("html,body").animate({ scrollTop: $pane.offset().top }, 250);
+		},
+
 		updateHeader: function () {
 			let header = Text.t("ui.map.page_header");
 			if (this.isMapModesVisible()) header += " (" + this.selectedMapMode + ")";
@@ -1117,6 +1409,8 @@ define([
 		},
 
 		onLevelSelectorChanged: function () {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			let level = parseInt($("#select-header-level").val());
 			if (this.selectedLevel === level) return;
 			this.selectLevel(level);
@@ -1124,6 +1418,8 @@ define([
 		},
 		
 		onMapModeSelectorChanged: function () {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			let mapMode = $("#select-header-mapmode").val();
 			if (this.selectedMapMode === mapMode) return;
 			this.selectMapMode(mapMode);

@@ -56,7 +56,8 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			this.playerPosNodes = engine.getNodeList(PlayerPositionNode);
 			this.isMapRevealed = false;
 			this.isMapEasyMode = false;
-			this.mapZoom = 1;
+			// bigger default zoom on touch screens so sector tap targets are usable
+			this.mapZoom = UIConstants.isTouchScreen() ? 1.5 : 1;
 			this.icons = MapElements.icons;
 		},
 

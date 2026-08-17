@@ -93,6 +93,10 @@ define([
 			let data = this.getCompressedSaveJSON();
 			let success = this.saveDataToSlot(slotID, data);
 
+			// mirror only once the local save is safely written. The helper swallows its own
+			// failures: a network problem must never reach the save the player just made
+			if (success) GameGlobals.gistSaveHelper.mirrorSlot(slotID, data);
+
 			this.saveMetaState();
 			
 			if (isDefaultSlot) {

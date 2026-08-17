@@ -11,7 +11,21 @@ function (Ash, GameGlobals, GlobalSignals, GameConstants) {
 
 		loadVersion: function () {
 			var helper = this;
-			$.getJSON('changelog.json', function (json) {
+			// The other asset requirejs does not cache-bust for us, and the one
+			// that says which version this is. Served stale it reports the
+			// previous release - so the number a player reads back to say a fix
+			// has landed is the one number that cannot be trusted, and the
+			// out-of-date warnings below are drawn from the same stale list.
+			// Reuse the loader's own urlArgs, as TextLoader does.
+			var url = 'changelog.json';
+			var urlArgs = null;
+			try {
+				urlArgs = requirejs.s.contexts._.config.urlArgs;
+			} catch (e) {
+				urlArgs = null;
+			}
+			if (urlArgs) url += '?' + urlArgs;
+			$.getJSON(url, function (json) {
 				helper.loadingSuccessful = true;
 				helper.versions = json.versions;
 				var version = helper.getCurrentVersionNumber();

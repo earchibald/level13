@@ -16,18 +16,36 @@
 	<meta itemprop="description" name="description" property="og:description" content="A text-based science fiction adventure game by nroutasuo with QOL updates by earchibald.">
 	<meta itemprop="image" property="og:image" content="favicon.png" />
 	<meta itemprop="name" property="og:title" content="Level 13" />
-	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+	<meta name="theme-color" content="#202220">
+	<!-- home-screen web app: iOS 16.3 and older ignore the manifest and need
+	     these; black-translucent lets the game paint under the status bar, so
+	     the safe-area insets in the css do the spacing -->
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="Level 13">
 	<link rel="shortcut icon" href="favicon.ico" />
+	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.18" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m94" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m94" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m94" />
+	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
 </head>
 
 <body class="wrap wider dark" style="height:100%">
 	
+	<!-- the manifest asks for a portrait lock, but iOS ignores it, so a phone
+	     turned sideways gets this instead of the broken landscape layout -->
+	<div id="rotate-notice">
+		<h2>Turn your phone upright</h2>
+		<p>Level 13 is portrait only for now.</p>
+	</div>
+
 	<div class="sticky-footer-wrapper game-opacity-controller">
 		<div class="grid hidden-by-popups" id="grid-main">
 			<div class="unit four-fifths" id="unit-main" style="display: none">
@@ -36,17 +54,13 @@
 				<div id="mobile-header" class="hidden-when-down" role="banner">
 					<div id="mobile-header-tribe">
 						<div id="statsbar-tribe-stats-mobile" class="statsbar-tribe-stats mobile-header-section"></div>
-						<!--
-						<span id="statsbar-hope-mobile" class="statsbar statsbar-hope">
+						<span id="statsbar-deity-mobile" class="statsbar statsbar-deity">
 							Deity: <span id="deity-name-mobile" class="deity-name">Name</span>
 						</span>
-						-->
 					</div>
 					<div id="mobile-header-self">
 						<div class="player-stats-container mobile-header-section"></div>
-						<!--
 						<div id="container-equipment-stats-mobile" class="container-equipment-stats"></div>
-						-->
 					</div>
 					<div id="mobile-header-status" class="mobile-header-section">
 						<ul class="itemlist player-perks-list" id="player-perks-list-mobile"></ul>
@@ -64,15 +78,11 @@
 							<span class="value">0</span>
 						</span>
 						<div id="bag-resources-mobile" class="bag-resources statsbar"></div>
-						<!--
 						<ul class="itemlist list-header-items" id="list-header-items-mobile"></ul>
-						-->
 					</div>
-					<!--
 					<div id="mobile-header-explorers" class="mobile-header-section">
 						<ul class="itemlist list-header-explorers" id="list-header-explorers-mobile"></ul>
 					</div>
-					-->
 					<div id="mobile-header-camp" class="mobile-header-section">
 						<div id="header-camp-storage-mobile" class="stat-indicator header-camp-storage">
 							<span class="label"></span>
@@ -126,7 +136,7 @@
 					</div>
 				</div>
 				
-				<div class="grid" id="grid-main-header" class="vision-container hidden-when-down" role="banner">
+				<div class="grid vision-container hidden-when-down" id="grid-main-header" role="banner">
 					<h3 class="hide-from-visual-layout">Stats</h3>
 					<div class="unit whole lvl13-box-1 header-row" id="header-tribe-container">
 						<div id="statsbar-self" class="statsbar">
@@ -189,10 +199,24 @@
 					</div>
 				</div><!-- grid for the whole stats bar -->
 				
-				<div class="grid">
+				<div class="grid" id="grid-location">
 					<div id="grid-location-header" class="unit whole vision-container">
 						<div class='info-callout-target info-callout-target-side'><img id="level-icon" /></div>
 						<h1>Camp</h1>
+						<!-- the room you are standing in, outside camp. It was an h2
+						     in the scrolling page; up here it is on screen while the
+						     page scrolls, and it opens the room description. Hidden
+						     until UIOutHeaderSystem has decided the layout. -->
+						<!-- the room name and nothing else. It carried the scavenged
+						     percentage for one release; that reads from the finds row
+						     at the bottom of the screen now. -->
+						<button id="btn-room" class="btn-meta hidden-when-down" aria-expanded="false" style="display:none"><span id="btn-room-name"></span></button>
+						<!-- reveals the adventurer's own stats, which the small-layout
+						     header otherwise leaves off (see mobile.less). It rides in
+						     the banner because the banner is on screen on every tab, in
+						     camp and out. Hidden until UIOutHeaderSystem has decided the
+						     layout, so the regular layout never flashes it. -->
+						<button id="btn-adventurer" class="btn-meta text-key hidden-when-down" aria-expanded="false" data-text-key="ui.main.adventurer_button_label" style="display:none"></button>
 					</div>
 				</div>
 				
@@ -323,6 +347,9 @@
 					<!-- "embark" page when leaving camp -->
 					<div class="grid tabcontainer" id="container-tab-enter-out" data-tab="switch-embark">
 						<div class="unit whole">
+							<div class="actionbox action-mirror">
+								<button class="action text-key" id="in-action-leave-top" action="leave_camp" data-text-key="ui.embark.leave_camp_button_label"></button>
+							</div>
 							<p class="text-key" data-text-key="ui.embark.page_description"></p>
 							<div class="grid">
 								<div class="unit one-third" id="embark-resources-container">
@@ -355,6 +382,22 @@
 					<!-- level: minimap and header -->
 					<div class="grid tabcontainer" id="container-tab-two-out" data-tab="switch-out">
 						<div class="unit unit-compass" id="out-container-compass">
+							<!-- What this room has, out of the scrolling page and into
+							     the band that already holds the minimap - beside the
+							     thumb that does the scavenging, rather than at the far
+							     top of the screen.
+
+							     Two fixed lines, and every value always present even
+							     with nothing to say. A line that appears and disappears
+							     moves the direction buttons under the player's thumb
+							     between one scavenge and the next, which is the moment
+							     they are tapping fastest. -->
+							<div id="out-finds-row">
+								<div class="finds-line"><span class="finds-part finds-part-scavenged"><span class="label">Scavenged</span>: <span id="out-scavenged-value">?</span></span><span class="finds-part finds-part-resources"><span class="label">Resources</span>: <span id="out-resources-value">?</span></span></div>
+								<!-- absent, not blank, in a room with no items to report - see
+								     hasVisibleItemsToShow -->
+								<div class="finds-line finds-line-items"><span class="finds-part finds-part-items"><span class="label">Items</span>: <span id="out-items-value">?</span></span></div>
+							</div>
 							<div id="minimap-background-container" class="canvas-container">
 								<canvas id="minimap-background" width="224" height="224"></canvas>
 								<div id="minimap-container" class="canvas-container" style="width: 198px; height: 198px">
@@ -371,6 +414,9 @@
 						<div class="unit unit-rest">
 							<h2 id="header-sector">Sector header</h2>
 							<div id="out-desc"></div>
+							<!-- last here so the desktop reading order is unchanged; the
+							     small layout orders it above the header instead -->
+							<div id="out-desc-stats"></div>
 						</div>
 					</div>
 					
@@ -389,17 +435,56 @@
 						</div>
 						
 						<div class="unit unit-rest">
+							<div id="out-sector-bar">
+								<div id="out-sector-bar-actions" class="actionbox">
+									<button class="action action-location tabbutton" data-tab="switch-out" id="out-action-sca" action="scavenge">Scavenge</button>
+									<button class="action action-location" id="out-action-scout" action="scout">Scout</button>
+									<button class="action action-location" id="out-action-use-spring" action="use_spring">Refill water</button>
+									<!-- Founding a camp changes the whole game and it was the last row of a
+									     table below the description, so it was the one action you had to go
+									     looking for. It belongs with the other things you do to a sector, and
+									     so does the beacon: both are things you place here, both appear only
+									     where they can be placed, and neither shows for long. What stays in
+									     the Build table is what you do to something already standing - the
+									     collector upgrades and the beacon's dismantle. -->
+									<button class="action action-build action-location" id="out-action-build-camp" action="build_out_camp">Camp</button>
+									<button class="action action-build action-location" id="out-action-build-beacon" action="build_out_beacon">Beacon</button>
+								</div>
+								<div id="out-sector-bar-collectors">
+									<div id="out-collector-chip-water" class="collector-chip">
+										<span class="collector-chip-icon" role="img" aria-label="water"></span>
+										<span id="out-collector-fill-water" class="collector-chip-fill vision-text"></span>
+										<!-- before it is built the chip is the icon and this button; after,
+										     the fill and the two collect actions. The states never overlap. -->
+										<button class="action action-build action-location text-key" action="build_out_collector_water" id="out-action-build-bucket" data-text-key="game.improvements.collector_water_name_default"></button>
+										<button class="action action-use action-location btn-narrow text-key" action="use_out_collector_water" id="out-action-use-bucket" data-text-key="ui.exploration.collect_all_short_label"></button>
+										<button class="action action-use action-location btn-compact" action="use_out_collector_water_one" id="out-action-use-bucket_one">1</button>
+										<!-- The upgrade. It was a row of the Build table down in the pane, and a
+										     player could reach the end of the game without ever meeting it: the row
+										     only appears once the tribe has researched the collector upgrade, and by
+										     then nobody reads that table. Raising a bucket's capacity is a thing you
+										     do to this bucket, so it belongs on this bucket's chip, beside the
+										     actions that empty it. -->
+										<button class="action action-improve action-location btn-compact" action="improve_out_collector_water" id="out-action-improve-bucket">▲</button>
+									</div>
+									<div id="out-collector-chip-food" class="collector-chip">
+										<span class="collector-chip-icon" role="img" aria-label="food"></span>
+										<span id="out-collector-fill-food" class="collector-chip-fill vision-text"></span>
+										<button class="action action-build action-location text-key" action="build_out_collector_food" id="out-action-build-trap" data-text-key="game.improvements.collector_food_name_default"></button>
+										<button class="action action-use action-location btn-narrow text-key" action="use_out_collector_food" id="out-action-use-trap" data-text-key="ui.exploration.collect_all_short_label"></button>
+										<button class="action action-use action-location btn-compact" action="use_out_collector_food_one" id="out-action-use-trap_one">1</button>
+										<button class="action action-improve action-location btn-compact" action="improve_out_collector_food" id="out-action-improve-trap">▲</button>
+									</div>
+								</div>
+							</div>
 							<div class="subheader" id="header-out-actions">
 								<h3 class="text-key" data-text-key="ui.exploration.scavenge_actions_header"></h3>
 							</div>
 							<div id="out-actions" class="actionbox">
-								<button class="action action-location tabbutton" data-tab="switch-out" id="out-action-sca" action="scavenge">Scavenge</button>
-								<button class="action action-location" id="out-action-scout" action="scout">Scout</button>
 								<button class="action action-location" id="out-action-investigate" action="investigate">Investigate</button>
 								<button class="action action-location" id="out-action-examine" action="examine">Examine</button>
 								<button class="action action-location btn-x-wide" id="out-action-scavenge-heap" action="scavenge_heap">Scavenge heap</button>
 								<button class="action action-location" id="out-action-clear-workshop" action="clear_workshop">Scout workshop</button>
-								<button class="action action-location" id="out-action-use-spring" action="use_spring">Refill water</button>
 								<button class="action action-location" id="out-action-get-up" action="get_up"><span>Get up</span></button>
 								<button class="action action-location btn-icon" id="out-action-nap" action="nap"><span>Rest</span></button>
 								<button class="action action-location" id="out-action-wait" action="wait"><span>Wait</span></button>
@@ -420,23 +505,16 @@
 							</div>
 							<div id="out-improvements" class="actionbox">
 								<table>
-								<tr id="out-improvements-collector-water">
-									<td><button class="action action-build action-location text-key" action="build_out_collector_water" id="out-action-build-bucket" data-text-key="game.improvements.collector_water_name_default"></button></td>
-									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-bucket" action="improve_out_collector_water">▲</button></td>
-									<td><button class="action action-use action-location btn-narrow text-key" action="use_out_collector_water" id="out-action-use-bucket" data-text-key="ui.exploration.collect_all_resources_label"></button></td>
-									<td><button class="action action-use action-location btn-compact" action="use_out_collector_water_one" id="out-action-use-bucket_one">1</button></td>
-									<td class="list-storage vision-text"></td>
-								</tr><tr id="out-improvements-collector-food">
-									<td><button class="action action-build action-location text-key" action="build_out_collector_food" id="out-action-build-trap" data-text-key="game.improvements.collector_food_name_default"></button></td>
-									<td><button class='action action-improve btn-glyph-big' id="out-action-improve-trap" action="improve_out_collector_food">▲</button></td>
-									<td><button class="action action-use action-location btn-narrow text-key" action="use_out_collector_food" id="out-action-use-trap" data-text-key="ui.exploration.collect_all_resources_label"></button></td>
-									<td><button class="action action-use action-location btn-compact" action="use_out_collector_food_one" id="out-action-use-trap_one">1</button></td>
-									<td class="list-storage vision-text"></td>
-								</tr><tr id="out-improvements-beacon">
-									<td><button class="action action-build action-location" action="build_out_beacon" id="out-action-build-beacon">Beacon</button></td>
+								<!-- The collectors have left this table altogether. Their builds and their
+								     collect actions went to the chips in the sector bar, and the upgrade has
+								     now followed them there, so the rows that held it were labels with no
+								     action in them. What remains is the beacon's dismantle. -->
+								<!-- the builds moved into the sector bar (#out-action-build-camp,
+								     #out-action-build-beacon); btn-action names the row's improvement now
+								     that the button it used to be read from has gone -->
+								<tr id="out-improvements-beacon" btn-action="build_out_beacon">
+									<td class="collector-row-label vision-text"><span>Beacon</span></td>
 									<td><button class='action action-dismantle btn-glyph-big' id="out-action-dismantle-beacon" action='dismantle_out_beacon'>×</button></td>
-								</tr><tr id="out-improvements-camp">
-									<td><button class="action action-build action-location" action="build_out_camp" >Camp</button></td>
 								</tr>
 								</table>
 							</div>
@@ -483,6 +561,7 @@
 						<div class="unit one-quarter">
 							<div id="self-bag-actions" class="actionbox">
 								<button id="btn-self-manage-inventory">Manage inventory</button>
+								<button id="btn-self-craft">Craft</button>
 							</div>
 							<div class="subheader" id="header-self-use-items">
 								<h3 class="text-key" data-text-key="ui.inventory.use_item_header"></h3>
@@ -541,9 +620,13 @@
 									<canvas id="mainmap" width="500" height="500" role="img" aria-label="level map"></canvas>
 									<div id="mainmap-overlay" class="canvas-overlay"></div>
 								</div>
+								<div id="mainmap-zoom-controls">
+									<button id="btn-mainmap-zoom-in" class="btn-glyph-big" aria-label="Zoom in">+</button>
+									<button id="btn-mainmap-zoom-out" class="btn-glyph-big" aria-label="Zoom out">&minus;</button>
+								</div>
 							</div>
 							<div id="mainmap-container-ascii">
-								<textarea rows="12" readonly></textarea>
+								<textarea rows="12" readonly wrap="off"></textarea>
 								<div id="mainmap-ascii-legend" class="lvl13-box-1"></div>
 							</div>
 							<div id="mainmap-sector-details" class="lvl13-box-1" style="margin: 5px; padding: 5px;">
@@ -574,6 +657,10 @@
 									<p class="meta text-key" id="mainmap-sector-details-empty-text-ascii" data-text-key="ui.map.sector_details_empty_info_ascii"></p>
 								</div>
 								<div id="mainmap-sector-details-content">
+									<!-- on a phone this block is a panel over the map rather than a
+									     section under it, so it needs a way out; on the desktop layout
+									     it is in the flow and the css hides this -->
+									<button id="btn-mainmap-sector-details-close" class="context btn-glyph" aria-label="Close sector details">&times;</button>
 									<h3><span id="mainmap-sector-details-name">Sector</span> <span id="mainmap-sector-details-pos"/></h3>
 									<table class="spacious full-width">
 										<tr><td class="textwidth text-key" data-text-key="ui.map.sector_detail_district_label"></td><td><span id="mainmap-sector-details-district"></span></td></tr>
@@ -619,6 +706,13 @@
 					<div class="grid tabcontainer" id="container-tab-two-projects" data-tab="switch-projects" style="display:none">
 						<div class="unit whole">
 							<div class="actionbox" id="container-in-improvements-colony">
+								<!-- the id is how UIOutProjectsSystem hides this bar: on a phone
+								     it is lifted out of this container and hung off the shell
+								     column, where the container's own display no longer
+								     reaches it (see updateActionMirrorPlacement) -->
+								<div class="actionbox action-mirror" id="in-launch-bar">
+									<button id="in-action-launch-top" class="action" action="launch">Launch</button>
+								</div>
 								<div class="subheader"><h3>Colony projects</h3></div>
 								<div id="in-improvements-colony" class="actionbox">
 									<table class="fullwidth"></table>
@@ -715,6 +809,7 @@
 					
 					<div class="grid tabcontainer" id="container-tab-two-milestones" data-tab="switch-milestones" style="display:none">
 						<div class="unit whole">
+							<div id="milestone-top-button-container" class="action-mirror"></div>
 							<div class="milestone-container" id="milestone-container-current">
 								<h3>Current: <span id='milestone-current-name' class="hl-functionality"></span></h3>
 								<p id="milestone-current-description"></p>
@@ -736,18 +831,31 @@
 							</div>
 						</div>
 					</div>
-					
+
+					<!-- The adventurer's own numbers, while outside. Health and the
+					     gear bonuses are the two things the small header leaves out,
+					     and the Adventurer chip was the only way to read them out
+					     here. This pane has almost nothing left in it on the
+					     exploration tab, so they are read in it instead and the chip
+					     is spared. UIOutHeaderSystem.updateAdventurerDockPlacement
+					     moves the elements in and out.
+
+					     Last in the pane on purpose: on the passes where the pane
+					     does have something to show, that content keeps the top and
+					     these numbers fall below it, with no ordering logic. -->
+					<div id="out-adventurer" class="hidden-when-down"></div>
+
 			</div><!-- main switch content grid -->
 			
 			</div><!-- excluding log -->
 			
 			<div id="log-container" class="unit one-fifth div-horizontal-space-filler hidden-by-popups">
-				<h1 class="hide-from-visual-layout hide-while-loading" id="header-log-main">Log</h2>
-				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-latest">Latest</h3>
+				<h1 class="hide-from-visual-layout hide-while-loading" id="header-log-main">Log</h1>
+				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-latest">Latest</h2>
 				<div id="log-latest" class="hide-from-visual-layout">
 					<ul role="log"></ul>
 				</div>
-				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-all">All</h3>
+				<h2 class="hide-from-visual-layout hide-while-loading" id="header-log-all">All</h2>
 				<div id="log" class="limit-height">
 					<ul></ul>
 				</div>
@@ -763,24 +871,78 @@
 		<div class="unit unit four-fifths" id="footer">
 			<span id="game-version" class="p-meta"></span>
 			<span id="game-msg" class="p-meta"></span>
+			<span id="cloud-sync-status" class="p-meta" style="display:none"></span>
 			<ul id="game-options-extended" style="display:none">
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.settings_button_label" id="btn-settings"></button></li>
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.game_info_button_label" id="btn-info"></button></li>
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.player_stats_button_label" id="btn-stats"></button></li>
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.game_data_button_label" id="btn-importexport"></button></li>
-				<li><span>:</span></li>
+				<li><button class="btn-meta" id="btn-reload">reload</button></li>
+				<li><button class="btn-meta text-key" data-text-key="ui.meta.restart_button_label" id="btn-restart"></button></li>
+				<li class="options-separator"><span>:</span></li>
 			</ul>
 			<ul id="game-options">
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.more_options_button_label" id="btn-more"></button>
-				<li><button class="btn-meta text-key" data-text-key="ui.meta.restart_button_label" id="btn-restart"></button></li>
 				<li><button class="btn-meta text-key" data-text-key="ui.meta.quick_save_button_label" id="btn-save"></button></li>
 			</ul>
 		</div>
 	</div><!-- sticky footer -->
-	
+
+	<!-- mobile log drawer toggle (shown in small layout only) -->
+
+	<button id="btn-log-toggle" class="hidden-by-popups hidden-when-down" aria-label="Toggle message log">log</button>
+
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
+
+	<!-- transient notification card: save and cloud confirmations, top of screen, auto-fades.
+	     Shown/hidden with a class, never inline display, so nothing can fight the CSS. -->
+
+	<div id="notification-toast" role="status" aria-live="polite"></div>
+
+	<!-- The two things that hang under the fixed chrome on a phone. They share
+	     one column so they stack instead of covering each other - the room
+	     description first, then any new log messages under it. Body level, so
+	     no scroll container can clip them. See mobile.less. -->
+
+	<!-- A custom property that holds env(...) reads back as the literal text,
+	     not a resolved length, so the inset has to be measured off a real box.
+	     See updateSafeAreaTop in UIOutHeaderSystem. At body level, not inside
+	     #mobile-overlays: that column is display:none by default and in
+	     landscape, which is the rotation this measurement exists for. -->
+	<div id="safe-area-probe" aria-hidden="true"></div>
+	<div id="mobile-overlays">
+
+		<!-- UIOutHeaderSystem moves #out-desc in here in the small layout and
+		     puts it back on the way out - the same element, not a copy, so
+		     every existing write into it still lands. -->
+
+		<div id="room-panel" class="hidden-by-popups hidden-when-down">
+			<button id="btn-room-panel-close" class="context btn-glyph" aria-label="Close room description">&times;</button>
+		</div>
+
+		<!-- new log messages, shown for a few seconds each. Same two classes
+		     as the pill so popups and being "down" reach them too.
+
+		     The cards go in an inner div, and that is what carries aria-hidden.
+		     UIPopupManager stamps aria-hidden onto every .hidden-by-popups
+		     element on each popup open AND close, so a static one on the outer
+		     div would be rewritten to "false" the first time a popup closed.
+		     Nothing writes to the inner div, so its hiding holds.
+
+		     Hidden on purpose: #log ul carries role="log" and already announces
+		     these messages. A second reading of the same text is noise. -->
+
+		<!-- not hidden-when-down. The opening of the game is vision-step-0
+		     from the first frame until the player finds light, and that is the
+		     stretch where a message most needs to be seen. The log pill keeps
+		     the fade: that is chrome, and it leads somewhere unusable here. -->
+		<div id="log-toasts" class="hidden-by-popups">
+			<div id="log-toasts-list" aria-hidden="true"></div>
+		</div>
+
+	</div>
 
 	<!-- popups -->
 
@@ -837,37 +999,42 @@
 			<div class="buttonbox" id="fight-buttons-infightactions"></div>
 			<div id="fight-popup-results"></div>
 			<div class="buttonbox" id="fight-buttons-main">
-				<button id="out-action-fight-cancel" class="action action-manual-trigger" action="flee">Flee</button>
-				<button id="out-action-fight-confirm" class="action" action="fight">Fight</button>
-				<button id="out-action-fight-close">Leave</button>
-				<button id="out-action-fight-continue">Continue</button>
-				<button id="out-action-fight-takeselected" class="action inventory-selection-ok" action="accept_inventory">Continue</button>
-				<button id="out-action-fight-takeall" class='action inventory-selection-takeall' action='take_all'>Take all</button>
+				<!-- One popup, four states (see UIOutFightSystem.updateFightPopupState),
+				     so each state marks its own Enter and Escape button and the popup
+				     manager presses whichever is on screen. Without these the keys did
+				     nothing here at all: the manager looked for #confirmation-takeall and
+				     .button-popup-escape, and this popup builds its own buttons. -->
+				<button id="out-action-fight-cancel" class="action action-manual-trigger button-popup-escape" action="flee">Flee</button>
+				<button id="out-action-fight-confirm" class="action button-popup-enter" action="fight">Fight</button>
+				<button id="out-action-fight-close" class="button-popup-enter button-popup-escape">Leave</button>
+				<button id="out-action-fight-continue" class="button-popup-enter button-popup-escape">Continue</button>
+				<button id="out-action-fight-takeselected" class="action inventory-selection-ok button-popup-escape" action="accept_inventory">Continue</button>
+				<button id="out-action-fight-takeall" class='action inventory-selection-takeall button-popup-enter' action='take_all'>Take all</button>
 			</div>
 		</div>
 		
 		<div id="incoming-caravan-popup" role="dialog" class="popup popup-wide fill-on-mobiles hidden-by-default popup-ingame" style="display:none" aria-labelledby="trade-header" aria-modal="true">
 			<h3 id="trade-header">Trader</h3>
 			<p id="incoming-caravan-popup-markup"></p>
-			<div class="inventorybox" style="display:flex">
-				<div id="inventorylist-incoming-caravan-camp-inventory" class="inventorydivision" style="width: 170px">
+			<div class="inventorybox" id="incoming-caravan-inventorybox">
+				<div id="inventorylist-incoming-caravan-camp-inventory" class="inventorydivision inventorydivision-inventory">
 					<p class="inventorybox-header">Camp inventory</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
 				</div>
-				<div id="inventorylist-incoming-caravan-camp-offer" class="inventorydivision inventorydivision-with-footer highlightbox" style="width: 130px">
+				<div id="inventorylist-incoming-caravan-camp-offer" class="inventorydivision inventorydivision-offer inventorydivision-with-footer highlightbox">
 					<p class="inventorybox-header">Camp offer</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
-					<p class="value inventorybox-footer">0</span>
+					<p class="value inventorybox-footer">0</p>
 				</div>
-				<div id="inventorylist-incoming-caravan-trader-offer" class="inventorydivision inventorydivision-with-footer highlightbox" style="width: 130px">
+				<div id="inventorylist-incoming-caravan-trader-offer" class="inventorydivision inventorydivision-offer inventorydivision-with-footer highlightbox">
 					<p class="inventorybox-header">Trader offer</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
-					<p class="value inventorybox-footer">0</span>
+					<p class="value inventorybox-footer">0</p>
 				</div>
-				<div id="inventorylist-incoming-caravan-trader-inventory" class="inventorydivision" style="width: 170px">
+				<div id="inventorylist-incoming-caravan-trader-inventory" class="inventorydivision inventorydivision-inventory">
 					<p class="inventorybox-header">Trader inventory</p>
 					<ul></ul>
 					<p class="msg-empty">(empty)</p>
@@ -881,6 +1048,14 @@
 			</div>
 		</div>
 		
+		<div id="more-options-popup" role="dialog" class="popup hidden-by-default popup-ingame" style="display:none" aria-labelledby="more-options-popup-header" aria-modal="true">
+			<h3 id="more-options-popup-header">Options</h3>
+			<div id="more-options-popup-options"></div>
+			<div class="buttonbox">
+				<button id="more-options-popup-close" class="button-popup-default">Close</button>
+			</div>
+		</div>
+
 		<div id="manage-save-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display:none" aria-labelledby="manage-save-popup-header" aria-modal="true">
 			<h3 id="manage-save-popup-header">Manage saves</h3>
 			<p id="manage-save-info">Note that the game is still in alpha and updates can break old saves.</p>
@@ -897,6 +1072,8 @@
 						<button id="btn-save-list-options-save">Save</button>
 						<button id="btn-save-list-options-load">Load</button>
 						<button id="btn-save-list-options-export">Export</button>
+						<button id="btn-save-list-options-cloud-save" class="hidden-by-default">Save to GitHub</button>
+						<button id="btn-save-list-options-cloud-load" class="hidden-by-default">Load from GitHub</button>
 					</div>
 					<div id="save-list-options-export">
 						<p>Export</p>
@@ -939,14 +1116,33 @@
 				<input type="checkbox" class="checkbox" id="craft-popup-show-obsolete" /><p class="checkbox-label" id="craft-popup-show-obsolete-label">Show obsolete</p>
 			</span>
 			<div id="craft-popup-list" class="scrollable-container"></div>
-			<p class="p-meta">arrows: navigate and fold &middot; enter: craft &middot; esc: close</p>
+			<p class="p-meta hide-in-small-layout">arrows: navigate and fold &middot; enter: craft &middot; esc: close</p>
 			<div class="buttonbox">
 				<button id="craft-popup-close" class="button-popup-default">Close</button>
 			</div>
 		</div>
 
-		<div id="settings-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="settings-popup-header" aria-modal="true">
+		<div id="buildings-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="buildings-popup-header" aria-modal="true">
+			<h3 id="buildings-popup-header">Buildings</h3>
+			<div id="buildings-popup-list" class="scrollable-container"></div>
+			<p class="p-meta hide-in-small-layout">arrows: navigate and fold &middot; enter: build &middot; esc: close</p>
+			<div class="buttonbox">
+				<button id="buildings-popup-close" class="button-popup-default">Close</button>
+			</div>
+		</div>
+
+		<div id="go-popup" role="dialog" class="popup hidden-by-default popup-ingame" style="display: none" aria-labelledby="go-popup-header" aria-modal="true">
+			<h3 id="go-popup-header">Go to camp</h3>
+			<p id="go-popup-desc" class="p-meta">Type a level number, then press ENTER.</p>
+			<div id="go-popup-value">&ndash;</div>
+			<div class="buttonbox">
+				<button id="go-popup-close" class="button-popup-default">Cancel</button>
+			</div>
+		</div>
+
+		<div id="settings-popup" role="dialog" class="popup popup-wide fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="settings-popup-header" aria-modal="true">
 			<h3 id="settings-popup-header">Settings</h3>
+			<div id="settings-popup-body">
 			<span class="settings-entry">
 				<input type="checkbox" class="checkbox" id="settings-checkbox-sfx-enabled" /><p class="checkbox-label">Enable sounds</p>
 			</span>
@@ -956,12 +1152,82 @@
 			<span class="settings-entry">
 				<input type="checkbox" class="checkbox" id="settings-checkbox-hotkeys-numpad" /><p class="checkbox-label">Use Numpad for movement</p>
 			</span>
-			<div id="hotkeys-list" class="scrollable-container"></div>
+			<div id="settings-github" class="settings-group">
+				<p class="settings-group-header">Cloud saves</p>
+				<span class="settings-entry">
+					<input type="password" id="settings-github-token" placeholder="GitHub token" autocomplete="off" />
+					<button id="btn-settings-github-validate">Save and validate</button>
+				</span>
+				<span class="settings-entry">
+					<input type="text" id="settings-github-gist" placeholder="Gist ID (blank makes a new one)" autocomplete="off" spellcheck="false" />
+				</span>
+				<!-- written into the gist with every save, so the cards on the other device
+				     can name this one. Editable because "iPhone" and "iPhone" say nothing -->
+				<span class="settings-entry">
+					<input type="text" id="settings-github-device" placeholder="This device's name" autocomplete="off" spellcheck="false" maxlength="40" />
+				</span>
+				<p id="settings-github-status" class="p-meta">Not set up</p>
+				<span class="settings-entry">
+					<input type="checkbox" class="checkbox" id="settings-checkbox-github-auto" /><p class="checkbox-label">Mirror every save automatically</p>
+				</span>
+				<button id="btn-settings-github-help">How do I get a token?</button>
+			</div>
+			<!-- two columns because the two halves of the game barely share a key:
+			     outside is movement and gathering, camp is the buildings. Anything
+			     that works in both sits under them, full width -->
+			<div id="hotkeys-list" class="scrollable-container">
+				<div id="hotkeys-columns">
+					<div class="hotkeys-column">
+						<p class="hotkeys-column-header">Outside</p>
+						<div id="hotkeys-list-out"></div>
+					</div>
+					<div class="hotkeys-column">
+						<p class="hotkeys-column-header">In camp</p>
+						<div id="hotkeys-list-in"></div>
+					</div>
+				</div>
+				<div class="hotkeys-column" id="hotkeys-anywhere">
+					<p class="hotkeys-column-header">Anywhere</p>
+					<div id="hotkeys-list-any"></div>
+				</div>
+			</div>
 			<div id="language-selection" class="hidden-by-default">
 				<select id="language-dropdown"></select>
 			</div>
+			</div><!-- /settings-popup-body -->
 			<div class="buttonbox">
 				<button id="settings-popup-close" class="button-popup-default">Close</button>
+			</div>
+		</div>
+
+		<div id="github-setup-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="github-setup-popup-header" aria-modal="true">
+			<h3 id="github-setup-popup-header">Set up cloud saves</h3>
+			<div id="github-setup-steps" class="scrollable-container">
+				<p>Cloud saves keep a copy of your save in a GitHub Gist, so you can pick the game up on another machine.</p>
+				<p class="warning">The gist is <em>secret</em>, which means unlisted rather than private. Anyone with the link can read it. It holds a compressed game state and nothing personal, but it is not protected.</p>
+				<ol>
+					<li>On GitHub, open your profile picture menu and choose <strong>Settings</strong>.</li>
+					<li>In the left sidebar, choose <strong>Developer settings</strong>.</li>
+					<li>Under Personal access tokens, choose <strong>Fine-grained tokens</strong>, then <strong>Generate new token</strong>.<br/><span class="p-meta">Direct link: <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></span></li>
+					<li>Give it a <strong>Token name</strong>, for example <em>level13 saves</em>.</li>
+					<li>Set an <strong>Expiration</strong>. When it expires, saving stops working until you make a new one.</li>
+					<li>Leave <strong>Resource owner</strong> as your own account.</li>
+					<li>Open <strong>Permissions</strong>, find <strong>Account permissions</strong>, and set <strong>Gists</strong> to <strong>Read and write</strong>.</li>
+					<li>Press <strong>Generate token</strong> and copy it. GitHub shows it once and never again.</li>
+					<li>Paste it into the token box in Settings, leave the Gist ID box empty, and press <strong>Save and validate</strong>.</li>
+				</ol>
+				<p class="p-meta">Validating with an empty Gist ID box creates one secret gist called "Level 13 saves". Each save slot becomes a file inside it.</p>
+				<p class="settings-group-header">Adding a second device</p>
+				<p>Every device must use the <em>same</em> gist, or each one only ever reads back its own saves.</p>
+				<ol>
+					<li>On the device that is already set up, open Settings and copy the Gist ID shown in the Gist ID box.</li>
+					<li>On the new device, paste the same token into the token box.</li>
+					<li>Paste that Gist ID into the <strong>Gist ID</strong> box.</li>
+					<li>Press <strong>Save and validate</strong>. The game joins the existing gist instead of making a new one, and offers you the save already in it.</li>
+				</ol>
+			</div>
+			<div class="buttonbox">
+				<button id="github-setup-popup-close" class="button-popup-default">Close</button>
 			</div>
 		</div>
 
@@ -1017,15 +1283,19 @@
 	
 	<div id="theme-transition-overlay" style="display:none"></div>
 
+	<!-- every type here said audio/mpeg regardless of what the file actually was,
+	     and the notification was an ogg, which safari cannot decode at all: it
+	     failed with MEDIA_ERR_SRC_NOT_SUPPORTED on every log message. It is aac
+	     now, and each type says what the file is. -->
 	<div id="audio-container">
-		<audio id="audio-action-started"><source src="audio/UIClick_BLEEOOP_Baby_Click.wav" type="audio/mpeg"></audio>
-		<audio id="audio-action-completed"><source src="audio/MECHSwtch_BLEEOOP_Mechanism.wav" type="audio/mpeg"></audio>
-		<audio id="audio-button-clicked"><source src="audio/UIClick_BLEEOOP_Baby_Click.wav" type="audio/mpeg"></audio>
+		<audio id="audio-action-started"><source src="audio/UIClick_BLEEOOP_Baby_Click.wav" type="audio/wav"></audio>
+		<audio id="audio-action-completed"><source src="audio/MECHSwtch_BLEEOOP_Mechanism.wav" type="audio/wav"></audio>
+		<audio id="audio-button-clicked"><source src="audio/UIClick_BLEEOOP_Baby_Click.wav" type="audio/wav"></audio>
 		<audio id="audio-moved"><source src="audio/footstep1.mp3" type="audio/mpeg"></audio>
 		<audio id="audio-moved-camp"><source src="audio/footstep2.mp3" type="audio/mpeg"></audio>
-		<audio id="audio-notification"><source src="audio/Modern10.ogg" type="audio/mpeg"></audio>
-		<audio id="audio-popup-opened"><source src="audio/UIClick_BLEEOOP_Well_Oiled.wav" type="audio/mpeg"></audio>
-		<audio id="audio-popup-closed"><source src="audio/UIClick_BLEEOOP_Old_Keycap.wav" type="audio/mpeg"></audio>
+		<audio id="audio-notification"><source src="audio/Modern10.m4a" type="audio/mp4"></audio>
+		<audio id="audio-popup-opened"><source src="audio/UIClick_BLEEOOP_Well_Oiled.wav" type="audio/wav"></audio>
+		<audio id="audio-popup-closed"><source src="audio/UIClick_BLEEOOP_Old_Keycap.wav" type="audio/wav"></audio>
 	</div>
 
 	<!-- GoatCounter (visitor counter) -->
@@ -1037,10 +1307,84 @@
 	<script data-goatcounter="https://level13.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 
 	<!-- GlitchTip (exception tracker) -->
-	 <script src="https://browser.sentry-cdn.com/7.60.0/bundle.min.js" crossorigin="anonymous"></script>
+	 <script src="https://browser.sentry-cdn.com/7.60.0/bundle.min.js" crossorigin="anonymous" defer></script>
 
 	<!-- RequireJS -->
 	<script data-main="src/config" src="lib/requirejs/require.min.js"></script>
+
+	<!-- A cold load asks for three hundred separate module files, and a release
+	     gives every one of them a new ?v=, so the first load after an upgrade
+	     sends all of them to the network at once. GitHub Pages answers one of
+	     them with a 503 often enough to matter, and requirejs treats a single
+	     failed script as fatal: the dependency chain never resolves, the app
+	     module never runs, and the page sits on the loading spinner with nothing
+	     but "Script error" in the console. Reloading by hand always fixed it,
+	     because by then every other file is cached and only the failed one is
+	     asked for again. Do that without the reload - ask again for just the
+	     file that failed. -->
+	<script>
+		(function () {
+			var MAX_ATTEMPTS = 3;
+			var RETRIABLE = { scripterror: true, timeout: true, load: true };
+			var attempts = {};
+
+			function retry(id, delay) {
+				window.setTimeout(function () {
+					console.warn("[boot] retrying " + id + " (attempt " + attempts[id] + " of " + MAX_ATTEMPTS + ")");
+					requirejs.undef(id);
+					requirejs([id], function () {});
+				}, delay);
+			}
+
+			require.onError = function (err) {
+				var ids = RETRIABLE[err.requireType] ? err.requireModules : null;
+				var retrying = false;
+				for (var i = 0; ids && i < ids.length; i++) {
+					var attempt = (attempts[ids[i]] || 0) + 1;
+					if (attempt > MAX_ATTEMPTS) continue;
+					attempts[ids[i]] = attempt;
+					retrying = true;
+					// The failure is a burst of requests meeting a rate limit, so
+					// asking again at once, all together, asks for the same answer.
+					// Back off, and stagger the files against each other.
+					retry(ids[i], attempt * 500 + i * 100);
+				}
+				if (!retrying) throw err;
+			};
+		})();
+	</script>
+
+	<!-- Service worker: offline play, and a home screen app that actually
+	     updates. Registered relative to the page so it works on a project
+	     path (earchibald.github.io/level13-mobile/). -->
+	<script>
+		(function () {
+			if (!("serviceWorker" in navigator)) return;
+
+			// only reload for a worker that replaces an earlier one; on a first
+			// install controllerchange fires too and would reload needlessly
+			var hadController = !!navigator.serviceWorker.controller;
+			var reloading = false;
+
+			if (hadController) {
+				navigator.serviceWorker.addEventListener("controllerchange", function () {
+					if (reloading) return;
+					reloading = true;
+					window.location.reload();
+				});
+			}
+
+			window.addEventListener("load", function () {
+				navigator.serviceWorker.register("sw.js").then(function (registration) {
+					// an installed home screen app can sit for days without a
+					// navigation, so ask for the check explicitly
+					registration.update();
+				}).catch(function (e) {
+					console.warn("[sw] registration failed", e);
+				});
+			});
+		})();
+	</script>
 
 </body>
 </html>

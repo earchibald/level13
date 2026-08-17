@@ -9,6 +9,7 @@ define([
 	'game/GlobalSignals',
 	'game/constants/DialogueConstants',
 	'game/constants/ExplorationConstants',
+	'game/constants/ImprovementConstants',
 	'game/constants/PlayerStatConstants',
 	'game/constants/TextConstants',
 	'game/constants/LogConstants',
@@ -38,13 +39,40 @@ define([
 	'game/components/sector/EnemiesComponent'
 ], function (
 	Ash,
-	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, PlayerStatConstants, TextConstants,
+	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, ImprovementConstants, PlayerStatConstants, TextConstants,
 	LogConstants, UIConstants, PositionConstants, LocaleConstants, LevelConstants, MovementConstants, StoryConstants, TradeConstants,
 	TribeConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
 	PassagesComponent, SectorControlComponent, SectorFeaturesComponent, SectorLocalesComponent,
 	MovementOptionsComponent, PositionComponent, CampComponent, SectorImprovementsComponent,
 	WorkshopComponent, SectorStatusComponent, EnemiesComponent
 ) {
+	// The bucket and the trap. Everything either one offers now lives on its chip
+	// in the sector bar: build it, empty it, and raise its capacity.
+	var COLLECTOR_DEFS = [
+		{
+			improvementName: improvementNames.collector_water,
+			resource: resourceNames.water,
+			buildAction: "build_out_collector_water",
+			buildID: "#out-action-build-bucket",
+			improveID: "#out-action-improve-bucket",
+			chipID: "#out-collector-chip-water",
+			fillID: "#out-collector-fill-water",
+			useAllID: "#out-action-use-bucket",
+			useOneID: "#out-action-use-bucket_one",
+		},
+		{
+			improvementName: improvementNames.collector_food,
+			resource: resourceNames.food,
+			buildAction: "build_out_collector_food",
+			buildID: "#out-action-build-trap",
+			improveID: "#out-action-improve-trap",
+			chipID: "#out-collector-chip-food",
+			fillID: "#out-collector-fill-food",
+			useAllID: "#out-action-use-trap",
+			useOneID: "#out-action-use-trap_one",
+		},
+	];
+
 	var UIOutLevelSystem = Ash.System.extend({
 
 		engine: null,
@@ -55,12 +83,23 @@ define([
 
 		pendingUpdateMap: true,
 
+		// which rooms this browser has already described - see updateRoomIntro. Beside
+		// the save, never in it.
+		STORAGE_KEY_ROOM_INTROS: "room-intros-seen",
+		shownRoomIntros: null,
+
 		constructor: function () {
 			GameGlobals.uiFunctions.toggle("#switch-out .bubble", false);
 
 			this.elements = {};
 			this.elements.sectorHeader = $("#header-sector");
+			this.elements.roomName = $("#btn-room-name");
 			this.elements.description = $("#out-desc");
+			this.elements.descriptionStats = $("#out-desc-stats");
+			this.elements.scavengedValue = $("#out-scavenged-value");
+			this.elements.resourcesValue = $("#out-resources-value");
+			this.elements.itemsValue = $("#out-items-value");
+			this.elements.findsRow = $("#out-finds-row");
 			this.elements.btnScavengeHeap = $("#out-action-scavenge-heap");
 			this.elements.btnClearWorkshop = $("#out-action-clear-workshop");
 			this.elements.btnNap = $("#out-action-nap");
@@ -161,9 +200,11 @@ define([
 			});
 			GlobalSignals.add(this, GlobalSignals.playerLeftCampSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.collectorCollectedSignal, this.updateOutImprovementsStatus);
+			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
 			GlobalSignals.add(this, GlobalSignals.movementBlockerClearedSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
+			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
 			GlobalSignals.add(this, GlobalSignals.buttonStateChangedSignal, this.onButtonStateChanged);
 			GlobalSignals.add(this, GlobalSignals.localeScoutedSignal, this.scheduleMapUpdate);
 			GlobalSignals.add(this, GlobalSignals.inventoryChangedSignal, this.scheduleMapUpdate);
@@ -234,6 +275,57 @@ define([
 			this.updateNap(isScouted, hasCampHere);
 			this.updateWait(hasCampHere);
 			this.updateDespair();
+
+			this.updateOutActionsHeader();
+		},
+
+		// #out-actions lost its unconditional buttons to the sector bar, so the
+		// heading has to follow the box's contents.
+		//
+		// Read data-visible, not :visible. The direct children of #out-actions are
+		// .callout-container wrappers two levels above each button. Every wrapper's
+		// display is written a tick later by UIOutElementsSystem, off
+		// elementToggledSignal. A :visible read here would see the previous state
+		// of the toggles that ran a few lines above. data-visible is synchronous.
+		updateOutActionsHeader: function () {
+			let $movement = $("#container-out-actions-movement-related");
+			let numVisible = $("#out-actions")
+				.find("button.action")
+				.not("#container-out-actions-movement-related button")
+				.not("[data-visible='false']")
+				.length;
+
+			// The movement span is slide-toggled, so it carries no data-visible of
+			// its own until the animation ends. Reading its `display` here works
+			// only because the slide out runs at duration 0 and jQuery finishes a
+			// 0-duration animation synchronously. Give that duration a value and
+			// the read goes stale, and the empty box it guards stays on screen.
+			// So read the condition that drives the slide instead.
+			let isScouted = this.playerLocationNodes.head.entity.get(SectorStatusComponent).scouted;
+			if (numVisible === 0 && $movement.children().length > 0 && isScouted) {
+				numVisible++;
+			}
+
+			// Docked into the sector bar the box is one of the bar's own rows, and
+			// the heading that labelled it in the pane has nothing left to label.
+			// The bar shows and hides its rows with classes rather than a display
+			// of their own - see SECTOR ACTION BAR in mobile.less - so the same
+			// count drives has-finds there.
+			let isDocked = $("#out-actions").parent().is("#out-sector-bar");
+
+			// the box keeps .actionbox's margin and padding when empty, so it goes
+			// with the heading rather than leaving a gap under it
+			GameGlobals.uiFunctions.toggle("#header-out-actions", !isDocked && numVisible > 0);
+			GameGlobals.uiFunctions.toggle("#out-actions", numVisible > 0);
+			$("#out-sector-bar").toggleClass("has-finds", isDocked && numVisible > 0);
+		},
+
+		// setTab force-shows #out-action-sca (a .tabbutton for this tab) without
+		// telling anyone, so the bar's own state has to be recomputed after it
+		onTabChanged: function (tabID) {
+			if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.out) return;
+			if (!this.playerLocationNodes.head) return;
+			this.updateLevelPageActions();
 		},
 
 		updateLevelPageActions: function (isScouted, hasCamp, hasCampHere) {
@@ -265,9 +357,35 @@ define([
 
 			GameGlobals.uiFunctions.toggle("#out-action-get-up", !isAwake);
 			GameGlobals.uiFunctions.toggle("#out-action-enter", isAwake && hasCampHere);
-			GameGlobals.uiFunctions.toggle("#out-action-sca", isAwake);
-			GameGlobals.uiFunctions.toggle("#out-action-scout", isAwake && GameGlobals.gameState.unlockedFeatures.vision);
-			GameGlobals.uiFunctions.toggle("#out-action-use-spring", isAwake && isScouted && featuresComponent.hasSpring);
+			// isVisible("scout") is false once the sector is scouted (the action
+			// requires sector.scouted: false, and DISABLED_REASON_SCOUTED blocks
+			// visibility) but stays true when only light is missing, so an
+			// unscouted dark sector still explains itself. The unlockedFeatures
+			// gate stays: it is not the same test as the action's own vision
+			// requirement, and keeping it makes this a pure subtraction.
+			let showScavenge = isAwake;
+			let showScout = isAwake && GameGlobals.gameState.unlockedFeatures.vision && GameGlobals.playerActionsHelper.isVisible("scout");
+			let showSpring = isAwake && isScouted && featuresComponent.hasSpring;
+			// The camp build was a row of the improvements table, and that table
+			// lives inside #out-improvements, which is itself gated on vision -
+			// so the vision test here is not new, it is the gate the row already
+			// sat behind. The rest is the row's own rule: the table showed a row
+			// when the action was visible or one was already built, and a second
+			// camp cannot be built where one stands, so only the first half
+			// applies.
+			let showCamp = isAwake
+				&& GameGlobals.gameState.unlockedFeatures.vision
+				&& GameGlobals.playerActionsHelper.isVisible("build_out_camp");
+			let showBeacon = isAwake
+				&& GameGlobals.gameState.unlockedFeatures.vision
+				&& GameGlobals.playerActionsHelper.isVisible("build_out_beacon");
+
+			GameGlobals.uiFunctions.toggle("#out-action-sca", showScavenge);
+			GameGlobals.uiFunctions.toggle("#out-action-scout", showScout);
+			GameGlobals.uiFunctions.toggle("#out-action-use-spring", showSpring);
+			GameGlobals.uiFunctions.toggle("#out-action-build-camp", showCamp);
+			GameGlobals.uiFunctions.toggle("#out-action-build-beacon", showBeacon);
+			$("#out-sector-bar").toggleClass("has-actions", showScavenge || showScout || showSpring || showCamp || showBeacon);
 			GameGlobals.uiFunctions.toggle("#out-action-investigate", isAwake && this.showInvestigate());
 
 			// examine spots
@@ -295,13 +413,29 @@ define([
 				this.elements.btnScavengeHeap.find(".btn-label").text("scavenge " + heapName);
 			}
 
-			GameGlobals.uiFunctions.slideToggleIf("#out-locales", null, this.getVisibleLocales(isScouted).length > 0, 200, 0);
+			// Locales are where this sector leads on to, and they sat at the very
+			// end of the tab. Docked into the bar they are one of its rows, shown
+			// by class like the others - and not slid, because the bar is chrome
+			// and animating its height would shove the reading pane about.
+			let showLocales = this.getVisibleLocales(isScouted).length > 0;
+			let localesDocked = $("#out-locales").parent().is("#out-sector-bar");
+			if (localesDocked) {
+				GameGlobals.uiFunctions.toggle("#out-locales", showLocales);
+			} else {
+				GameGlobals.uiFunctions.slideToggleIf("#out-locales", null, showLocales, 200, 0);
+			}
+			$("#out-sector-bar").toggleClass("has-locales", localesDocked && showLocales);
+
 			GameGlobals.uiFunctions.slideToggleIf("#container-out-actions-movement-related", null, isScouted, 200, 0);
 
 			GameGlobals.uiFunctions.toggle("#table-out-actions-movement", GameGlobals.gameState.isFeatureUnlocked("move"));
 			GameGlobals.uiFunctions.toggle("#container-tab-two-out-actions h3", GameGlobals.gameState.isFeatureUnlocked("move"));
-			GameGlobals.uiFunctions.toggle("#out-improvements", GameGlobals.gameState.unlockedFeatures.vision);
-			GameGlobals.uiFunctions.toggle("#out-improvements table", GameGlobals.gameState.unlockedFeatures.vision);
+			// #out-improvements and its table are toggled by
+			// updateOutImprovementsList, which is the only code that knows whether
+			// any row in it has anything to say. The vision test moved there with
+			// them; it was never the whole condition.
+
+			this.updateOutActionsHeader();
 		},
 
 		getVisibleLocales: function (isScouted) {
@@ -414,20 +548,17 @@ define([
 			description += "</p><p>";
 			description += this.getStatusDescription(hasVision, isScouted, hasEnemies, featuresComponent, passagesComponent, hasCampHere, hasCampOnLevel);
 			description += this.getMovementDescription(isScouted, passagesComponent, entity);
-			description += "</p><p>";
-			
-			if (isScouted) {
-				if (sectorStatus.graffiti) {
-					description += "There is a graffiti here: " + sectorStatus.graffiti;
-					description += "</p><p>";
-				} else if (featuresComponent.graffiti) {
-					description += "There is a graffiti here: " + featuresComponent.graffiti;
-					description += "</p><p>";
-				}
-			}
-			
-			description += this.getResourcesDescription(isScouted, featuresComponent, sectorStatus);
 			description += "</p>";
+
+			// The scavenged and resources-found figures used to close this text.
+			// They are a table of their own now - see getSectorStatsTable - so
+			// the prose ends with the graffiti if there is one, and the empty
+			// paragraph that used to trail every sector goes with them.
+			if (isScouted) {
+				let graffiti = sectorStatus.graffiti || featuresComponent.graffiti;
+				if (graffiti) description += "<p>There is a graffiti here: " + graffiti + "</p>";
+			}
+
 			return description;
 		},
 
@@ -596,56 +727,145 @@ define([
 			return description;
 		},
 
-		getResourcesDescription: function (isScouted, featuresComponent, statusComponent) {
-			if (!featuresComponent) return;
-			let description = "";
+		// What has been taken from this sector and what is left in it. This is
+		// the one part of the sector text that is numbers rather than prose, and
+		// it is what a player checks before deciding to scavenge again - so it
+		// gets a table of its own and, on a phone, the top of the tab.
+		getSectorStatsTable: function (isScouted, featuresComponent, statusComponent) {
+			let fields = this.getSectorStatsFields(isScouted, featuresComponent, statusComponent);
+			if (fields.length == 0) return "";
 
-			if (isScouted && GameGlobals.gameState.unlockedFeatures.scavenge) {
-				description += Text.t("ui.exploration.sector_status_scavenged_percent_field", UIConstants.roundValue(Math.floor(statusComponent.getScavengedPercent())));
-				description += "<br />";
+			let table = "<table class='sector-stats'>";
+			for (let i = 0; i < fields.length; i++) {
+				table += this.getSectorStatsRow(fields[i]);
 			}
+			table += "</table>";
+
+			return table;
+		},
+
+		// The fields are localized as one "Label: value" string each, so the
+		// split happens here and the string file keeps one entry per field. A
+		// translation that drops the colon still shows - as one wide row rather
+		// than two cells.
+		getSectorStatsRow: function (field) {
+			let separator = field.indexOf(":");
+			if (separator < 0) return "<tr><td colspan='2'>" + field + "</td></tr>";
+
+			let label = field.substring(0, separator);
+			let value = field.substring(separator + 1).trim();
+
+			return "<tr><td class='sector-stats-label'>" + label + "</td><td class='sector-stats-value'>" + value + "</td></tr>";
+		},
+
+		// How far the room is scavenged. It reads "?" until the room is
+		// scouted, rather than "0%", because those are different facts: one is
+		// "nobody has looked" and the other is "there is nothing here yet".
+		getScavengedText: function (isScouted, statusComponent) {
+			if (!statusComponent) return Text.t("ui.common.value_unknown");
+			if (!isScouted) return Text.t("ui.common.value_unknown");
+			if (!GameGlobals.gameState.unlockedFeatures.scavenge) return Text.t("ui.common.value_unknown");
+			return Math.floor(statusComponent.getScavengedPercent()) + "%";
+		},
+
+		// The resources list, in one place. It used to be built inline in
+		// getSectorStatsFields; it is its own row in the action band now, and
+		// the rule for what to show when nothing is known belongs with it
+		// rather than with the table it left.
+		getResourcesFoundText: function (featuresComponent, statusComponent) {
+			if (!featuresComponent || !statusComponent) return Text.t("ui.common.value_unknown");
+
+			let knownResources = GameGlobals.sectorHelper.getLocationKnownResources();
+			if (knownResources.length > 0) {
+				let discoveredResources = GameGlobals.sectorHelper.getLocationDiscoveredResources();
+				return TextConstants.getScaResourcesString(discoveredResources, knownResources, featuresComponent.resourcesScavengable);
+			}
+
+			let scavengedPercent = statusComponent.getScavengedPercent();
+			if (scavengedPercent >= ExplorationConstants.THRESHOLD_SCAVENGED_PERCENT_REVEAL_NO_RESOURCES) {
+				if (featuresComponent.resourcesScavengable.getTotal() > 0) return Text.t("ui.common.value_unknown");
+				return Text.t("ui.common.list_template_zero");
+			}
+
+			return Text.t("ui.common.value_unknown");
+		},
+
+		// Whether there is an items line to show at all.
+		//
+		// The regular layout's table has always asked this, and answered by leaving the
+		// line out. The phone's finds row did not, so a room that produces no items -
+		// most of them - carried a permanent "Items: ?" that could never become
+		// anything. One rule in one place now, so the two layouts cannot drift again.
+		//
+		// It flips at scouting, not while scavenging, so the row does not change height
+		// under a thumb that is mid-tap.
+		hasVisibleItemsToShow: function (featuresComponent) {
+			if (!featuresComponent) return false;
+			if (featuresComponent.itemsScavengeable.length == 0) return false;
+			return GameGlobals.sectorHelper.hasSectorVisibleIngredients();
+		},
+
+		// The items list, on the same three-state rule as the resources list
+		// above and deliberately not a simpler one. "There are no items here"
+		// is knowledge the player has to earn: reading it off an empty list
+		// before the room is scavenged would say, for free, that this room is
+		// not worth the stamina. So it stays "?" until the same threshold that
+		// reveals an empty resources list.
+		getItemsFoundText: function (featuresComponent, statusComponent) {
+			if (!featuresComponent || !statusComponent) return Text.t("ui.common.value_unknown");
+
+			if (GameGlobals.sectorHelper.hasSectorVisibleIngredients()) {
+				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
+				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
+				return TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable);
+			}
+
+			let scavengedPercent = statusComponent.getScavengedPercent();
+			if (scavengedPercent >= ExplorationConstants.THRESHOLD_SCAVENGED_PERCENT_REVEAL_NO_RESOURCES) {
+				if (featuresComponent.itemsScavengeable.length > 0) return Text.t("ui.common.value_unknown");
+				return Text.t("ui.common.list_template_zero");
+			}
+
+			return Text.t("ui.common.value_unknown");
+		},
+
+		getSectorStatsFields: function (isScouted, featuresComponent, statusComponent) {
+			if (!featuresComponent) return [];
+			let fields = [];
 
 			if (this.showInvestigate()) {
 				let investigatedPercent = statusComponent.getInvestigatedPercent();
 				let investigationComplete = investigatedPercent >= 100;
 				if (investigationComplete) {
-					description += Text.t("ui.exploration.sector_status_investigated_percent_field_completed", Math.floor(investigatedPercent));
+					fields.push(Text.t("ui.exploration.sector_status_investigated_percent_field_completed", Math.floor(investigatedPercent)));
 				} else {
-					description += Text.t("ui.exploration.sector_status_investigated_percent_field_default", Math.floor(investigatedPercent));
-				}
-				description += "<br/>";
-			}
-			
-			let scavengedPercent = statusComponent.getScavengedPercent();
-			let discoveredResources = GameGlobals.sectorHelper.getLocationDiscoveredResources();
-			let knownResources = GameGlobals.sectorHelper.getLocationKnownResources();
-			
-			let resourcesFoundValueText = "";
-			if (knownResources.length > 0) {
-				resourcesFoundValueText = TextConstants.getScaResourcesString(discoveredResources, knownResources, featuresComponent.resourcesScavengable);
-			} else if (scavengedPercent >= ExplorationConstants.THRESHOLD_SCAVENGED_PERCENT_REVEAL_NO_RESOURCES) {
-				if (featuresComponent.resourcesScavengable.getTotal() > 0) {
-					resourcesFoundValueText = Text.t("ui.common.value_unknown");
-				} else {
-					resourcesFoundValueText = Text.t("ui.common.list_template_zero");
-				}
-			} else {
-				resourcesFoundValueText = Text.t("ui.common.value_unknown");
-			}
-			description += Text.t("ui.exploration.sector_status_resources_found_field", resourcesFoundValueText);
-			description += "<br />";
-			
-			if (featuresComponent.itemsScavengeable.length > 0) {
-				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
-				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
-				let showIngredients = GameGlobals.sectorHelper.hasSectorVisibleIngredients();
-				if (showIngredients) {
-					description += Text.t("ui.exploration.sector_status_items_found_field", TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable));
-					description += "<br />";
+					fields.push(Text.t("ui.exploration.sector_status_investigated_percent_field_default", Math.floor(investigatedPercent)));
 				}
 			}
 
-			return description;
+			// The phone reads these from its own row above the minimap, so the
+			// table would be saying them twice. The regular layout has no such
+			// band, and this table is where it has always read them - taking
+			// the lines out for everyone would have quietly cost desktop the
+			// resources and items lists altogether.
+			// The phone's row lives in the map panel, and that panel does not
+			// exist until scouting unlocks (see updateUnlockedFeatures) - so
+			// until it does, the table is the only place they can go.
+			let hasFindsRow = $("body").hasClass("layout-small") && GameGlobals.gameState.unlockedFeatures.scout;
+			if (hasFindsRow) return fields;
+
+			fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
+
+			// Only when there is something to say, which is how this table has always
+			// read - and now how the phone's finds row reads too, through the same
+			// predicate rather than a copy of the condition.
+			if (this.hasVisibleItemsToShow(featuresComponent)) {
+				let discoveredItems = GameGlobals.sectorHelper.getLocationDiscoveredItems();
+				let knownItems = GameGlobals.sectorHelper.getLocationKnownItems();
+				fields.push(Text.t("ui.exploration.sector_status_items_found_field", TextConstants.getScaItemString(discoveredItems, knownItems, featuresComponent.itemsScavengeable)));
+			}
+
+			return fields;
 		},
 
 		getMovementDescription: function (isScouted, passagesComponent, entity) {
@@ -788,12 +1008,84 @@ define([
 			return enemyDesc + (hasHazards ? hazardDesc : notCampableDesc);
 		},
 
+		// What is on screen for the two collectors: which of the chip's buttons are
+		// offered, and whether each chip exists at all.
+		//
+		// Split from updateCollectorFills on purpose. This half asks the action
+		// helper what is visible, which is expensive; the fills change on every
+		// collect and every slow tick and cost nothing.
+		updateCollectorChips: function () {
+			if (!this.playerLocationNodes.head) return;
+
+			let improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
+			let numChips = 0;
+
+			for (let i = 0; i < COLLECTOR_DEFS.length; i++) {
+				let def = COLLECTOR_DEFS[i];
+				let vo = improvements.getVO(def.improvementName);
+				let isBuilt = vo.count > 0;
+				let level = improvements.getLevel(def.improvementName);
+				let maxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(def.improvementName);
+
+				// level < maxLevel, not maxLevel > 1: at the cap the game keeps the
+				// arrow visible and disabled, which would leave every finished
+				// collector with a permanently dead button
+				let showBuild = !isBuilt && GameGlobals.playerActionsHelper.isVisible(def.buildAction);
+				let showImprove = isBuilt && level < maxLevel;
+
+				GameGlobals.uiFunctions.toggle(def.buildID, showBuild);
+				GameGlobals.uiFunctions.toggle(def.improveID, showImprove);
+
+				// Two states for one chip, and they cannot overlap: before it is
+				// built the chip is the icon and the button that builds it, after
+				// it is the fill level and the two collect actions.
+				//
+				// Toggled here rather than hidden by the chip's own class.
+				// UIOutElementsSystem keeps a cached list of the buttons worth
+				// updating and rebuilds it from what is visible, so a button that
+				// css alone had hidden dropped out of that list - and the pass
+				// that dropped it also left an inline hide on its container,
+				// which kept it invisible after the class came back. It could
+				// never earn its way in again, and sat there with whatever
+				// disabled state it had when it left: a full bucket beside a
+				// struck-through "all". Toggling says so out loud instead.
+				GameGlobals.uiFunctions.toggle(def.useAllID, isBuilt);
+				GameGlobals.uiFunctions.toggle(def.useOneID, isBuilt);
+
+				$(def.chipID).toggleClass("is-built", isBuilt);
+				$(def.chipID).toggleClass("is-buildable", showBuild);
+				if (isBuilt || showBuild) numChips++;
+			}
+
+			$("#out-sector-bar").toggleClass("has-collectors", numChips > 0);
+		},
+
+		// The stored/capacity numbers on the chips. These change on every collect
+		// and every slow tick but never change what is visible, so they run on
+		// their own and cost no requirement checks.
+		updateCollectorFills: function () {
+			if (!this.playerLocationNodes.head) return;
+			if (GameGlobals.playerHelper.isInCamp()) return;
+
+			let improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
+
+			for (let i = 0; i < COLLECTOR_DEFS.length; i++) {
+				let def = COLLECTOR_DEFS[i];
+				let vo = improvements.getVO(def.improvementName);
+				let capacity = vo.storageCapacity[def.resource] * vo.count;
+				let stored = Math.floor(vo.storedResources[def.resource] * 10) / 10;
+				$(def.fillID).text(capacity > 0 ? stored + " / " + capacity : "");
+			}
+		},
+
 		updateOutImprovementsList: function (improvements) {
 			if (!this.playerLocationNodes.head) return;
 			if (GameGlobals.playerHelper.isInCamp()) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
 			var uiFunctions = GameGlobals.uiFunctions;
 			var numVisible = 0;
+			this.updateCollectorChips();
+			this.updateCollectorFills();
 			$.each(this.elements.outImprovementsTR, function () {
 				var actionName = $(this).attr("btn-action");
 
@@ -808,37 +1100,37 @@ define([
 						let actionVisible = GameGlobals.playerActionsHelper.isVisible(actionName);
 						let existingImprovements = improvements.getCount(improvementName);
 						$(this).find(".list-amount").text(existingImprovements);
-						GameGlobals.uiFunctions.toggle($(this).find(".action-use"), existingImprovements > 0);
 
-						let isVisible = actionVisible || existingImprovements > 0;
+						// A row whose build button has moved to the sector bar has
+						// nothing to offer until something is standing here - only
+						// the dismantle is left in it. Without this the beacon row
+						// would show empty wherever a beacon could be built.
+						let hasBuildButton = $(this).find("button.action-build").length > 0;
+						let isVisible = (hasBuildButton && actionVisible) || existingImprovements > 0;
 						GameGlobals.uiFunctions.toggle($(this), isVisible);
 						if (isVisible) numVisible++;
 					}
 				}
 			});
-			GameGlobals.uiFunctions.toggle("#header-out-improvements", numVisible > 0);
+			// The box keeps .actionbox's margin and padding when every row in it is
+			// hidden, so it goes with the heading rather than leaving a band of
+			// blank pane under it - the same rule updateOutActionsHeader follows.
+			// With the collectors gone to the sector bar this table is empty for
+			// most of a game, and that band was the only thing left of it.
+			let showImprovements = GameGlobals.gameState.unlockedFeatures.vision && numVisible > 0;
+			GameGlobals.uiFunctions.toggle("#header-out-improvements", showImprovements);
+			GameGlobals.uiFunctions.toggle("#out-improvements", showImprovements);
+			GameGlobals.uiFunctions.toggle("#out-improvements table", showImprovements);
 		},
 
+		// live values only - anything that changes what is visible belongs in
+		// updateOutImprovementsList, which owns the #header-out-improvements count
 		updateOutImprovementsStatus: function () {
 			if (!this.playerLocationNodes.head) return;
 			var improvements = this.playerLocationNodes.head.entity.get(SectorImprovementsComponent);
-			var hasCamp = GameGlobals.levelHelper.getLevelEntityForSector(this.playerLocationNodes.head.entity).has(CampComponent);
-		
-			var collectorFood = improvements.getVO(improvementNames.collector_food);
-			var collectorWater = improvements.getVO(improvementNames.collector_water);
-			var collectorFoodCapacity = collectorFood.storageCapacity.food * collectorFood.count;
-			var collectorWaterCapacity = collectorWater.storageCapacity.water * collectorWater.count;
-			$("#out-improvements-collector-food .list-storage").text(
-				collectorFoodCapacity > 0 ? (Math.floor(collectorFood.storedResources.food * 10) / 10) + " / " + collectorFoodCapacity : "");
-			$("#out-improvements-collector-water .list-storage").text(
-				collectorWaterCapacity > 0 ? (Math.floor(collectorWater.storedResources.water * 10) / 10) + " / " + collectorWaterCapacity : "");
-				
-			let bucketMaxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(improvementNames.collector_water);
-			let trapMaxLevel = GameGlobals.campHelper.getCurrentMaxImprovementLevel(improvementNames.collector_food);
-				
-			GameGlobals.uiFunctions.toggle("#out-action-improve-bucket", collectorWaterCapacity > 0 && bucketMaxLevel > 1);
-			GameGlobals.uiFunctions.toggle("#out-action-improve-trap", collectorFoodCapacity > 0 && trapMaxLevel > 1);
-			
+
+			this.updateCollectorFills();
+
 			let hasBeacon = improvements.getCount(improvementNames.beacon);
 			GameGlobals.uiFunctions.toggle("#out-action-dismantle-beacon", hasBeacon);
 		},
@@ -939,8 +1231,15 @@ define([
 			let isScouted = sectorStatus.scouted;
 			let showCharacters = hasCharacters && isScouted;
 
-			GameGlobals.uiFunctions.toggle($("#header-out-characters"), showCharacters);
+			// Same arrangement as the Search box: docked into the sector bar this
+			// is one of the bar's own rows, the heading has nothing left to label,
+			// and the bar shows its rows by class rather than by a display of
+			// their own (see SECTOR ACTION BAR in mobile.less).
+			let isDocked = $("#out-characters").parent().is("#out-sector-bar");
+
+			GameGlobals.uiFunctions.toggle($("#header-out-characters"), !isDocked && showCharacters);
 			GameGlobals.uiFunctions.toggle($("#out-characters"), showCharacters);
+			$("#out-sector-bar").toggleClass("has-characters", isDocked && showCharacters);
 
 			if (!showCharacters) return;
 
@@ -1006,6 +1305,10 @@ define([
 
 		updateSectorDescription: function () {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			// every line below dereferences it, and four signal handlers call
+			// this without checking first - updateLocales and updateCharacters
+			// beside them already guard the same way
+			if (!this.playerLocationNodes.head) return;
 			var featuresComponent = this.playerLocationNodes.head.entity.get(SectorFeaturesComponent);
 			var sectorStatus = this.playerLocationNodes.head.entity.get(SectorStatusComponent);
 
@@ -1016,9 +1319,13 @@ define([
 			var hasCampHere = this.playerLocationNodes.head.entity.has(CampComponent);
 			var isScouted = sectorStatus.scouted;
 
-			// Header
+			// Header. Written twice on purpose: the h2 is what the regular
+			// layout reads, and the banner chip is what a phone reads. The
+			// stylesheet hides whichever one this layout does not use.
 			var features = GameGlobals.sectorHelper.getTextFeatures(sector);
-			this.elements.sectorHeader.text(TextConstants.getSectorHeader(hasVision, features));
+			var sectorHeaderText = TextConstants.getSectorHeader(hasVision, features);
+			this.elements.sectorHeader.text(sectorHeaderText);
+			this.elements.roomName.text(sectorHeaderText);
 
 			// Description
 			this.elements.description.html(this.getDescription(
@@ -1028,6 +1335,135 @@ define([
 				hasVision,
 				isScouted
 			));
+
+			// Investigated, as a table of its own
+			this.elements.descriptionStats.html(this.getSectorStatsTable(isScouted, featuresComponent, sectorStatus));
+
+			// The finds row, at the bottom of the phone's screen. Every value
+			// is written on every pass, and each has a reading for "nothing
+			// known yet", so the row keeps its shape - nothing shifts under the
+			// thumb at the moment of scouting or scavenging, which is exactly
+			// when the player is tapping.
+			this.elements.scavengedValue.text(this.getScavengedText(isScouted, sectorStatus));
+			this.elements.resourcesValue.text(this.getResourcesFoundText(featuresComponent, sectorStatus));
+			this.elements.itemsValue.text(this.getItemsFoundText(featuresComponent, sectorStatus));
+			// A class on the row rather than uiFunctions.toggle: toggle writes an inline
+			// display, and the line is a flex container, so it would come back as a block
+			// and put the label and the list on separate lines.
+			this.elements.findsRow.toggleClass("no-items", !this.hasVisibleItemsToShow(featuresComponent));
+
+			this.updateRoomIntro(isScouted, hasCampHere);
+		},
+
+		// The description used to be on screen simply because it was in the
+		// page. Now that it is a panel, something has to decide when a player
+		// who has not asked for it should see it: the first time they stand
+		// here, and any time the room itself has changed since.
+		//
+		// The key is the room's identity, and NOTHING that is merely true of the
+		// room right now. It used to hash the rendered header and description,
+		// which is not identity at all: getSectorDescription picks between a
+		// "sector-vision" and a "sector-novision" template, so the same room
+		// hashed differently by lamplight than in the dark, and the text
+		// features underneath it move with scavenging besides. A fresh launch
+		// starts with vision low and climbing, so the stored hash almost never
+		// matched and every room was described again - which is what this was
+		// supposed to stop.
+		//
+		// What is left is what actually makes a room worth introducing twice:
+		// having been scouted, and having a camp in it. Position is the key it
+		// is stored under, so it does not need repeating in the value.
+		//
+		// Kept in the browser, NOT in the save. The save format uses two-letter
+		// keys and drops falsy values to stay small, and a hash per sector
+		// across a whole world would cost real bytes for what is a cosmetic
+		// memory - and it would ride the cloud save to other devices, where it
+		// is nobody's memory. So it sits beside the save instead: this browser
+		// remembers which rooms it has already described, and a different or a
+		// cleared browser describes them again, which is the right trade.
+		//
+		// It was in memory only, so every reload described every room the
+		// player walked back through as if it were new.
+		// A value stored by an earlier version is a number, and this one is a string, so
+		// they never match: every room gets one more introduction and then settles. One
+		// repeat is a better migration than reading someone else's format.
+		updateRoomIntro: function (isScouted, hasCampHere) {
+			// Never load - and above all never CACHE a load - while the world
+			// seed is unset. A load against seed 0 rejects the real memory,
+			// and caching that rejection replays every room for the session.
+			// The seed is 0 during boot and again between a reset and the
+			// world coming back, and this can run in both windows.
+			if (!this.shownRoomIntros) {
+				if (!GameGlobals.gameState.worldSeed) return;
+				this.shownRoomIntros = this.loadShownRoomIntros();
+			}
+
+			let position = this.playerPosNodes.head.position;
+			let positionKey = position.level + "." + position.sectorX + "." + position.sectorY;
+
+			// two flags, so it is readable in storage and cannot drift with anything
+			// that is not one of them
+			let hash = (isScouted ? "1" : "0") + (hasCampHere ? "1" : "0");
+
+			if (this.shownRoomIntros[positionKey] === hash) return;
+
+			// the panel is a small-layout thing, and it has nothing to say
+			// about a camp, about a player who cannot see, or about a screen
+			// that already has a popup on it
+			if (!$("body").hasClass("layout-small")) return;
+			if (position.inCamp) return;
+			if ($("body").hasClass("vision-step-0")) return;
+			// isPaused covers the popups too: UIPopupManager sets it from
+			// hasOpenPopup() every time a popup opens or closes
+			if (GameGlobals.gameState.isPaused) return;
+
+			// Stored only once it is actually shown. Arriving somewhere while a
+			// popup is up is common - a fight, a story beat - and marking the
+			// room seen there would spend its one intro on a screen the player
+			// never saw. updateSectorDescription runs again on popupClosed, on
+			// leaving camp and on vision changing, so the intro arrives when
+			// whatever was in the way clears.
+			this.shownRoomIntros[positionKey] = hash;
+			this.saveShownRoomIntros();
+
+			GameGlobals.uiFunctions.toggleRoomPanel(true);
+		},
+
+		// One world's worth, under one key, stamped with the seed it belongs to. A
+		// mismatched seed is a different world - a restart, or a save from elsewhere -
+		// and its rooms are not these rooms, so the memory starts empty rather than
+		// silently swallowing the new world's first intros.
+		//
+		// Keeping only the current world also bounds what this can grow to: one entry
+		// per room described, about twenty bytes each, and nothing accumulating across
+		// games. Going back to an older world describes its rooms again.
+		loadShownRoomIntros: function () {
+			try {
+				let raw = localStorage.getItem(this.STORAGE_KEY_ROOM_INTROS);
+				let stored = raw ? JSON.parse(raw) : null;
+				if (stored && stored.seed === GameGlobals.gameState.worldSeed && stored.rooms) return stored.rooms;
+			} catch (ex) {
+				log.w("could not read shown room intros: " + ex);
+			}
+			return {};
+		},
+
+		// Storage can be full or refused - private browsing, a quota - and none of this
+		// is worth an exception on the path that shows a room description. Losing it
+		// costs one repeated intro.
+		saveShownRoomIntros: function () {
+			// a map stamped with seed 0 belongs to no world and would be
+			// rejected by every future load - refusing the write keeps
+			// whatever is stored, which at worst repeats one intro
+			if (!GameGlobals.gameState.worldSeed) return;
+			try {
+				localStorage.setItem(this.STORAGE_KEY_ROOM_INTROS, JSON.stringify({
+					seed: GameGlobals.gameState.worldSeed,
+					rooms: this.shownRoomIntros
+				}));
+			} catch (ex) {
+				log.w("could not store shown room intros: " + ex);
+			}
 		},
 
 		updateLocationDetails: function () {
@@ -1090,9 +1526,30 @@ define([
 			this.showTollGatePopup(direction);
 		},
 
+		// Dropped from MEMORY only, never from storage. This fires for every
+		// world rebuild, and most rebuilds are the same world coming back:
+		// loading a cloud save at startup goes through the restart path, so
+		// clearing storage here wiped the room memory on every launch that
+		// touched the cloud - which on a phone is every launch - and every
+		// room introduced itself again. The stored copy is stamped with its
+		// world's seed: a genuinely new game has a new seed and rejects it
+		// on the next read, and the same world reloaded keeps its memory.
+		// Nulling the cache is still required, or a restart in the same page
+		// would inherit the old world's map without consulting the stamp.
+		onGameReset: function () {
+			this.shownRoomIntros = null;
+			GameGlobals.uiFunctions.toggleRoomPanel(false);
+		},
+
 		onPopupClosed: function () {
 			this.updateLocales();
 			this.updateCharacters();
+			// A room first described behind a popup - a fight, a story beat -
+			// has had its intro held back rather than spent (see
+			// updateRoomIntro). This is the pass that lets it through, and
+			// without it the intro would wait for some unrelated update that
+			// may never come while the player is still standing there.
+			this.updateSectorDescription();
 		},
 		
 		onButtonStateChanged: function (action, isEnabled) {

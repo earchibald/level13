@@ -141,11 +141,18 @@ define([
 				$("#milestone-next-reqs").append(requirementsDiv);
 			}
 			
-			// unlock button
+			// unlock button; mirrored at the top of the tab because the
+			// requirements list above it can be a long scroll on phones
+			let buttonHTML = "<div><button class='action' action='" + action + "'>Unlock</button></div>";
+
 			$("#milestone-next-button-container").empty();
-			$("#milestone-next-button-container").append("<div><button class='action' action='" + action + "'>Unlock</button></div>");
-			
+			$("#milestone-next-button-container").append(buttonHTML);
+
+			$("#milestone-top-button-container").empty();
+			$("#milestone-top-button-container").append(buttonHTML);
+
 			GameGlobals.uiFunctions.createButtons("#milestone-next-button-container");
+			GameGlobals.uiFunctions.createButtons("#milestone-top-button-container");
 		},
 		
 		updatePopulation: function () {

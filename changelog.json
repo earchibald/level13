@@ -1,1054 +1,2183 @@
 {
-	"versions": [
-		{
-			"version": "0.6.3.18",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Map sector tooltip stays open when the sector is clicked"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.17",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Hover tooltips on the Map tab controls: style, mode and level selectors, download button, and the sector navigation icon buttons"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.16",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Map tooltip hides when the map mode or level selection changes"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.15",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Fix UI freezing in a 'transitioning' state after movement (buttons stuck disabled, clicks ignored until tab flip or reload): stuck transitions now self-heal within seconds"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.14",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Location buttons keep their hotkey badge while disabled. Reduce UI churn: map overlays and tab numbers only rebuild when their content changes."
-				}
-			]
-		},
-		{
-			"version": "0.6.3.13",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Scout is back on M; the map hotkey is now P"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.12",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Craft dialog: up arrow reaches the show obsolete toggle (space toggles); crafting without materials flashes the name and lacking costs"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.11",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "New hotkeys: M shows the map, I opens manage inventory, K opens a keyboard-navigable craft dialog (arrows navigate and fold sections, Enter crafts with confirmation, Esc closes). Scout moved from M to T."
-				}
-			]
-		},
-		{
-			"version": "0.6.3.10",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Fix Enter from a dialog confirmation leaking to the passage/camp hotkey"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.7",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "B asks to go back to camp (Enter confirms, Esc cancels); when camp is unreachable it shows the requirements. Fix hotkey badges missing from localized buttons (Enter camp, Go, passages, collect all, movement)."
-				}
-			]
-		},
-		{
-			"version": "0.6.3.6",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "? opens settings with the hotkey list. Buttons with a hotkey show a small badge (hover-only on compact buttons)."
-				}
-			]
-		},
-		{
-			"version": "0.6.3.5",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Minimap tooltips: hover a minimap square or an off-map hint icon for sector details. New hotkeys: Shift-F/Shift-G collect 1 food/water, H refills water at a spring."
-				}
-			]
-		},
-		{
-			"version": "0.6.3.4",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Tab number annotations sit in the tab corner; ENTER on the embark tab leaves the camp"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.3",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Update page description with fork attribution"
-				}
-			]
-		},
-		{
-			"version": "0.6.3.2",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Number keys 1-9 select the visible tabs in order; tabs show the number. ENTER enters the camp or uses a passage in the current sector."
-				}
-			]
-		},
-		{
-			"version": "0.6.3.1",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2026-08-02",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Map: mouse wheel zoom, click targets and icons scale with zoom, hover tooltip for sectors"
-				},
-				{
-					"type": "DEV",
-					"summary": "Fix error when scouting greenhouse after discovering deity; fix map tooltip error when no sector is selected"
-				}
-			]
-		},
-		{
-			"version": "0.6.3",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2025-07-20",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Bugfixes and text polish"
-				},
-				{
-					"type": "GB",
-					"summary": "Small balancing adjustments (building repair costs, damaged building reputation penalty, disease frequency)"
-				},
-				{
-					"type": "DEV",
-					"summary": "Better visitor and error tracking and a note in the FAQ about what is being tracked"
-				}
-			]
-		},
-		{
-			"version": "0.6.2",
-			"requiredVersion": "0.6.1",
-			"phase": "beta",
-			"final": true,
-			"released": "2025-07-06",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Bugfixes and text polish"
-				},
-				{
-					"type": "GB",
-					"summary": "Balancing adjustements to upgrade costs (rumours) and hazard values (when certain equipment is expected)"
-				},
-				{
-					"type": "Text",
-					"summary": "Add a few more dialogues for variety and hints"
-				},
-				{
-					"type": "UI",
-					"summary": "Add a list of active outgoing trade caravans to the trade tab"
-				}
-			]
-		},
-		{
-			"version": "0.6.1",
-			"requiredVersion": "0.6.1",
-			"released": "2025-06-30",
-			"phase": "beta",
-			"final": true,
-			"changes": [
-				{
-					"type": "Dev",
-					"summary": "Add story and dialogue systems along with initial story structure and lots of dialogues"
-				},
-				{
-					"type": "GD",
-					"summary": "Add NPCs in camp and outside"
-				},
-				{
-					"type": "GD",
-					"summary": "Add new explorer abilities"
-				},
-				{
-					"type": "GD",
-					"summary": "Add explorer injuries"
-				},
-				{
-					"type": "GD",
-					"summary": "Improve explorer generation"
-				},
-				{
-					"type": "GD",
-					"summary": "Make explorers sometimes improve their abilities"
-				},
-				{
-					"type": "QoL",
-					"summary": "Ensure certain explorers (including dogs) never leave unless dismissed"
-				},
-				{
-					"type": "GD",
-					"summary": "Add new movement blockers and hazards (flooding, old explosives, gang territroy, toll gates)"
-				},
-				{
-					"type": "GD",
-					"summary": "Add several new camp events (disease, earthquake, accident, refugees, visitor)"
-				},
-				{
-					"type": "GD",
-					"summary": "Add examine spots with a little lore in some sectors"
-				},
-				{
-					"type": "GD",
-					"summary": "Add new perks (stressed, cursed, accomplished, lucky, restart bonus)"
-				},
-				{
-					"type": "Text",
-					"summary": "Rename 'favour' to 'hope', 'follower' to 'explorer', and adjust a few other terms"
-				},
-				{
-					"type": "GD",
-					"summary": "Add more items, enemy types and locale types to support story and world-building"
-				},
-				{
-					"type": "GD",
-					"summary": "Add varying quality to equipment items"
-				},
-				{
-					"type": "GD",
-					"summary": "Make medicine and herbs more useful"
-				},
-				{
-					"type": "UI",
-					"summary": "Add better save management"
-				},
-				{
-					"type": "UI",
-					"summary": "Add a popup with some game stats"
-				},
-				{
-					"type": "UI",
-					"summary": "Add a settings menu and make hotkeys more visible and configurable"
-				},
-				{
-					"type": "QoL",
-					"summary": "Make it possible for population to grow by more than 1 at once"
-				},
-				{
-					"type": "QoL",
-					"summary": "Add dedicated metal scavenging spots (heaps)"
-				},
-				{
-					"type": "QoL",
-					"summary": "Add option to move a few more steps when out of food or water"
-				},
-				{
-					"type": "UI",
-					"summary": "Add basic UI sounds"
-				},
-				{
-					"type": "UI",
-					"summary": "Change the log to only show messages relevant for current location"
-				},
-				{
-					"type": "UI",
-					"summary": "Improve mobile layout a bit and add a warning for mobile devices"
-				},
-				{
-					"type": "UI",
-					"summary": "Improve page structure for screen readers"
-				},
-				{
-					"type": "GD",
-					"summary": "Add rare prebuilt passages between levels"
-				},
-				{
-					"type": "Dev",
-					"summary": "Lay some groundwork for translations by moving most (but not all) strings to a separate file"
-				},
-				{
-					"type": "Dev",
-					"summary": "Lots of bugfixes, balancing adjustments, UI improvements and text polish"
-				}
-			]
-		},
-		{
-			"version": "0.5.3",
-			"requiredVersion": "0.5.1",
-			"released": "2025-04-29",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "Dev",
-					"summary": "Fix a bug where camp resources sometimes got reset"
-				}
-			]
-		},
-		{
-			"version": "0.5.2",
-			"requiredVersion": "0.5.1",
-			"released": "2023-07-18",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "Dev",
-					"summary": "Bugfixes and text corrections"
-				}
-			]
-		},
-		{
-			"version": "0.5.1",
-			"released": "2023-07-06",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Add simple ending"
-				},
-				{
-					"type": "GD",
-					"summary": "Add milestones and limits to evidence / rumour / favour accumulation based on milestones"
-				},
-				{
-					"type": "GD",
-					"summary": "Add investigate action and insight stat"
-				},
-				{
-					"type": "GD",
-					"summary": "Add study at library action"
-				},
-				{
-					"type": "GD",
-					"summary": "Add breaking and repairing items"
-				},
-				{
-					"type": "GD",
-					"summary": "Add luxury resources and outposts"
-				},
-				{
-					"type": "GD",
-					"summary": "Add worker robots"
-				},
-				{
-					"type": "GD",
-					"summary": "Add more permanent and temporary effects (tired, blessed, varied injuries)"
-				},
-				{
-					"type": "GD",
-					"summary": "Add more follower types"
-				},
-				{
-					"type": "GD",
-					"summary": "Add a chance that defenders (soldiers) get killed or buildings damaged during raids"
-				},
-				{
-					"type": "UI",
-					"summary": "Improve the map (modes, readability fixes and layout improvements)"
-				},
-				{
-					"type": "UI",
-					"summary": "Remove many repetitive log messages and add some new ones"
-				},
-				{
-					"type": "UI",
-					"summary": "Many smaller UI improvements"
-				}
-			]
-		},
-		{
-			"version": "0.4.3",
-			"released": "2022-05-12",
-			"requiredVersion": "0.4.1",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "WG",
-					"summary": "Fix a few issues related to fight and hazard balancing"
-				},
-				{
-					"type": "GB",
-					"summary": "Allow building a barracks regardless of camp population"
-				},
-				{
-					"type": "Dev",
-					"summary": "Fix error when using a First Aid Kit"
-				},
-				{
-					"type": "Dev",
-					"summary": "Other bugfixes"
-				}
-			]
-		},
-		{
-			"version": "0.4.2",
-			"requiredVersion": "0.4.1",
-			"released": "2022-05-03",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "WG",
-					"summary": "Fix several issues with world generation and fight balancing that could cause soft locks"
-				},
-				{
-					"type": "GB",
-					"summary": "Adjust costs and checks to make the start a little bit easier"
-				},
-				{
-					"type": "Dev",
-					"summary": "Other bugfixes"
-				}
-			]
-		},
-		{
-			"version": "0.4.1",
-			"released": "2022-04-26",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "GB",
-					"summary": "Unlock more levels"
-				},
-				{
-					"type": "GD",
-					"summary": "Add many more enemy types and many new items"
-				},
-				{
-					"type": "GD",
-					"summary": "Improve followers and add different follower abilities"
-				},
-				{
-					"type": "GB",
-					"summary": "Add locations with scavengeable crafting ingredients"
-				},
-				{
-					"type": "GD",
-					"summary": "Make building effects clearer (upgrades unlock building levels, no automatic effects)"
-				},
-				{
-					"type": "GD",
-					"summary": "Add upgrades to traps and buckets"
-				},
-				{
-					"type": "GD",
-					"summary": "Add map pieces and graffiti that help navigating new areas"
-				},
-				{
-					"type": "GD",
-					"summary": "Make some debuffs (hunger, thirst, cold, poison, radiation) more forgiving by adding them slowly instead of immediately"
-				},
-				{
-					"type": "GD",
-					"summary": "Polish the Rejuv Shot (block using twice; only restores stamina and doesn't affect max stamina)"
-				},
-				{
-					"type": "GB",
-					"summary": "Adjust balancing for buildings, crafting, upgrades, fights, raids and scavenging results"
-				},
-				{
-					"type": "UI",
-					"summary": "Improve UI for screen reader users"
-				}
-			]
-		},
-		{
-			"version": "0.3.3",
-			"requiredVersion": "0.3.1",
-			"released": "2021-03-23",
-			"phase": "alpha",
-			"final": true,
-			"changes": [
-				{
-					"type": "GB",
-					"summary": "Adjust upgrade/evidence balancing"
-				},
-				{
-					"type": "DEV",
-					"summary": "Small bugfixes"
-				}
-			]
-		},
-		{
-			"version": "0.3.2",
-			"requiredVersion": "0.3.1",
-			"phase": "alpha",
-			"final": true,
-			"released": "2021-02-21",
-			"changes": [
-				{
-					"type": "GB",
-					"summary": "Adjust upgrade unlocking order (ensure unlocking Knife doesn't block Compass)"
-				},
-				{
-					"type": "DEV",
-					"summary": "Small bugfixes"
-				},
-				{
-					"type": "DEV",
-					"summary": "Add tools page with limited cheats to help players affected by bugs"
-				}
-			]
-		},
-		{
-			"version": "0.3.1",
-			"phase": "alpha",
-			"final": true,
-			"released": "2021-02-18",
-			"changes": [
-				{
-					"type": "GD",
-					"summary": "New levels (the ground level and level 14, an extremely radioactive level)"
-				},
-				{
-					"type": "GD",
-					"summary": "Deity, favour, temples, shrines, greenhouses, and a new resource (rubber)"
-				},
-				{
-					"type": "GD",
-					"summary": "New equipment for surviving extremely irradiated levels"
-				},
-				{
-					"type": "GD",
-					"summary": "New consumable item that restores stamina"
-				},
-				{
-					"type": "GD",
-					"summary": "New building: beacon"
-				},
-				{
-					"type": "GD",
-					"summary": "More challenges and rewards to campless levels (more encounters, blueprints)"
-				},
-				{
-					"type": "GD",
-					"summary": "Improved sector descriptions"
-				},
-				{
-					"type": "GB",
-					"summary": "Make all fights drop crafting ingredients"
-				},
-				{
-					"type": "GB",
-					"summary": "Introduce scavenged %, giving diminishing rewards for scavenging the same sector"
-				},
-				{
-					"type": "UI",
-					"summary": "UI improvements (collect 1, simplify rest outside, animations for numbers)"
-				},
-				{
-					"type": "WG",
-					"summary": "Improved world generation (structure, hard levels, validation)"
-				}
-			]
-		},
-		{
-			"version": "0.2.7",
-			"phase": "alpha",
-			"final": true,
-			"released": "2020-02-13",
-			"requiredVersion": "0.2.5",
-			"changes": [
-				{
-					"type": "GB",
-					"summary": "Adjust upgrade unlocking order (Block Knife from being unlocked on Level 13)"
-				},
-				{
-					"type": "DEV",
-					"summary": "Bugfixes"
-				}
-			]
-		},
-		{
-			"version": "0.2.6",
-			"phase": "alpha",
-			"final": true,
-			"released": "2020-02-06",
-			"requiredVersion": "0.2.5",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Bugfixes"
-				}
-			]
-		},
-		{
-			"version": "0.2.5",
-			"phase": "alpha",
-			"final": true,
-			"released": "2020-02-01",
-			"changes": [
-				{
-					"type": "GD",
-					"summary": "Add possibility to improve (some) buildings for small effect boosts"
-				},
-				{
-					"type": "GD",
-					"summary": "Add active and passive rumour generation to markets"
-				},
-				{
-					"type": "GD",
-					"summary": "Add a new movement blocker: debris"
-				},
-				{
-					"type": "GB",
-					"summary": "Adjust level sizes and structure"
-				},
-				{
-					"type": "GB",
-					"summary": "Adjust balancing (raids, rumours, upgrades, reputation)"
-				},
-				{
-					"type": "GB",
-					"summary": "Add more items, equipment and crafting materials"
-				},
-				{
-					"type": "GB",
-					"summary": "Add more enemies and make enemy difficulty more dynamic"
-				},
-				{
-					"type": "UI",
-					"summary": "Improve fight UI"
-				},
-				{
-					"type": "DEV",
-					"summary": "Refactor CSS styles and color themes for easier maintanability"
-				},
-				{
-					"type": "DEV",
-					"summary": "Bugfixes and testing tools"
-				}
-			]
-		},
-		{
-			"version": "0.2.4",
-			"phase": "alpha",
-			"final": true,
-			"released": "2019-04-13",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Bugfixes"
-				}
-			]
-		},
-		{
-			"version": "0.2.3",
-			"phase": "alpha",
-			"final": true,
-			"released": "2019-04-07",
-			"changes": [
-				{
-					"type": "UI",
-					"summary": "Improved tech tree visualization"
-				},
-				{
-					"type": "UI",
-					"summary": "Improved maps"
-				},
-				{
-					"type": "GD",
-					"summary": "New building: caravan stable"
-				},
-				{
-					"type": "DEV",
-					"summary": "Smaller saves"
-				},
-				{
-					"type": "GB",
-					"summary": "Bigger difference between camps on different levels (population density)"
-				},
-				{
-					"type": "GB",
-					"summary": "Balancing improvements (upgrades, storage capacity, building costs)"
-				},
-				{
-					"type": "UI",
-					"summary": "Visual view of the current camp and its buildings"
-				},
-				{
-					"type": "GB",
-					"summary": "Improved world generation and better level structure"
-				}
-			]
-		},
-		{
-			"version": "0.2.2",
-			"phase": "alpha",
-			"final": true,
-			"released": "2018-08-10",
-			"changes": [
-				{
-					"type": "DEV",
-					"summary": "Option to export/import save. (Breaks old saves)"
-				},
-				{
-					"type": "GD",
-					"summary": "Manually choosing equipped items"
-				},
-				{
-					"type": "GD",
-					"summary": "Remove time-based food/water consumption and time-based stamina recovery while exploring"
-				},
-				{
-					"type": "UI",
-					"summary": "Polished reputation, raids and trade"
-				},
-				{
-					"type": "GD",
-					"summary": "Two new buildings that increase reputation: Garden and Square"
-				},
-				{
-					"type": "DEV",
-					"summary": "Improved performance"
-				}
-			]
-		},
-		{
-			"version": "0.2.1",
-			"phase": "alpha",
-			"final": true,
-			"released": "2018-03-19",
-			"changes": [{
-					"type": "GD",
-					"summary": "Simple ending to the game"
-				},
-				{
-					"type": "UI",
-					"summary": "Improved UI for building projects"
-				},
-				{
-					"type": "DEV",
-					"summary": "Lots of bugfixes, especially for late-game"
-				}
-			]
-		},
-		{
-			"version": "0.1.7",
-			"phase": "alpha",
-			"final": true,
-			"released": "2017-08-19",
-			"changes": [{
-					"type": "GD",
-					"summary": "Currency, trade partners on the map, outgoing trade caravans and incoming traders"
-				},
-				{
-					"type": "GB",
-					"summary": "More varied resources found when scavenging"
-				},
-				{
-					"type": "GB",
-					"summary": "More bag levels"
-				},
-				{
-					"type": "DEV",
-					"summary": "Bugfixes and performance improvements"
-				}
-			]
-		},
-		{
-			"version": "0.1.6",
-			"phase": "alpha",
-			"final": true,
-			"released": "2017-04-25",
-			"changes": [{
-					"type": "DEV",
-					"summary": "Lots of small bugfixes"
-				},
-				{
-					"type": "UI",
-					"summary": "A friendly popup when the game crashes"
-				},
-				{
-					"type": "UI",
-					"summary": "Visualization of the tech tree"
-				}
-			]
-		},
-		{
-			"version": "0.1.5",
-			"phase": "alpha",
-			"final": true,
-			"released": "2017-01-01",
-			"changes": [{
-					"type": "GD",
-					"summary": "Reputation logic changed (camp-dependent and changing over time)"
-				},
-				{
-					"type": "GD",
-					"summary": "New building: generator (increases reputation)"
-				},
-				{
-					"type": "GB",
-					"summary": "Rebalanced upgrades and a few new ones. Several buildings can now be upgraded"
-				},
-				{
-					"type": "UI",
-					"summary": "Lots of small UI fixes and additions"
-				}
-			]
-		},
-		{
-			"version": "0.1.4",
-			"phase": "alpha",
-			"final": true,
-			"released": "2016-11-06",
-			"changes": [{
-					"type": "GD",
-					"summary": "Improved followers and inn functionality"
-				},
-				{
-					"type": "GD",
-					"summary": "Lots of new log messages for results of player actions when exploring"
-				},
-				{
-					"type": "UI",
-					"summary": "Improved header appearance and show item stats more clearly"
-				},
-				{
-					"type": "GD",
-					"summary": "Improved sector generation (more intersections and more interesting level shapes)"
-				}
-			]
-		},
-		{
-			"version": "0.1.3",
-			"phase": "alpha",
-			"final": true,
-			"released": "2016-10-16",
-			"changes": [{
-					"type": "GD",
-					"summary": "Rework how food and water work while exploring & add springs"
-				},
-				{
-					"type": "GD",
-					"summary": "Proper inventory management and add weights for items"
-				},
-				{
-					"type": "GD",
-					"summary": "Stamina regeneration much slower while exploring and option to recover it in camp"
-				},
-				{
-					"type": "GD",
-					"summary": "New items: first aid kits and glowsticks"
-				},
-				{
-					"type": "GD",
-					"summary": "Environmental hazards: cold, radiation and poison"
-				},
-				{
-					"type": "GD",
-					"summary": "More clothing slots & items"
-				}
-			]
-		},
-		{
-			"version": "0.1.2",
-			"phase": "alpha",
-			"final": true,
-			"released": "2016-03-20",
-			"changes": [{
-					"type": "GD",
-					"summary": "Some items can be left in the camp (and not lost them when fainting)"
-				},
-				{
-					"type": "GD",
-					"summary": "Blueprints are made of pieces which must be separately collected"
-				},
-				{
-					"type": "UI",
-					"summary": "Notifications for new content in tabs like available buildigs or items"
-				},
-				{
-					"type": "UI",
-					"summary": "Improved exploration UI"
-				},
-				{
-					"type": "GD",
-					"summary": "Levels are composed of randomly generated paths and have intersections"
-				},
-				{
-					"type": "GD",
-					"summary": "Fights changed from action to random encounters"
-				},
-				{
-					"type": "GD",
-					"summary": "Exploration more risky, but also has more rewards"
-				},
-				{
-					"type": "GD",
-					"summary": "Healing injuries is no longer instant"
-				},
-				{
-					"type": "GD",
-					"summary": "New improvement: aqueduct"
-				},
-				{
-					"type": "UI",
-					"summary": "Timer for next worker"
-				},
-				{
-					"type": "GB",
-					"summary": "Levels where no camp can be built"
-				}
-			]
-		},
-		{
-			"version": "0.1.1",
-			"phase": "alpha",
-			"final": true,
-			"released": "2015-09-02",
-			"changes": [{
-					"type": "GD",
-					"summary": "Initial list of upgrades, upgrades balancing & blueprint mechanic"
-				},
-				{
-					"type": "GD",
-					"summary": "Working crafting system and all basic items. Secondary resources (crafting ingredients)"
-				},
-				{
-					"type": "GD",
-					"summary": "Exploration now requires food and water"
-				},
-				{
-					"type": "GD",
-					"summary": "Locales: new scouting opportunities that appear on some sectors"
-				},
-				{
-					"type": "UI",
-					"summary": "Black skin for dark levels/sectors"
-				}
-			]
-		},
-		{
-			"version": "0.1.0",
-			"phase": "alpha",
-			"final": true,
-			"released": "2015-07-08",
-			"changes": [{
-					"type": "GB",
-					"summary": "Initial building list"
-				},
-				{
-					"type": "GD",
-					"summary": "Basic camp game play"
-				},
-				{
-					"type": "GD",
-					"summary": "Basic exploration"
-				}
-			]
-		}
-	]
+    "versions": [
+        {
+            "version": "0.6.3.m94",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-16",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Enter that confirms a popup no longer carries on into the game and fires the action behind it"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A movement or screen transition that never finishes now gives up after a few seconds instead of leaving the game frozen and swallowing clicks"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The map controls and the sector detail buttons explain themselves on hover"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Changing the map level or the map mode no longer leaves a stale tooltip behind"
+                },
+                {
+                    "type": "TWEAK",
+                    "summary": "The map overlay and the tab numbers are only redrawn when something about them has actually changed"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m93",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-16",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The S badge stays on the campfire button while sitting down is unavailable, so the key is still there to read when the rumour pool is empty"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The map opens with the page scrolled to the top of the tab content, so the room details are in view instead of below the fold"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Go bar on the Outside tab in camp stays docked below the page instead of drifting back over it, so more, save and the version at the foot of the page are no longer covered"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m92",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-13",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Camp has hotkeys of its own: S sits down at the campfire, T takes treatment at the hospital, ^ improves the campfire and B opens the buildings you can put up. Outside and camp barely share a key, so the same letter can mean one thing in each place"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The hotkey list in settings reads as three groups, Outside, In camp and Anywhere, instead of one long row. On a phone it is hidden, since there is no keyboard to press"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m91",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The bucket and the trap upgrade from their own chips in the action bar. The arrow appears beside the collect actions as soon as the tribe has researched the upgrade, and goes again when that collector reaches its cap. It used to be a row of the Build table, which was easy to finish a game without ever reading"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The Build box outside no longer holds a band of empty space when it has nothing to show"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m90",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Outside, health and the gear bonuses are on screen instead of behind the Adventurer button, which is hidden there because there is nothing left for it to reveal. When the sector has figures of its own to report they take the top and the adventurer's numbers move below them"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m89",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "TWEAK",
+                    "summary": "The game now loads as one file instead of three hundred, so starting up is quicker and has far less chance of stalling on a slow or busy connection"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m88",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-12",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "A fresh load that stopped on the loading spinner now recovers by itself. The game asks for about three hundred separate files, and one of them coming back as a server error was enough to halt start-up; it now asks again for just the file that failed"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m87",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-11",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Outside, the water and food tooltips point to the nearest known source: distance and direction to the nearest spring, bucket or trap, and to the nearest unbuilt collector spot when that is closer"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m86",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-11",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The footer no longer stretches to the height of the page on the map and other tabs (m85 regression)"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m85",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-11",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Save and cloud confirmations show as a card at the top of the screen that fades on its own"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The phone footer is one fixed row - version, more and save - so the direction buttons never move when the game saves"
+                },
+                {
+                    "type": "UI",
+                    "summary": "More opens the other options as a popup on the phone; restart moved in with them"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m84",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-11",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Projects tab on a phone: each project is one line of name and controls over its location, with the columns lined up"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The projects tab no longer keeps a pinned Launch bar before the colony is on the table"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m83",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "R rests, in camp and outside"
+                },
+                {
+                    "type": "UI",
+                    "summary": "On the Tribe tab, G or T asks for a level number and goes to that camp; the Go buttons show their key sequence"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m82",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a cloud save no longer erases the memory of which rooms have been described"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m81",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Camp projects display as readable cards on mobile instead of overlapping table columns"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m80",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-10",
+            "changes": [
+                {
+                    "type": "CHANGE",
+                    "summary": "Sounds play with near-zero latency and no per-click stutter"
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "Sound files are no longer re-downloaded after every update"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m79",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Rooms are no longer described again every time the game is opened"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m78",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Escape presses continue at the end of a conversation"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m77",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The finds row leaves the items line out in rooms with no items to report, as the regular layout always has"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m76",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Cloud saves say which device wrote them, and each device can be named in settings"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Anything the game changes by itself from the cloud now says so instead of doing it silently"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m75",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The app fills the screen again instead of stopping a status bar short of the bottom"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Enter and Escape work in fights, in the inventory popup and when claiming resources"
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "This browser remembers which rooms it has described, so reloading no longer re-describes them"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m74",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "A sideways phone gets the fullscreen map straight away, instead of being stuck on the rotate notice for the session"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m73",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Cloud saves stop reporting this device's own write as a save from another device"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A phone turned sideways switches to the map, or back, even when iOS does not announce the rotation"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m72",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Changing the Gist ID works without pasting the token again, and a failed change says why instead of reverting silently"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "On phones a popup that grows after it opens no longer pushes its buttons off the bottom of the screen"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The footer shows which gist cloud saves go to, next to the version"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m71",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Cloud saves: a second device now joins the first device's gist instead of making its own, so both devices share one cloud save"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Settings shows the Gist ID, and takes one, so it can be copied to another device"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m70",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The map zooms with + and -, on the main keys or the numpad"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m69",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "A device that hit a cloud save conflict no longer stays stuck on it after the conflict has passed"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m68",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a cloud save no longer makes the next save report a conflict with another device"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m67",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Saving to the cloud no longer reports that another device has written, and no longer stops the game syncing afterwards"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m66",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The footer shows whether the cloud save is working, and a failure or a conflict raises a message"
+                },
+                {
+                    "type": "UI",
+                    "summary": "A session left idle for a minute looks for a newer save from another device, and takes it when there is nothing of yours to lose"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m65",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The cloud save is read fresh every time instead of from the browser cache, which was reporting saves over an hour out of date"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Cloud save times are shown in your own timezone, in the same format as the local time beside them"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m64",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The settings dialog no longer runs off the bottom of the screen with its close button out of reach"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A device that has never synced with the cloud now asks before overwriting a save it has not seen"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m63",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-09",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a cloud save now restores the whole game, not just where you were standing"
+                },
+                {
+                    "type": "UI",
+                    "summary": "A reload button under more, for playing as an installed app where there is no browser to reload with"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The arrow keys walk and move the map cursor, for the four main directions"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Escape returns to the exploration tab from anywhere else"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The mousewheel no longer zooms the map; the + and - buttons still do"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m62",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "A device that is behind can no longer overwrite a newer cloud save; it asks which one you want instead"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m61",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The map can be moved around with the same keys you walk with, starting from the sector you are standing in"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m60",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Saves can be kept in a GitHub Gist and loaded on another machine, set up with a token in settings"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m59",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "One press of Enter no longer both switches tabs and fires the tab's own action"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A fast second Enter in the craft dialog no longer leaves it on screen without its overlay"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Enter no longer takes all when hotkeys are turned off in settings"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m58",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-08",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "K opens a craft dialog listing every known recipe grouped by type, navigated by the arrow keys, with a Craft button in the bag tab beside it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "I jumps to the bag and opens manage inventory; P jumps to the map"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m57",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-05",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The scavenged percentage and the items list join the resources list in one row above the minimap, next to the thumb that does the scavenging"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room name in the top bar is now just the room name"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The installed app no longer comes to rest with its top bar behind the status bar after the view moves without a resize"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m56",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The room name now sits in the top bar in capitals with the scavenged percentage beside it, and the resources list has its own row above the minimap"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Tapping a log card marks that message as read, so the unread count stops counting it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room description and the map's sector details close on a tap anywhere instead of a close button, and tapping another sector shows that one"
+                },
+                {
+                    "type": "Bugfix",
+                    "summary": "A tab can no longer end up on a full-width row of its own"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m55",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "Bugfix",
+                    "summary": "The status bar reserve now measures from the smallest portrait viewport of the session, so a first frame that reports the whole screen cannot quietly switch it off"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m54",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "On a phone held sideways, the sector description now floats over the map instead of being squeezed into a narrow column beside it, and the map controls take only the width they need"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The first message of the game now gets a card, like every other message, and cards stay visible while you are in the dark"
+                },
+                {
+                    "type": "Bugfix",
+                    "summary": "The level banner no longer keeps its placeholder text after you load a save"
+                },
+                {
+                    "type": "Bugfix",
+                    "summary": "The top of the screen no longer slides under the status bar after you turn the phone"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m53",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The room description now floats over the whole screen instead of being squeezed above the action bar, so long descriptions are readable without scrolling inside a small box"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Log message cards stay a little longer, and up to four can be on screen at once"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m52",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "New log messages now appear as cards under the header for a few seconds, so a message can be read as it arrives instead of only counted by the badge"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room you are standing in is named in the top bar, and tapping it shows the description"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The room description opens by itself the first time you stand somewhere, and closes again on the next thing you do"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The floating log button no longer covers the save button in the footer"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m51",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-04",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "A phone turned sideways now shows the map full screen: map on the left, its controls and the selected sector on the right"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The map fills the space it is given instead of a measured height, so it no longer opens at 198px on a sideways phone"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Opening the game on the map tab no longer ends in the \"you've found a bug\" popup"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m50",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The map tab gives the whole screen to the map: no level banner, no stats block, tabs at the top"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Sector details are a panel over the map that closes again, instead of a wall of text under it"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m48",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Buttons that a tab change faded out can no longer stay hidden for the rest of the session"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m46",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Building a camp or a beacon is done from the bar above the map instead of a table below the description"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Whoever is in the sector, and the locales it leads on to, are rows of the bar too, so nothing situational has to be scrolled to"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The gear stat icons have tooltips saying what they are; the text was already written and had nowhere to go"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m45",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The log button stays reachable while the log is open on the exploration tab, so the log can be closed again"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m44",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Sound effects reuse one audio element each instead of building a new one on every button, tab and log line"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The log notification sound is aac rather than ogg, which Safari could not decode at all"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m43",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "CHANGE",
+                    "summary": "The adventurer button is a small chip at the right of the level banner instead of a word in the stats"
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "The adventurer button now works outside as well as in camp, where health and the gear numbers could not be read at all"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m42",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The bucket and trap collect buttons stop showing a stale disabled state when you walk onto a sector that already has one"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Compass directions no longer stack a letter to a line"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Loading a save no longer sometimes throws an error popup over the loading screen"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m40",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The tribe tab's camp overview is a card per camp on a phone instead of a twelve-column table, and none of its columns are dropped any more"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m39",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Building a bucket or a trap is done from its chip in the bar above the map, not from a list further down the tab"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m38",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The level title is pinned to the top of the screen instead of scrolling away, and takes about half the room it did"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The Search actions moved into the bar above the map, so they never have to be scrolled to"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Action buttons fit their labels instead of a fixed width, so \"examine cracks\" no longer runs out of its button"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The empty band above the stats bar is gone"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The version number can no longer be read from a stale copy of the changelog"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m37",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Go button on the embark page is no longer cut off the bottom of the screen and out of reach"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m36",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Camp resource tooltips say how long until the store is full or empty"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Perks and debuffs show in camp again, and an Adventurer button reveals health, vision and gear"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The exploration tab leads with the sector figures as a table, then the description, then the actions"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The version bar and the log button moved into the map panel, out of the scrolling page"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The embark page no longer repeats its Go button at the end of the packing list"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m35",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Tooltips near the bottom of the page no longer open behind the action bar and the map"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Build heading no longer goes out of step with the bucket and trap rows"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Search heading no longer lingers over an empty box when leaving a scouted sector"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "Offline play survives a version change instead of loading with no text"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m34",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The bucket and trap icons are now actually blue and red rather than grey"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m33",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "The bucket and trap now really do fit on one row, and a new text label can no longer show up as its raw key after an update"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m32",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The bucket and trap now show a blue or red resource icon, and both fit on one row above the map"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m31",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Scavenge, scout, refill water and the bucket and trap collect actions moved into a bar above the map, so they never scroll away"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Scout disappears once a sector is scouted, and a built bucket or trap shows its fill level and collect buttons instead of a build button"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m30",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Mobile: fix the map and movement controls disappearing, and the footer opening the page instead of ending it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the stats bar, the tab content and the map panel are one column the height of the screen, so no band can drift, be clipped, or be measured wrong"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m29",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Mobile: fix the stats bar scrolling away and the map panel coming loose in the middle of the page - the page itself no longer scrolls, only the middle band does, so neither can detach"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the footer (save, restart, version) scrolls with the page instead of sitting after it, and \"back to camp\" clears the right edge"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m28",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned map panel is about a third shorter - the compass, the map and \"back to camp\" sit side by side instead of stacked - and the perk icons share a row with the bag, so there is far more of the screen left to read the game in"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m27",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-03",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Mobile: fix a bucket or trap appearing to be buildable in sectors that do not offer it, and the map panel appearing before scouting is unlocked"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m26",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the minimap is pinned to the bottom of the exploration tab instead of sitting at the end of it, and sector tooltips stay clear of the pinned header, tab bar and map"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the log button carries a badge with the number of unread entries, cleared when the drawer is opened"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix the first row of tabs hiding behind the stats bar when the tabs wrap to more than one row, and give the wrapped rows room to breathe"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: harden the collector cards and the exploration tab against the same inline-display problem, so the bucket and trap cannot silently fall back to the row that stranded their fill level"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix the map panel stacking and filling the screen - jQuery writes an inline display when it shows the panel, and an inline style beat the rule that lays it out as a row"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned stats bar, the scrolling page and the pinned map panel are separated by a bright rule and a shadow, so it is clear where one ends and the next begins - they were all the same tone"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The game is a proper installable web app now: a service worker keeps it playable offline, and - the reason for it - the home screen app picks up new releases instead of holding an old copy of the page for days"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: size both columns of the pinned map panel outright instead of from their content, so a scaled map cannot push the compass out of the row"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: close the hairline between the info bar and the tab bar that the scrolling page showed through"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned map panel is a non-wrapping row, so the compass can never end up underneath the map whatever the map measures"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned minimap is scaled down so the compass always sits beside it rather than under it, at every phone width, and the panel takes a quarter of the screen instead of half"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the compass, enter camp and back to camp move into the pinned minimap panel, beside the map, and out of the scrolling middle of the exploration tab"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: research and camp or collector upgrades ask first, with their cost, the same way crafting does. The plain sector scout does not - it is repeated too often for a confirm to help"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Resource tooltips now end with the net rate - the sum of the credits and debits above it - in red when the store is draining. It was the one number the card never showed, on any layout"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix the scrolling page painting over the stats bar while a stats tooltip was open"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Fix rumours and reputation staying hidden in the header after you had earned some: the value was shown but its callout wrapper was left behind, because toggling the regular and mobile copies as one set silently skipped the wrapper"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: scouting a sector now asks first too, alongside locales and workshops"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: scouting a locale or a workshop asks first, the same way crafting does - a dialog with the cost, cancel only when you cannot afford it, cancel or scout when you can"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: crafting no longer uses tooltip cards. Tapping an item opens a dialog with its effect and required resources - cancel only when you cannot afford it, cancel or craft when you can"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: portrait only for now - the manifest asks for a portrait lock, and a phone turned sideways gets a notice instead of the broken landscape layout"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: tooltips are measured again once their costs and requirements have been filled in, are re-placed when the phone toolbars slide in and out, and are capped to the space available so a long one scrolls instead of losing its end"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the bucket and the trap are laid out as cards - name and fill level on one line, collect all / collect one / upgrade beneath - instead of a five-widget row that wrapped and left the fill level stranded under the build button"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: fix debuff and status tooltips never opening - the halo that widened their tap target was attached to the chip's list item, which covered the target itself and swallowed every tap"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: a tooltip that would run off the bottom of the screen, or under the pinned action bar, now opens above its button instead. Fractional resource amounts no longer break the value away from its total in the info bar."
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the game column no longer sits 15px right of centre, so panels stop bleeding off the right edge. Tapping a debuff, perk or resource chip opens its tooltip in iOS Safari. The log button no longer stretches down the screen while pressed."
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: in landscape and on small tablets the game fills the screen instead of leaving the old log column's fifth empty"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Home screen web app: new crisp icon set and manifest, and the game runs full screen with no browser chrome when launched from the iOS home screen"
+                },
+                {
+                    "type": "UI",
+                    "summary": "B asks to go back to camp (Enter confirms, Esc cancels); when camp is unreachable it shows the requirements. Fix hotkey badges missing from localized buttons (Enter camp, Go, passages, collect all, movement)."
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile port: the game works on phones with touch callouts, map pan and pinch zoom, a scrollable tab bar, a log drawer, and touch-sized controls"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile compactness overhaul: dense two-row header, mobile type scale, camp view scales to screen width, callouts clamp to the viewport, log stays in its drawer, tighter tables and popups, bigger touch targets"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the info bar is a compact aligned grid, the tab bar is pinned below it and wraps to an indented overflow row instead of scrolling, and long single-action pages (leave camp, milestones, colony launch) repeat their main action at the top"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the pinned info bar is now a ruled grid of label-over-value cells, three columns in camp (evidence/rumours/stamina, storage/reputation/population, materials) and two outside (evidence/rumours, vision/stamina, bag and party). Fixes camp storage vanishing from the header after re-entering camp, blank labels caused by a broken text refresh, and stat limits missing on small screens"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: a page's main action is pinned to the bottom of the screen instead of repeated at the top, clearing the phone's home indicator and browser chrome, with the log button lifted above it"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Mobile: the exploration tab leads with its actions (compass, enter camp, scavenge) instead of the minimap, so the most-used controls in the game are reachable without scrolling"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.6",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "? opens settings with the hotkey list. Buttons with a hotkey show a small badge (hover-only on compact buttons)."
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.5",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Minimap tooltips: hover a minimap square or an off-map hint icon for sector details. New hotkeys: Shift-F/Shift-G collect 1 food/water, H refills water at a spring."
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.4",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Tab number annotations sit in the tab corner; ENTER on the embark tab leaves the camp"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.3",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Update page description with fork attribution"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.2",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Number keys 1-9 select the visible tabs in order; tabs show the number. ENTER enters the camp or uses a passage in the current sector."
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.1",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-02",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Map: mouse wheel zoom, click targets and icons scale with zoom, hover tooltip for sectors"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Fix error when scouting greenhouse after discovering deity; fix map tooltip error when no sector is selected"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2025-07-20",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes and text polish"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Small balancing adjustments (building repair costs, damaged building reputation penalty, disease frequency)"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Better visitor and error tracking and a note in the FAQ about what is being tracked"
+                }
+            ]
+        },
+        {
+            "version": "0.6.2",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2025-07-06",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes and text polish"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Balancing adjustements to upgrade costs (rumours) and hazard values (when certain equipment is expected)"
+                },
+                {
+                    "type": "Text",
+                    "summary": "Add a few more dialogues for variety and hints"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Add a list of active outgoing trade caravans to the trade tab"
+                }
+            ]
+        },
+        {
+            "version": "0.6.1",
+            "requiredVersion": "0.6.1",
+            "released": "2025-06-30",
+            "phase": "beta",
+            "final": true,
+            "changes": [
+                {
+                    "type": "Dev",
+                    "summary": "Add story and dialogue systems along with initial story structure and lots of dialogues"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add NPCs in camp and outside"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add new explorer abilities"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add explorer injuries"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Improve explorer generation"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Make explorers sometimes improve their abilities"
+                },
+                {
+                    "type": "QoL",
+                    "summary": "Ensure certain explorers (including dogs) never leave unless dismissed"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add new movement blockers and hazards (flooding, old explosives, gang territroy, toll gates)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add several new camp events (disease, earthquake, accident, refugees, visitor)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add examine spots with a little lore in some sectors"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add new perks (stressed, cursed, accomplished, lucky, restart bonus)"
+                },
+                {
+                    "type": "Text",
+                    "summary": "Rename 'favour' to 'hope', 'follower' to 'explorer', and adjust a few other terms"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add more items, enemy types and locale types to support story and world-building"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add varying quality to equipment items"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Make medicine and herbs more useful"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Add better save management"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Add a popup with some game stats"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Add a settings menu and make hotkeys more visible and configurable"
+                },
+                {
+                    "type": "QoL",
+                    "summary": "Make it possible for population to grow by more than 1 at once"
+                },
+                {
+                    "type": "QoL",
+                    "summary": "Add dedicated metal scavenging spots (heaps)"
+                },
+                {
+                    "type": "QoL",
+                    "summary": "Add option to move a few more steps when out of food or water"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Add basic UI sounds"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Change the log to only show messages relevant for current location"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improve mobile layout a bit and add a warning for mobile devices"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improve page structure for screen readers"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add rare prebuilt passages between levels"
+                },
+                {
+                    "type": "Dev",
+                    "summary": "Lay some groundwork for translations by moving most (but not all) strings to a separate file"
+                },
+                {
+                    "type": "Dev",
+                    "summary": "Lots of bugfixes, balancing adjustments, UI improvements and text polish"
+                }
+            ]
+        },
+        {
+            "version": "0.5.3",
+            "requiredVersion": "0.5.1",
+            "released": "2025-04-29",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "Dev",
+                    "summary": "Fix a bug where camp resources sometimes got reset"
+                }
+            ]
+        },
+        {
+            "version": "0.5.2",
+            "requiredVersion": "0.5.1",
+            "released": "2023-07-18",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "Dev",
+                    "summary": "Bugfixes and text corrections"
+                }
+            ]
+        },
+        {
+            "version": "0.5.1",
+            "released": "2023-07-06",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Add simple ending"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add milestones and limits to evidence / rumour / favour accumulation based on milestones"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add investigate action and insight stat"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add study at library action"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add breaking and repairing items"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add luxury resources and outposts"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add worker robots"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add more permanent and temporary effects (tired, blessed, varied injuries)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add more follower types"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add a chance that defenders (soldiers) get killed or buildings damaged during raids"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improve the map (modes, readability fixes and layout improvements)"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Remove many repetitive log messages and add some new ones"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Many smaller UI improvements"
+                }
+            ]
+        },
+        {
+            "version": "0.4.3",
+            "released": "2022-05-12",
+            "requiredVersion": "0.4.1",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "WG",
+                    "summary": "Fix a few issues related to fight and hazard balancing"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Allow building a barracks regardless of camp population"
+                },
+                {
+                    "type": "Dev",
+                    "summary": "Fix error when using a First Aid Kit"
+                },
+                {
+                    "type": "Dev",
+                    "summary": "Other bugfixes"
+                }
+            ]
+        },
+        {
+            "version": "0.4.2",
+            "requiredVersion": "0.4.1",
+            "released": "2022-05-03",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "WG",
+                    "summary": "Fix several issues with world generation and fight balancing that could cause soft locks"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Adjust costs and checks to make the start a little bit easier"
+                },
+                {
+                    "type": "Dev",
+                    "summary": "Other bugfixes"
+                }
+            ]
+        },
+        {
+            "version": "0.4.1",
+            "released": "2022-04-26",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "GB",
+                    "summary": "Unlock more levels"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add many more enemy types and many new items"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Improve followers and add different follower abilities"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Add locations with scavengeable crafting ingredients"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Make building effects clearer (upgrades unlock building levels, no automatic effects)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add upgrades to traps and buckets"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add map pieces and graffiti that help navigating new areas"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Make some debuffs (hunger, thirst, cold, poison, radiation) more forgiving by adding them slowly instead of immediately"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Polish the Rejuv Shot (block using twice; only restores stamina and doesn't affect max stamina)"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Adjust balancing for buildings, crafting, upgrades, fights, raids and scavenging results"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improve UI for screen reader users"
+                }
+            ]
+        },
+        {
+            "version": "0.3.3",
+            "requiredVersion": "0.3.1",
+            "released": "2021-03-23",
+            "phase": "alpha",
+            "final": true,
+            "changes": [
+                {
+                    "type": "GB",
+                    "summary": "Adjust upgrade/evidence balancing"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Small bugfixes"
+                }
+            ]
+        },
+        {
+            "version": "0.3.2",
+            "requiredVersion": "0.3.1",
+            "phase": "alpha",
+            "final": true,
+            "released": "2021-02-21",
+            "changes": [
+                {
+                    "type": "GB",
+                    "summary": "Adjust upgrade unlocking order (ensure unlocking Knife doesn't block Compass)"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Small bugfixes"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Add tools page with limited cheats to help players affected by bugs"
+                }
+            ]
+        },
+        {
+            "version": "0.3.1",
+            "phase": "alpha",
+            "final": true,
+            "released": "2021-02-18",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "New levels (the ground level and level 14, an extremely radioactive level)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Deity, favour, temples, shrines, greenhouses, and a new resource (rubber)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New equipment for surviving extremely irradiated levels"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New consumable item that restores stamina"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New building: beacon"
+                },
+                {
+                    "type": "GD",
+                    "summary": "More challenges and rewards to campless levels (more encounters, blueprints)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Improved sector descriptions"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Make all fights drop crafting ingredients"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Introduce scavenged %, giving diminishing rewards for scavenging the same sector"
+                },
+                {
+                    "type": "UI",
+                    "summary": "UI improvements (collect 1, simplify rest outside, animations for numbers)"
+                },
+                {
+                    "type": "WG",
+                    "summary": "Improved world generation (structure, hard levels, validation)"
+                }
+            ]
+        },
+        {
+            "version": "0.2.7",
+            "phase": "alpha",
+            "final": true,
+            "released": "2020-02-13",
+            "requiredVersion": "0.2.5",
+            "changes": [
+                {
+                    "type": "GB",
+                    "summary": "Adjust upgrade unlocking order (Block Knife from being unlocked on Level 13)"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes"
+                }
+            ]
+        },
+        {
+            "version": "0.2.6",
+            "phase": "alpha",
+            "final": true,
+            "released": "2020-02-06",
+            "requiredVersion": "0.2.5",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes"
+                }
+            ]
+        },
+        {
+            "version": "0.2.5",
+            "phase": "alpha",
+            "final": true,
+            "released": "2020-02-01",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Add possibility to improve (some) buildings for small effect boosts"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add active and passive rumour generation to markets"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Add a new movement blocker: debris"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Adjust level sizes and structure"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Adjust balancing (raids, rumours, upgrades, reputation)"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Add more items, equipment and crafting materials"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Add more enemies and make enemy difficulty more dynamic"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improve fight UI"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Refactor CSS styles and color themes for easier maintanability"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes and testing tools"
+                }
+            ]
+        },
+        {
+            "version": "0.2.4",
+            "phase": "alpha",
+            "final": true,
+            "released": "2019-04-13",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes"
+                }
+            ]
+        },
+        {
+            "version": "0.2.3",
+            "phase": "alpha",
+            "final": true,
+            "released": "2019-04-07",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Improved tech tree visualization"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improved maps"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New building: caravan stable"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Smaller saves"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Bigger difference between camps on different levels (population density)"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Balancing improvements (upgrades, storage capacity, building costs)"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Visual view of the current camp and its buildings"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Improved world generation and better level structure"
+                }
+            ]
+        },
+        {
+            "version": "0.2.2",
+            "phase": "alpha",
+            "final": true,
+            "released": "2018-08-10",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Option to export/import save. (Breaks old saves)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Manually choosing equipped items"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Remove time-based food/water consumption and time-based stamina recovery while exploring"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Polished reputation, raids and trade"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Two new buildings that increase reputation: Garden and Square"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Improved performance"
+                }
+            ]
+        },
+        {
+            "version": "0.2.1",
+            "phase": "alpha",
+            "final": true,
+            "released": "2018-03-19",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Simple ending to the game"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improved UI for building projects"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Lots of bugfixes, especially for late-game"
+                }
+            ]
+        },
+        {
+            "version": "0.1.7",
+            "phase": "alpha",
+            "final": true,
+            "released": "2017-08-19",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Currency, trade partners on the map, outgoing trade caravans and incoming traders"
+                },
+                {
+                    "type": "GB",
+                    "summary": "More varied resources found when scavenging"
+                },
+                {
+                    "type": "GB",
+                    "summary": "More bag levels"
+                },
+                {
+                    "type": "DEV",
+                    "summary": "Bugfixes and performance improvements"
+                }
+            ]
+        },
+        {
+            "version": "0.1.6",
+            "phase": "alpha",
+            "final": true,
+            "released": "2017-04-25",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Lots of small bugfixes"
+                },
+                {
+                    "type": "UI",
+                    "summary": "A friendly popup when the game crashes"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Visualization of the tech tree"
+                }
+            ]
+        },
+        {
+            "version": "0.1.5",
+            "phase": "alpha",
+            "final": true,
+            "released": "2017-01-01",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Reputation logic changed (camp-dependent and changing over time)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New building: generator (increases reputation)"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Rebalanced upgrades and a few new ones. Several buildings can now be upgraded"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Lots of small UI fixes and additions"
+                }
+            ]
+        },
+        {
+            "version": "0.1.4",
+            "phase": "alpha",
+            "final": true,
+            "released": "2016-11-06",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Improved followers and inn functionality"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Lots of new log messages for results of player actions when exploring"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improved header appearance and show item stats more clearly"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Improved sector generation (more intersections and more interesting level shapes)"
+                }
+            ]
+        },
+        {
+            "version": "0.1.3",
+            "phase": "alpha",
+            "final": true,
+            "released": "2016-10-16",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Rework how food and water work while exploring & add springs"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Proper inventory management and add weights for items"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Stamina regeneration much slower while exploring and option to recover it in camp"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New items: first aid kits and glowsticks"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Environmental hazards: cold, radiation and poison"
+                },
+                {
+                    "type": "GD",
+                    "summary": "More clothing slots & items"
+                }
+            ]
+        },
+        {
+            "version": "0.1.2",
+            "phase": "alpha",
+            "final": true,
+            "released": "2016-03-20",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Some items can be left in the camp (and not lost them when fainting)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Blueprints are made of pieces which must be separately collected"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Notifications for new content in tabs like available buildigs or items"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Improved exploration UI"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Levels are composed of randomly generated paths and have intersections"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Fights changed from action to random encounters"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Exploration more risky, but also has more rewards"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Healing injuries is no longer instant"
+                },
+                {
+                    "type": "GD",
+                    "summary": "New improvement: aqueduct"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Timer for next worker"
+                },
+                {
+                    "type": "GB",
+                    "summary": "Levels where no camp can be built"
+                }
+            ]
+        },
+        {
+            "version": "0.1.1",
+            "phase": "alpha",
+            "final": true,
+            "released": "2015-09-02",
+            "changes": [
+                {
+                    "type": "GD",
+                    "summary": "Initial list of upgrades, upgrades balancing & blueprint mechanic"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Working crafting system and all basic items. Secondary resources (crafting ingredients)"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Exploration now requires food and water"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Locales: new scouting opportunities that appear on some sectors"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Black skin for dark levels/sectors"
+                }
+            ]
+        },
+        {
+            "version": "0.1.0",
+            "phase": "alpha",
+            "final": true,
+            "released": "2015-07-08",
+            "changes": [
+                {
+                    "type": "GB",
+                    "summary": "Initial building list"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Basic camp game play"
+                },
+                {
+                    "type": "GD",
+                    "summary": "Basic exploration"
+                }
+            ]
+        }
+    ]
 }

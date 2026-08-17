@@ -8,12 +8,71 @@ define(['ash', 'game/constants/UIConstants'
 			$("#" + canvasId).mouseup({ helper: this }, this.onScrollableMapMouseUp);
 			$("#" + canvasId).mouseleave({ helper: this }, this.onScrollableMapMouseLeave);
 			$("#" + canvasId).mousemove({ helper: this }, this.onScrollableMapMouseMove);
-			
+
 			$("#" + canvasId).addClass("scrollable");
-			
+
 			$("#" + canvasId).parent().wrap("<div class='scroll-position-container lvl13-box-2'></div>");
 			$("#" + canvasId).parent().before("<div class='scroll-position-indicator scroll-position-indicator-vertical' data-canvasid='" + canvasId + "' />");
 			$("#" + canvasId).parent().before("<div class='scroll-position-indicator scroll-position-indicator-horizontal' data-canvasid='" + canvasId + "' />");
+
+			this.makeCanvasTouchScrollable(canvasId);
+		},
+
+		// touch drag-to-pan; bound on the scroll container so drags that start on
+		// overlay cells pan too; taps without movement still click through
+		makeCanvasTouchScrollable: function (canvasId) {
+			let helper = this;
+			let container = $("#" + canvasId).parent()[0];
+			if (!container) return;
+
+			// stop the browser from scrolling the page with touches that start on the map
+			container.style.touchAction = "none";
+
+			let state = { active: false, moved: false, startX: 0, startY: 0, startLeft: 0, startTop: 0, suppressClickUntil: 0 };
+
+			container.addEventListener("touchstart", function (e) {
+				if (e.touches.length != 1) { state.active = false; return; }
+				state.active = true;
+				state.moved = false;
+				state.startX = e.touches[0].pageX;
+				state.startY = e.touches[0].pageY;
+				state.startLeft = container.scrollLeft;
+				state.startTop = container.scrollTop;
+			}, { passive: true });
+
+			container.addEventListener("touchmove", function (e) {
+				if (!state.active || e.touches.length != 1) return;
+				let dx = e.touches[0].pageX - state.startX;
+				let dy = e.touches[0].pageY - state.startY;
+				if (!state.moved && Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+				state.moved = true;
+				e.preventDefault();
+				container.scrollLeft = state.startLeft - dx;
+				container.scrollTop = state.startTop - dy;
+				helper.updateScrollIndicators(canvasId);
+			}, { passive: false });
+
+			container.addEventListener("touchend", function (e) {
+				if (!state.active) return;
+				state.active = false;
+				if (state.moved) {
+					helper.snapScrollPositionToGrid(canvasId);
+					helper.updateScrollIndicators(canvasId);
+					state.suppressClickUntil = Date.now() + 400;
+				}
+			});
+
+			container.addEventListener("touchcancel", function () {
+				state.active = false;
+			});
+
+			// a click right after a drag is the tail of the drag, not a tap
+			container.addEventListener("click", function (e) {
+				if (Date.now() < state.suppressClickUntil) {
+					e.preventDefault();
+					e.stopPropagation();
+				}
+			}, true);
 		},
 		
 		onScrollableMapMouseDown: function (e) {
@@ -83,6 +142,13 @@ define(['ash', 'game/constants/UIConstants'
 				$("#" + canvasId).removeClass("scroll-enabled");
 			if (isScrollEnabled && !$("#" + canvasId).hasClass("scroll-enabled"))
 				$("#" + canvasId).addClass("scroll-enabled");
+			// only block native touch scrolling while there is something to pan;
+			// otherwise a small canvas would be a page-scroll dead zone on touch.
+			// Containers with their own pinch zoom keep touch-action: none always.
+			if (scrollContainer.length > 0 && scrollContainer[0].style.touchAction !== "") {
+				let hasTouchZoom = scrollContainer[0].dataset && scrollContainer[0].dataset.touchZoom === "true";
+				scrollContainer[0].style.touchAction = isScrollEnabled || hasTouchZoom ? "none" : "pan-y";
+			}
 		},
 		
 		updateScrollIndicators: function (canvasId) {

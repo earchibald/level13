@@ -54,14 +54,15 @@ define([
 			this.initCraftingButtons();
 			this.initUseItemButtons();
 			this.initRepairItemButtons();
-			
+
 			$("#btn-self-manage-inventory").click($.proxy(this.showInventoryManageemntPopup, this));
 			$("#btn-self-manage-inventory").append("<div class='hotkey-hint hide-in-small-layout'>I</div>");
+			$("#btn-self-craft").click($.proxy(this.onOpenCraftPopup, this));
+			$("#btn-self-craft").append("<div class='hotkey-hint hide-in-small-layout'>K</div>");
 			$("#btn-bag-autoequip").click($.proxy(this.autoEquip, this));
-
 			this.initCraftPopup();
 		},
-
+				
 		// CRAFT POPUP (hotkey K)
 
 		initCraftPopup: function () {
@@ -184,7 +185,18 @@ define([
 			}
 		},
 
+		isCraftPopupInteractive: function () {
+			if (!$("#craft-popup").is(":visible")) return false;
+			if ($("#craft-popup").attr("data-visible") != "true") return false;
+			if (GameGlobals.uiFunctions.popupManager.isClosing("craft-popup")) return false;
+			return true;
+		},
+
 		onCraftPopupKeyDown: function (e) {
+			// the popup is not really open until showSpecialPopup's fadeIn sets data-visible,
+			// and slideToggleIf silently no-ops before that - so acting inside that window
+			// leaves the list on screen with its overlay gone and a popup stuck in the queue
+			if (!this.isCraftPopupInteractive()) return;
 			let code = e.originalEvent ? e.originalEvent.code : e.code;
 			switch (code) {
 				case "ArrowDown": e.preventDefault(); this.setCraftPopupCursor(this.craftPopupCursor + 1); break;
@@ -218,6 +230,7 @@ define([
 		},
 
 		activateCraftPopupRow: function () {
+			if (!this.isCraftPopupInteractive()) return;
 			if (this.craftPopupCursor == -1) {
 				$("#craft-popup-show-obsolete").click();
 				return;
@@ -257,14 +270,18 @@ define([
 			this.craftPopupReopen = true;
 			GameGlobals.uiFunctions.popupManager.closePopup("craft-popup");
 
+			// the popup manager closes this popup itself - handleOkButton after the ok
+			// callback, and the cancel handler before the cancel callback. Closing it here
+			// too schedules a second, unbalanced hideOverlay, and the overlay is the craft
+			// popup's parent, so the reopen below would be hidden the moment it happened.
+			// The cancel callback is null for the same reason: closing is already handled.
 			GameGlobals.uiFunctions.popupManager.showPopup("Craft", msg, "Craft", "Cancel", null,
 				function () {
-					GameGlobals.uiFunctions.popupManager.closePopup("common-popup");
-					GameGlobals.playerActionFunctions.startAction(actionName);
+					// startAction passes its param straight to craftItem; without it the
+					// item id is undefined and the craft throws on a null item definition
+					GameGlobals.playerActionFunctions.startAction(actionName, itemDefinition.id);
 				},
-				function () {
-					GameGlobals.uiFunctions.popupManager.closePopup("common-popup");
-				},
+				null,
 				{ isMeta: false, isDismissable: true }
 			);
 		},

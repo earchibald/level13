@@ -1,0 +1,3889 @@
+// Mobile port: touch support, phone-width layout, and small-layout upgrades.
+// Theme-neutral module, imported last so it wins the cascade.
+// Body classes set by JS: .touch (UIConstants.isTouchScreen), .layout-small
+// (window width <= 850), .log-drawer-open (mobile log drawer).
+
+// ---------------------------------------------------------------------------
+// THEME HOOKS
+// The only theme-dependent values mobile chrome needs.
+// Keep in sync with css/themes/theme-dark.less and theme-sunlit.less.
+
+body.dark {
+	--l13-mobile-bg: #282a28;
+	--l13-mobile-border: #3a3a3a;
+	// @color-bg-button, for the places where a chromeless button has to be
+	// given the same box as the ordinary one standing next to it
+	--l13-mobile-button-bg: #202220;
+	// the pinned chrome and the scrolling page are both #282a28, so an edge
+	// between them has to carry the separation on its own: a brighter rule
+	// than the ordinary border, and a shadow so the page reads as passing
+	// under the chrome rather than joining it
+	--l13-mobile-divider: #6e7064;
+	--l13-mobile-divider-shadow: rgba(0, 0, 0, 0.6);
+	--l13-mobile-badge-bg: #cccccc;
+	--l13-mobile-badge-fg: #202220;
+}
+
+body.sunlit {
+	--l13-mobile-bg: #ffffff;
+	--l13-mobile-border: #aaaaaa;
+	--l13-mobile-button-bg: #fbfbfb;
+	--l13-mobile-divider: #5f5f5f;
+	--l13-mobile-divider-shadow: rgba(0, 0, 0, 0.28);
+	--l13-mobile-badge-bg: #333333;
+	--l13-mobile-badge-fg: #ffffff;
+}
+
+// UIOutHeaderSystem measures #mobile-chrome and writes this on the root - the
+// chrome is built at runtime, so there is nothing here that could measure it.
+// The declaration is the value used before the first measurement, and the
+// value that stands in every layout that has no chrome to measure.
+:root {
+	--l13-chrome-height: 0px;
+	// How tall the shell is (see updateSafeAreaTop, which measures it). A percentage
+	// until then, and in every layout that never measures - which is also what it
+	// falls back to if the measurement is ever missing.
+	--l13-viewport-height: 100%;
+}
+
+// ---------------------------------------------------------------------------
+// PORTRAIT ONLY, EXCEPT FOR THE MAP
+// The manifest asks for a portrait lock. Android honours it; iOS Safari does
+// not, and neither does screen.orientation.lock(), so a sideways phone gets
+// this notice rather than the landscape layout. `pointer: coarse` keeps it off
+// desktop, where a short window is just a small window.
+//
+// The one exception is the map, which is the screen that wants width more than
+// it wants the chrome around it: a sideways phone with a map gets LANDSCAPE MAP
+// at the end of this file, and .landscape-map says so. The notice is what is
+// left over - a phone turned sideways before the map is unlocked.
+
+#rotate-notice {
+	display: none;
+}
+
+@media (orientation: landscape) and (max-height: 480px) and (pointer: coarse) {
+	body:not(.landscape-map) #rotate-notice {
+		display: flex;
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		padding: 0 2em;
+		text-align: center;
+		background: var(--l13-mobile-bg);
+	}
+
+	#rotate-notice h2 {
+		margin: 0 0 0.4em 0;
+	}
+
+	#rotate-notice p {
+		margin: 0;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TAP-OPENABLE CALLOUTS
+// JS toggles .callout-visible on .callout-container (tap, long-press, or tap
+// on a disabled button). Mirrors the :hover/:focus rules in elements-common.
+
+.callout-container.callout-visible > div.btn-callout,
+.callout-container.callout-visible > div.info-callout {
+	display: block;
+	z-index: 7; // above the fixed headers (z-index 5)
+}
+
+// a card that would run under the pinned action bar opens above its trigger
+// instead (see clampCalloutVertically); column-reverse moves the arrow to the
+// bottom and the rotation points it down, keeping the themed colour
+.callout-container.callout-visible > div.info-callout.callout-flipped,
+.callout-container.callout-visible > div.btn-callout.callout-flipped {
+	display: flex;
+	flex-direction: column-reverse;
+}
+
+.callout-flipped > div.callout-arrow-up {
+	transform: rotate(180deg);
+}
+
+// crafting and location scouting answer a tap with a dialog, so their cards
+// never open on a phone. Keep this list in step with isDialogActionButton.
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="craft_"]) > div.btn-callout,
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="scout_locale_"]) > div.btn-callout,
+body.layout-small .callout-container:has(> .container-btn-action > button[action="clear_workshop"]) > div.btn-callout,
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="unlock_upgrade_"]) > div.btn-callout,
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="improve_in_"]) > div.btn-callout,
+body.layout-small .callout-container:has(> .container-btn-action > button[action^="improve_out_"]) > div.btn-callout {
+	display: none !important;
+}
+
+// a card too tall for the space either side of its trigger is capped by
+// clampCalloutVertically and scrolls its own content rather than losing the
+// end of it. Button callouts are pointer-transparent by default, so the
+// capped ones have to take pointer events back to be scrollable.
+body.layout-small div.info-callout.callout-scrollable,
+body.layout-small div.btn-callout.callout-scrollable {
+	overflow-y: auto;
+	overflow-x: hidden;
+	overscroll-behavior: contain;
+}
+
+body.layout-small div.btn-callout.callout-scrollable {
+	pointer-events: auto;
+}
+
+.callout-container.callout-visible > .info-callout-target-side + div.info-callout {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+// vision-disabled buttons are hover-revealed on desktop; on touch keep them
+// faintly readable and reveal fully while their callout is open
+body.touch button.btn-disabled-vision {
+	opacity: 0.35;
+}
+
+body.touch .callout-container.callout-visible button.btn-disabled-vision {
+	opacity: 0.65;
+}
+
+// on touch, callouts open ONLY through the tap system; emulated sticky
+// :hover would otherwise pin them open with no way to dismiss
+body.touch .callout-container:not(.callout-visible) > div.btn-callout,
+body.touch .callout-container:not(.callout-visible) > div.info-callout {
+	display: none !important;
+}
+
+// native disabled buttons swallow clicks; let taps fall through to the
+// wrapper so the tap-shows-disabled-reason handler can run
+body.touch .container-btn-action > button.btn-disabled {
+	pointer-events: none;
+}
+
+// no callout card may be wider than the screen; !important beats the
+// nowrap variants' max-width: none !important (specificity + order)
+@media screen and (max-width: 850px) {
+	body[class] div.info-callout,
+	body[class] div.btn-callout {
+		max-width: ~"calc(100vw - 16px)" !important;
+	}
+}
+
+// the .layout-small variants of these rules in the themed modules never
+// match (they compile under body.dark/.sunlit with .layout-small as a
+// descendant, but the class sits on body itself); working versions live here
+body.layout-small .info-callout-target-small + div.info-callout {
+	white-space: normal;
+	min-width: ~"min(16em, calc(100vw - 16px))";
+	max-width: ~"min(320px, calc(100vw - 16px))" !important;
+	box-sizing: border-box;
+}
+
+body.layout-small .info-callout-side + div.info-callout,
+body.layout-small .info-callout-target-side + div.info-callout {
+	white-space: normal;
+	max-width: ~"calc(100vw - 16px)";
+}
+
+body.layout-small td.item-name {
+	min-width: 6em;
+}
+
+// desktop-narrow windows compress glyph buttons; touch keeps its 36px floor
+body.layout-small:not(.touch) button.btn-glyph-big {
+	min-width: 2em;
+}
+
+body.layout-small .blueprint-piece-box {
+	width: 2em;
+	height: 2em;
+}
+
+body.layout-small .blueprint-piece-box img {
+	margin: 0.2em;
+	width: 0.8em;
+	height: 0.8em;
+}
+
+// ---------------------------------------------------------------------------
+// TOUCH HYGIENE
+
+body.touch {
+	-webkit-tap-highlight-color: transparent;
+}
+
+body.touch button,
+body.touch ul.tabs li,
+body.touch .checkbox,
+body.touch input[type=checkbox],
+body.touch .checkbox-label,
+body.touch .stepper,
+body.touch .item,
+body.touch .res,
+body.touch .item-slot,
+body.touch .horizontal-select-option,
+body.touch .collapsible-header,
+body.touch .info-callout-target {
+	touch-action: manipulation;
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+}
+
+// prevent iOS zoom-on-focus (needs >= 16px font on form controls)
+body.touch input,
+body.touch select,
+body.touch textarea {
+	font-size: 16px;
+}
+
+// ---------------------------------------------------------------------------
+// TOUCH TARGET SIZES
+
+body.touch button {
+	min-height: 44px;
+}
+
+body.touch button.btn-glyph,
+body.touch button.btn-glyph-big {
+	min-height: 36px;
+	min-width: 36px;
+	width: auto;
+}
+
+// stepper +/- keep the 36px visual; an invisible halo restores the 44px
+// hit area (buttons are position:relative from the base rule)
+body.touch .stepper button.btn-glyph::after {
+	content: "";
+	position: absolute;
+	top: -4px;
+	bottom: -4px;
+	left: -4px;
+	right: -4px;
+}
+
+body.touch button.btn-mini,
+body.touch button.btn-compact {
+	min-height: 36px;
+}
+
+// vertical-only hit extension; these often sit inline next to other controls
+body.touch button.btn-mini::after,
+body.touch button.btn-compact::after {
+	content: "";
+	position: absolute;
+	top: -4px;
+	bottom: -4px;
+	left: 0;
+	right: 0;
+}
+
+body.touch button.btn-meta {
+	min-height: 32px;
+	padding: 4px 8px;
+}
+
+// chromeless text buttons: grow the hit strip vertically only, so adjacent
+// footer links never overlap
+body.touch button.btn-meta::after {
+	content: "";
+	position: absolute;
+	top: -6px;
+	bottom: -6px;
+	left: 0;
+	right: 0;
+}
+
+body.touch .checkbox,
+body.touch input[type=checkbox] {
+	width: 1.75em;
+	height: 1.75em;
+}
+
+body.touch .checkbox-label {
+	padding: 12px 6px;
+	cursor: pointer;
+}
+
+body.touch input[type=range] {
+	height: 44px;
+}
+
+body.touch input[type=range]::-webkit-slider-thumb {
+	height: 24px;
+	width: 24px;
+	margin-top: -10px;
+}
+
+body.touch input[type=range]::-moz-range-thumb {
+	height: 24px;
+	width: 24px;
+}
+
+body.touch ul.tabs li {
+	height: auto;
+	min-height: 2.75em; // 44px at the 16px root size
+}
+
+body.touch select {
+	min-height: 36px;
+}
+
+body.touch .stepper input.amount {
+	min-height: 36px;
+}
+
+body.touch .horizontal-select-option {
+	padding: 6px 10px;
+	min-height: 36px;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	position: relative;
+}
+
+// vertical-only hit extension (options sit inline with small gaps)
+body.touch .horizontal-select-option::after {
+	content: "";
+	position: absolute;
+	top: -4px;
+	bottom: -4px;
+	left: 0;
+	right: 0;
+}
+
+// free-standing item chips are tap targets for their callouts
+body.touch .item {
+	padding: 8px;
+}
+
+// .res has padding: 0 !important (elements-common); grow the hit area
+// invisibly instead of fighting the important flag. -6px horizontal stays
+// inside the 12px inter-chip gap; -11px vertical covers the count label.
+body.touch .res::after {
+	content: "";
+	position: absolute;
+	inset: -11px -6px;
+}
+
+// the most-tapped grid in the game: fill the dead 4-6px gaps between
+// compass buttons so near-miss taps still move
+body.touch #table-out-actions-movement button.action-move::after {
+	content: "";
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	left: -3px;
+	right: -3px;
+}
+
+body.touch .collapsible-header {
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+// iOS Safari only synthesises a click on elements it considers clickable:
+// links, form controls, elements with a handler bound directly to them, or
+// elements with cursor:pointer. The callout handlers are delegated from
+// document, so on a plain span or li (the debuff, perk and resource chips)
+// no click ever arrived and the tooltip never opened. Buttons were fine,
+// which is why only the chips looked broken.
+body.touch .info-callout-target,
+body.touch .container-btn-action {
+	cursor: pointer;
+}
+
+// a tap that lands on the chip icon must count as a tap on the chip
+body.touch .info-callout-target img {
+	pointer-events: none;
+}
+
+// long-press opens the callout preview; iOS would otherwise put its own
+// selection / share bubble on top of it
+body.touch .info-callout-target,
+body.touch button {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+// ---------------------------------------------------------------------------
+// POPUPS: never taller than the viewport, always scrollable inside
+// Note: body always carries a theme class (.dark/.sunlit), so overrides of
+// themed rules use a body[class] prefix to match their specificity; this
+// module is imported last, so the cascade order decides.
+// The shell rules stay inside the small-layout media query: on desktop the
+// old overflow behavior lets hover callouts extend past the popup border.
+
+// popup backdrop: touches starting on it must not scroll the page behind
+#popup-overlay {
+	touch-action: none;
+	overscroll-behavior: contain;
+}
+
+@media screen and (max-width: 850px) {
+	div.popup {
+		box-sizing: border-box;
+		max-height: 94vh;
+		max-height: ~"calc(100dvh - 10px)";
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		overscroll-behavior: contain;
+		touch-action: pan-y;
+	}
+
+	// The game centres a popup by writing an inline top/left once, when it opens.
+	// Content that appears later - selecting a save slot reveals five more buttons -
+	// then grows the popup downward from a top that was correct for the old height,
+	// and the last row ends up below the screen with no way to reach it. Centring on
+	// the popup's own box instead costs nothing to recompute: the browser redoes it
+	// on every content change, and with the max-height above the popup cannot leave
+	// the viewport whatever it grows to.
+	// Not flex on #popup-overlay: jQuery writes display inline when it fades the
+	// overlay in and out, so a display rule here would need !important and would
+	// then stop the overlay hiding at all.
+	body[class] div.popup {
+		top: 50% !important;
+		left: 50% !important;
+		transform: translate(-50%, -50%);
+		max-width: 90%;
+	}
+
+	// keep confirm/close reachable inside tall scrolling popups; only the
+	// final row pins — mid-content button rows (fight popup) scroll normally
+	div.popup > .buttonbox:last-child {
+		position: sticky;
+		bottom: 0;
+		background: inherit;
+		padding: 5px 0;
+	}
+
+	body[class] #hotkeys-list {
+		max-height: 40vh;
+		max-height: 40dvh;
+	}
+
+	// ID strength: #game-stats-container's own 70vh rule beats any class
+	// selector; 190px covers title + sticky buttons + popup chrome so the
+	// popup itself never double-scrolls
+	body[class] #game-stats-container {
+		max-height: 65vh;
+		max-height: ~"calc(100dvh - 190px)";
+	}
+}
+
+// phone widths: popups go full-bleed via gridism's .fill-on-mobiles
+// (width/padding-left/right 0 all !important); keep a readable inset
+@media screen and (max-width: 568px) {
+	body[class] div.popup {
+		max-width: ~"calc(100% - 12px)";
+		padding: 14px 10px !important;
+	}
+
+	body[class] div.popup > h3:first-child {
+		margin-top: 0;
+	}
+
+	body[class] div.popup > h3 {
+		margin-bottom: 0.35em;
+	}
+
+	body[class] #common-popup-desc {
+		margin: 0.4em 0;
+	}
+
+	// action callouts otherwise clamp to their (now content-width) button
+	// and render as skinny 80-133px cards
+	body[class] div.btn-callout {
+		width: ~"max(100%, 200px)";
+		max-width: ~"min(280px, calc(100vw - 16px))";
+	}
+}
+
+// ---------------------------------------------------------------------------
+// INCOMING CARAVAN POPUP
+// Desktop metrics moved here from inline styles; 2x2 grid at phone width.
+
+#incoming-caravan-inventorybox {
+	display: flex;
+}
+
+#inventorylist-incoming-caravan-camp-inventory,
+#inventorylist-incoming-caravan-trader-inventory {
+	width: 170px;
+}
+
+#inventorylist-incoming-caravan-camp-offer,
+#inventorylist-incoming-caravan-trader-offer {
+	width: 130px;
+}
+
+// 680px: below this the four fixed-width divisions (600px total) no longer
+// fit the popup interior and flex-shrink squeezes them unpredictably
+@media screen and (max-width: 680px) {
+	#incoming-caravan-inventorybox {
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 5px;
+	}
+
+	#incoming-caravan-inventorybox .inventorydivision {
+		display: block;
+		width: 47% !important;
+	}
+}
+
+// result popups: cap the inventory management boxes on small screens
+// (replaces the dead .layout-mobile rule)
+.layout-small #resultlist-inventorymanagement .inventorybox {
+	max-width: 90vw;
+}
+
+// ---------------------------------------------------------------------------
+// MANAGE SAVES POPUP
+
+@media screen and (max-width: 568px) {
+	body[class] #manage-save-popup {
+		width: auto;
+		max-width: 100% !important;
+	}
+
+	body[class] #save-list-container {
+		flex-direction: column;
+	}
+
+	#manage-save-popup textarea {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// FIGHT POPUP: keep floating damage/status numbers inside the popup
+
+@media screen and (max-width: 568px) {
+	body[class] .fight-damage-indicator {
+		right: 0;
+	}
+
+	body[class] .fight-status-indicator {
+		right: 3em;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TAB BAR: pinned under the info bar, wrapping to an indented overflow row
+// UIOutHeaderSystem.updateLayout sets --l13-tabs-top to the info bar height
+// and pads #unit-main by the height of both.
+
+// The whole top chrome is one fixed block, built by
+// UIOutHeaderSystem.updateChromeGrouping. The tab bar simply follows the stats
+// bar inside it, so however many rows either grows, the tab bar cannot end up
+// behind the header - which is what a measured offset kept doing.
+body.layout-small #mobile-chrome {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 6;
+	background: var(--l13-mobile-bg);
+	// the bottom edge of the whole top chrome: the page scrolls under here
+	border-bottom: 3px solid var(--l13-mobile-divider);
+	box-shadow: 0 5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+
+body.layout-small #grid-switch {
+	position: static;
+	margin: 0;
+	background: var(--l13-mobile-bg);
+	padding-left: ~"env(safe-area-inset-left)";
+	padding-right: ~"env(safe-area-inset-right)";
+}
+
+body.layout-small #switch {
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+}
+
+// tabs flow as text so overflow wraps instead of scrolling. The hanging
+// indent (padding-left + negative text-indent) leaves row 1 flush and
+// indents every wrapped row, marking it as continuation.
+body.layout-small ul#switch-tabs {
+	display: block;
+	white-space: normal;
+	text-align: left;
+	// top padding keeps the notification bubbles (top: -6px) visible
+	padding: 8px 0 0 18px !important;
+	text-indent: -18px;
+}
+
+// !important because something in the load-and-unlock path writes an inline
+// display on a tab, and an inline style beats a stylesheet rule. Reported
+// twice from play: "outside" and "bag" correct on one row, "party" and "map"
+// each taking a full-width row of their own - which is what an li does when it
+// is block-level, and list-item is jQuery's fallback for an li it cannot
+// restore. The writer was not reproducible here; there is one correct display
+// for a tab in this layout, so it is stated rather than hoped for.
+//
+// Paired with the hide guard at the end of this rule set: an important author
+// declaration also beats jQuery's inline `display: none`, so without it a
+// hidden tab would show.
+body.layout-small ul#switch-tabs li {
+	display: inline-block !important;
+	text-indent: 0;
+	vertical-align: top;
+	// a row gap so wrapped rows do not sit tight against each other - without
+	// it the rows touch and the "!" markers overlap the row above
+	margin: 0 0 5px 0 !important;
+	top: 0;
+	border-radius: 0;
+	border-bottom-width: 1px !important;
+}
+
+// hide still means hide - see the section of that name at the end of the file
+body.layout-small ul#switch-tabs li[style*="display: none"],
+body.layout-small ul#switch-tabs li[style*="display:none"] {
+	display: none !important;
+}
+
+body.layout-small ul#switch-tabs li.selected {
+	padding-bottom: 5px;
+}
+
+// landscape: the info bar scrolls away, so the tabs must too. They are back
+// in flow there, so reorder them above the location title to keep the same
+// reading order as the pinned portrait layout.
+@media screen and (max-height: 480px) {
+	body.layout-small #grid-switch {
+		position: static;
+		border-bottom: none;
+	}
+
+	// setGameElementsVisibility writes display inline, so ordering needs
+	// !important to win. Safe: that same call hides the parent #grid-main,
+	// so this can never reveal the game during loading.
+	body.layout-small #unit-main {
+		display: flex !important;
+		flex-direction: column;
+	}
+
+	body.layout-small #mobile-header {
+		order: 1;
+	}
+
+	body.layout-small #grid-switch {
+		order: 2;
+	}
+
+	body.layout-small #grid-location {
+		order: 3;
+	}
+
+	body.layout-small #grid-switch-content {
+		order: 4;
+	}
+
+	// gridism gives .wrap .grid "margin: 0 auto", which is a no-op in block
+	// flow but shrink-wraps and centres a flex item
+	body.layout-small #unit-main > .grid {
+		margin-left: 0;
+		margin-right: 0;
+		align-self: stretch;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MOBILE HEADER: compact; sections flow inline and share rows instead of
+// each taking its own centered row. The ResizeObserver in UIOutHeaderSystem
+// keeps the content padding correct at any resulting height.
+
+// The info bar is a table of cells: a label over its value, three columns
+// in camp and two outside, with 1px rules between them. The rules are the
+// grid gap showing through the header background, so they need no borders
+// and stay correct however the cells wrap.
+body.layout-small #mobile-header {
+	display: grid;
+	position: static;
+	grid-template-columns: repeat(2, 1fr);
+	align-items: stretch;
+	gap: 1px;
+	// the inset is reserved once, by #mobile-chrome (see APP SHELL)
+	padding: 2px 0 0 0;
+	box-sizing: border-box;
+	max-width: 100%;
+	background: var(--l13-mobile-border);
+	// above the tab bar (5): callouts from the last header row hang down
+	// into the strip and would otherwise be painted over by it
+	z-index: 6;
+}
+
+body.layout-small.location-inside #mobile-header {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+// The section wrappers exist only to group markup. Dissolving them makes
+// each stat its own cell, and an empty section costs no cell and no rule.
+// Bag and party stay whole: the sketch puts each in a single cell.
+body.layout-small #mobile-header > div:not(#mobile-header-bag):not(#mobile-header-explorers),
+body.layout-small #mobile-header .statsbar-tribe-stats,
+body.layout-small #mobile-header .player-stats-container {
+	display: contents;
+}
+
+// a group with nothing in it would still take a cell
+body.layout-small #mobile-header > div > div:empty,
+body.layout-small #mobile-header > div > span:empty,
+body.layout-small #mobile-header > div > ul:empty {
+	display: none;
+}
+
+// a stat the game has switched off leaves its wrapper behind, which would
+// hold an empty cell open. data-visible is set by UIFunctions.toggle.
+body.layout-small #mobile-header .callout-container:has(.stat-indicator[data-visible="false"]),
+body.layout-small #mobile-header .info-callout-target-small:has(> .stat-indicator[data-visible="false"]) {
+	display: none;
+}
+
+// Named cells. Matching by depth would also catch the chips inside the
+// resource strips, which have to keep flowing inline.
+body.layout-small #statsbar-tribe-stats-mobile > .callout-container,
+body.layout-small #mobile-header .player-stats-container > .info-callout-target-small,
+body.layout-small #mobile-header-camp > .stat-indicator,
+body.layout-small #mobile-header-camp > .callout-container,
+body.layout-small #mobile-header-bag,
+body.layout-small #mobile-header-explorers {
+	display: block;
+	width: 100%;
+	background: var(--l13-mobile-bg);
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+// Which sections belong to which location. Doing this in CSS keeps the two
+// layouts exactly as designed regardless of when the game's own toggles run.
+body.layout-small.location-inside #mobile-header-bag,
+body.layout-small.location-inside #mobile-header-explorers,
+body.layout-small.location-outside #mobile-header-camp,
+body.layout-small.location-outside #mobile-header-camp-res {
+	display: none !important;
+}
+
+// ADVENTURER DETAIL
+// Health, vision and the gear numbers are the adventurer's own state, read
+// deliberately rather than watched between actions, so the small-layout header
+// leaves them off and the adventurer button reveals them. Health and the gear
+// numbers are off in both locations; vision is off in camp only, because
+// outside it is spent by the step and has to be watched. They stay in the markup and
+// stay current - UIOutHeaderSystem no longer toggles them at all - so opening
+// the panel costs a class and nothing else.
+//
+// !important throughout: every one of these is toggled through jQuery
+// somewhere, which writes an inline display that would otherwise win.
+//
+// Every selector here is scoped to #mobile-header, the gear strip's included.
+// Outside, the strip and the health cell are moved out of the header and into
+// the pane (see THE ADVENTURER DOCK); an unscoped rule would follow them there
+// and hide them, where the whole point is that they show.
+body.layout-small #mobile-header #container-equipment-stats-mobile,
+body.layout-small #mobile-header .info-callout-target-small:has(> .stat-indicator-health),
+body.layout-small.location-inside #mobile-header .info-callout-target-small:has(> .stat-indicator-vision) {
+	display: none !important;
+}
+
+body.layout-small.adventurer-open #mobile-header .info-callout-target-small:has(> .stat-indicator-health),
+body.layout-small.adventurer-open #mobile-header .info-callout-target-small:has(> .stat-indicator-vision) {
+	// a named cell, like every other stat in the header
+	display: block !important;
+}
+
+// the gear numbers read as one wide row rather than a column of cells - the
+// strip rule further down already says how, this only turns it on
+body.layout-small.adventurer-open #mobile-header #container-equipment-stats-mobile {
+	display: flex !important;
+}
+
+// THE ADVENTURER DOCK
+// Where health and the gear numbers are read outside. The chip above reveals
+// them in the header on every other tab; on the exploration tab they are moved
+// into the pane instead (UIOutHeaderSystem.updateAdventurerDockPlacement) and
+// the chip is hidden, because a control that reveals what is already on screen
+// is one more thing to press past.
+//
+// The pane is the band this layout has spent ten migrations emptying. What is
+// left there shows rarely - a collector to upgrade, a beacon to dismantle - and
+// the dock is the last element in it, so on those passes the content keeps the
+// top and these numbers fall below it.
+//
+// Empty is the undocked state, and an empty flex box would still hold its
+// margin open.
+#out-adventurer:empty {
+	display: none;
+}
+
+// flex-start, not stretch: a cell that stretched to the height of the gear
+// grid beside it would be a tall box with one line of text at the top of it.
+body.layout-small #out-adventurer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 4px;
+	margin-top: 4px;
+}
+
+// The cells keep the header's background and its quiet label, so reading them
+// does not feel like a different part of the game. What they do not keep is the
+// header's label-above-value stack: the header is a grid of narrow columns and
+// needs the height, this is one short row and the stack cost 23px of a band
+// that has 160.
+body.layout-small #out-adventurer > .info-callout-target-small {
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	background: var(--l13-mobile-bg);
+	box-sizing: border-box;
+}
+
+body.layout-small #out-adventurer .stat-indicator {
+	white-space: nowrap;
+}
+
+body.layout-small #out-adventurer .stat-indicator > .label {
+	display: inline;
+	font-size: 0.8rem;
+	opacity: 0.75;
+}
+
+body.layout-small #out-adventurer .stats-value-container {
+	display: inline;
+	margin-left: 3px;
+}
+
+// The gear numbers are an icon-and-number strip, as in the header. It takes a
+// row of its own: squeezing it in beside the health cell was tried and is a
+// loss - at 280px the chips wrap three deep instead of two, which costs more
+// height than the row it saves.
+body.layout-small #out-adventurer > .container-equipment-stats {
+	flex: 1 1 100%;
+	min-width: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	padding: 2px 4px;
+	background: var(--l13-mobile-bg);
+	box-sizing: border-box;
+}
+
+body.layout-small #out-adventurer .container-equipment-stats > * {
+	width: auto;
+	flex: 0 0 auto;
+}
+
+// invisible chrome must not stay tappable while the player is down - the cells
+// are callout targets, and .hidden-when-down only takes the opacity to 0
+body.vision-step-0 #out-adventurer {
+	pointer-events: none;
+}
+
+// The control is a chip at the right end of the location banner, not a cell in
+// the header grid. Two reasons. The banner is the one row on screen on every
+// tab and in both locations, so the button reaches outside as well as camp; and
+// a bare word sitting in a grid of stats read as another stat rather than as
+// something to press. The banner holds one short title, so the room is free.
+// The margin is the base button's 4px, which the banner cannot afford: without
+// it the chip is exactly as tall as the level icon and the row costs nothing.
+// border-radius carries !important because btn-meta squares its corners with
+// one of its own. Opacity is left alone - the vision system writes it inline on
+// .hidden-when-down, and the chip has to fade out with the rest when the player
+// is down.
+body.layout-small #grid-location-header > #btn-adventurer {
+	flex: 0 0 auto;
+	margin: 0 0 0 auto;
+	min-height: 0;
+	padding: 2px 8px;
+	font-size: 0.72rem;
+	line-height: 1.4;
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 11px !important;
+	background: var(--l13-mobile-bg);
+}
+
+// open: the chip inverts. Underlining a word says "link"; the point of the
+// change was that this is a control with a state.
+body.layout-small.adventurer-open #grid-location-header > #btn-adventurer {
+	background: var(--l13-mobile-badge-bg);
+	color: var(--l13-mobile-badge-fg);
+	border-color: var(--l13-mobile-badge-bg);
+}
+
+// The chip is small on purpose; the tap target is not. Up is the safe-area
+// padding above the chrome, and right is the screen edge. Not down: the stats
+// start immediately below and their first row is a callout target of its own.
+//
+// Not left either, any more. The room chip sits immediately to the left and
+// takes all the slack, so there is no gap to claim - a 9px reach would land on
+// the chip's ellipsis, and this button is later in the DOM so it would win.
+// Tapping the end of the room name would have opened the adventurer.
+body.touch #grid-location-header > #btn-adventurer::after {
+	content: "";
+	position: absolute;
+	inset: -9px -9px 0 0;
+	border-radius: 20px 20px 0 0;
+}
+
+// invisible chrome must not stay tappable while the player is "down"
+body.vision-step-0 #btn-adventurer {
+	pointer-events: none;
+}
+
+// THE ROOM CHIP
+// The room name was an h2 in the scrolling page, where it left the screen as
+// soon as the player read anything below it. In the banner it is on screen on
+// every tab, and it is the control that opens the description.
+//
+// It takes what the title and the adventurer chip leave, and ellipsises. A
+// sector header runs as long as "A narrow dark alley with camp", and the
+// alternative - a second banner row - costs a band of fixed chrome on every
+// screen, which the small layout has spent several commits reclaiming.
+body.layout-small #grid-location-header > #btn-room {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+	padding: 2px 8px;
+	overflow: hidden;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.8rem;
+	line-height: 1.4;
+	min-height: 0;
+	border: 1px solid var(--l13-mobile-border);
+	// btn-meta squares its own corners with an !important of its own
+	border-radius: 11px !important;
+	background: var(--l13-mobile-bg);
+}
+
+// The chip holds the room name and nothing else. It carried the scavenged
+// percentage for one release; that figure now reads from the finds row at the
+// bottom of the screen, next to the thumb that is doing the scavenging.
+body.layout-small #grid-location-header > #btn-room {
+	display: flex;
+	align-items: baseline;
+	gap: 4px;
+}
+
+// Caps, as the default client sets its headers.
+body.layout-small #grid-location-header > #btn-room > #btn-room-name {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-transform: uppercase;
+}
+
+// open: the chip inverts, the same way the adventurer chip does. It is a
+// control with a state, and underlining it would say "link" instead.
+body.layout-small.room-panel-open #grid-location-header > #btn-room {
+	background: var(--l13-mobile-badge-bg);
+	color: var(--l13-mobile-badge-fg);
+	border-color: var(--l13-mobile-badge-bg);
+}
+
+// the chip is small; the tap target is not. Up is the safe-area padding above
+// the chrome. Not down - the stats row below is a callout target of its own.
+body.touch #grid-location-header > #btn-room::after {
+	content: "";
+	position: absolute;
+	inset: -9px 0 0 0;
+}
+
+// invisible chrome must not stay tappable while the player is "down"
+body.vision-step-0 #btn-room {
+	pointer-events: none;
+}
+
+// the name is in the banner now, so the copy in the page is a repeat
+body.layout-small #header-sector {
+	display: none;
+}
+
+// THE OVERLAY COLUMN
+// The room panel and the log toasts both belong under the chrome, and both had
+// the same fixed box - same top, same sides, same z-index - so whichever came
+// later in the document simply covered the other. Arriving somewhere new is
+// exactly when the panel opens AND when the game fires an ambient log message,
+// so in normal exploration every card spent its life behind the panel.
+//
+// One fixed column holds them both instead, and they stack in ordinary flow:
+// panel first, cards under it. No z-index between them to get wrong, and no
+// measuring - the panel's height is whatever it is, and the cards follow.
+//
+// The column takes no taps; the panel and the cards each take their own, so
+// the gaps stay transparent to the page underneath.
+#mobile-overlays {
+	display: none;
+}
+
+body.layout-small #mobile-overlays {
+	display: block;
+	position: fixed;
+	top: var(--l13-chrome-height, 0px);
+	left: 10px;
+	right: 10px;
+	// Over the bottom chrome, not squeezed above it. The action bar and the map
+	// panel are fixed bands at 8 and 9, so anything below that is trapped in
+	// whatever gap they leave - and on the exploration tab that gap is small,
+	// which left the description scrolling inside a sliver. 10 clears them and
+	// still passes under the popup overlay at 15.
+	z-index: 10;
+	// the whole screen below the chrome is available; the panel takes what its
+	// text needs and no more
+	max-height: ~"calc(100dvh - var(--l13-chrome-height, 0px) - 20px)";
+	pointer-events: none;
+}
+
+// landscape is the map and nothing else
+body.landscape-map #mobile-overlays {
+	display: none;
+}
+
+// THE ROOM PANEL
+// The description was several paragraphs in the middle of the scrolling page,
+// above the compass and the buttons the player reaches for between moves. It
+// rides at the top of the overlay column instead. See
+// UIFunctions.toggleRoomPanel.
+
+#room-panel {
+	display: none;
+}
+
+body.layout-small.room-panel-open #room-panel {
+	display: block;
+	// positioned by #mobile-overlays, which stacks it above the toasts.
+	// relative because the close button is absolute against it.
+	position: relative;
+	margin-top: 6px;
+	padding: 8px 10px 10px 10px;
+	box-sizing: border-box;
+	// It sizes to its text. The cap only bites on an unusually long
+	// description, and leaves ~100px so a card or two still shows beneath even
+	// then. It is NOT held above the bottom chrome any more: doing that left
+	// the description scrolling inside a sliver on the exploration tab, where
+	// the action bar and the map panel take most of the screen.
+	max-height: ~"calc(100dvh - var(--l13-chrome-height, 0px) - 100px)";
+	overflow-y: auto;
+	// it is the one thing here that takes taps
+	pointer-events: auto;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+}
+
+// Invisible chrome takes no room and no taps.
+//
+// .hidden-when-down only takes the opacity to 0, so while the player was down
+// this panel still held its height and its taps at the top of the overlay
+// column. That cost nothing while the toasts below it were invisible too. They
+// are not any more - the opening of the game is entirely vision-step-0 - so an
+// invisible box would push the cards down the screen and put an invisible
+// tap-eating band above them, whose only effect is to close a panel nobody can
+// see.
+body.layout-small.room-panel-open.vision-step-0 #room-panel {
+	display: none;
+}
+
+body.layout-small #room-panel #out-desc {
+	margin: 0;
+}
+
+body.layout-small #room-panel #out-desc p {
+	margin: 0 0 6px 0;
+}
+
+body.layout-small #room-panel #out-desc p:last-child {
+	margin-bottom: 0;
+}
+
+#btn-room-panel-close {
+	display: none;
+}
+
+// No close button on a phone. Any tap already closes this panel, so the button
+// only duplicated the gesture and cost a box in the corner of the text. The
+// element stays in the markup for the regular layout, where the base rule
+// keeps it hidden anyway.
+
+// landscape is the map and nothing else
+body.landscape-map #room-panel {
+	display: none !important;
+}
+
+// a cell: the label sits over its value, both centred. Two lines per cell
+// is the point of the layout, so the type is tightened to pay for it.
+body.layout-small #mobile-header .stat-indicator {
+	display: block;
+	text-align: center;
+	padding: 2px 4px;
+	line-height: 1.15;
+	white-space: normal;
+	background: var(--l13-mobile-bg);
+}
+
+body.layout-small #mobile-header .stat-indicator > .label,
+body.layout-small #mobile-header .stats-value-container {
+	display: block;
+}
+
+// a fractional amount ("8.5" instead of "8") makes the value run wider than
+// the cell, and it broke at the bare " / " text node between the value and
+// its total, dropping the total onto its own row. The separator sits directly
+// in the indicator, so nowrap has to go there; the label is a block above it
+// and keeps its own wrapping.
+body.layout-small #mobile-header .stat-indicator,
+body.layout-small #mobile-header .res {
+	white-space: nowrap;
+}
+
+body.layout-small #mobile-header .stat-indicator > .label {
+	white-space: normal;
+}
+
+body.layout-small #mobile-header .stat-indicator > .label {
+	font-size: 0.8rem;
+	opacity: 0.75;
+}
+
+// strips that read as one wide row rather than a column of cells
+body.layout-small #statsbar-resources-mobile,
+body.layout-small #mobile-header > div > .container-equipment-stats,
+body.layout-small #mobile-header-status > .itemlist,
+body.layout-small #mobile-header > div > .notification-player {
+	grid-column: ~"1 / -1";
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	padding: 2px 0;
+	background: var(--l13-mobile-bg);
+	box-sizing: border-box;
+}
+
+// The perk and status icons had a full-width strip to themselves, and whatever
+// followed left its neighbour cells empty - two rows of pinned chrome for one
+// row of content. Let the strip take those cells instead: it is the last thing
+// before the bag outside and before the camp stats in camp, so auto-placement
+// puts them side by side either way. Every row saved here is a row the player
+// can read in.
+body.layout-small #mobile-header-status > .itemlist {
+	grid-column: auto;
+}
+
+// chips inside a strip size to their own content
+body.layout-small #statsbar-resources-mobile > .callout-container,
+body.layout-small #mobile-header .container-equipment-stats > * {
+	width: auto;
+	flex: 0 0 auto;
+}
+
+// bag and party are single cells side by side (see the outside layout)
+body.layout-small #mobile-header-bag,
+body.layout-small #mobile-header-explorers {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 3px 4px;
+}
+
+body.layout-small #mobile-header-bag > *,
+body.layout-small #mobile-header-explorers > * {
+	background: none;
+	padding: 0;
+	max-width: 100%;
+}
+
+body.layout-small #mobile-header-bag .bag-resources,
+body.layout-small #mobile-header-bag .itemlist,
+body.layout-small #mobile-header-explorers .itemlist {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+}
+
+// the party cell carries its own label, like every other cell
+body.layout-small #mobile-header-explorers::before {
+	content: "party";
+	text-transform: lowercase;
+}
+
+// no party, no cell (the list keeps its old chips while hidden, so the
+// game's own visibility flag has to be checked too)
+body.layout-small #mobile-header-explorers:not(:has(li)),
+body.layout-small #mobile-header-explorers:has(> ul[data-visible="false"]) {
+	display: none;
+}
+
+// perk and status chips are tap targets, but 44px of padding each makes
+// them the tallest row in the header: shrink the visual, keep the hit area
+body.layout-small #mobile-header .item {
+	padding: 3px;
+}
+
+// The tap handler is delegated from `.info-callout-target`, and on a perk or
+// status chip that target is only the 16px icon inside a 28px li. The halo
+// that widens it has to belong to the target itself: hung off the li it
+// covered the target instead, so every tap on a debuff resolved to the li and
+// no tooltip ever opened. (Resource chips were unaffected - their halo sits
+// on .res, which is inside the target.)
+body.touch #mobile-header .item .info-callout-target {
+	display: block;
+	position: relative;
+}
+
+body.touch #mobile-header .item .info-callout-target::after {
+	content: "";
+	position: absolute;
+	inset: -8px -6px;
+}
+
+body.layout-small #mobile-header .notification-player {
+	margin-top: 2px;
+}
+
+// in camp the fight/movement equipment stats are not actionable; save the row.
+// Scoped to the header for the same reason as the rule above.
+body.layout-small.location-inside #mobile-header #container-equipment-stats-mobile {
+	display: none;
+}
+
+#container-equipment-stats-mobile .stat-indicator-secondary {
+	margin: 0 4px;
+}
+
+#mobile-header .itemlist {
+	margin: 0;
+	padding: 0;
+}
+
+body.layout-small #statsbar-deity-mobile {
+	text-align: center;
+	padding: 0 6px;
+}
+
+// in short (landscape) viewports the fixed header would eat most of the
+// screen; let it scroll away with the page instead
+@media screen and (max-height: 480px) {
+	body.layout-small #mobile-chrome {
+		position: static;
+		border-bottom: none;
+		box-shadow: none;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// PINNED ACTION BAR
+// Long single-action pages (embark, milestones, colony launch) keep their one
+// main action pinned to the bottom of the screen, so it never has to be
+// scrolled to. The page keeps its own copy at the end of the content.
+// Desktop shows those pages in full, so it keeps one copy and no bar.
+
+.action-mirror {
+	display: none;
+}
+
+body.layout-small .action-mirror {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 8px;
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 9;
+	margin: 0;
+	// the bottom inset clears the phone's home indicator and browser chrome
+	padding: 8px ~"calc(10px + env(safe-area-inset-right))" ~"calc(8px + env(safe-area-inset-bottom))" ~"calc(10px + env(safe-area-inset-left))";
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	// matches the top chrome's edge, cast the other way
+	border-top: 3px solid var(--l13-mobile-divider);
+	box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+
+// ...and on embark the page's own copy of the button goes with it. The bar is
+// on screen the whole time, so the second "Go" is one more thing to scroll
+// past and one more thing to mis-tap. Its warning stays: that belongs with the
+// packing list it is about, not with the button.
+//
+// min-height and not a plain rule: the bar goes static below 480px tall (see
+// the landscape block further down), and where it is static the copy at the
+// end of the content is a real convenience again. The two thresholds are one
+// decision - move both together.
+//
+// !important because createButtons wraps the button in a container and the
+// game writes an inline display on the pair.
+@media screen and (min-height: 481px) {
+	body.layout-small #in-action-leave,
+	body.layout-small .container-btn-action:has(> #in-action-leave) {
+		display: none !important;
+	}
+}
+
+// The reading order of the exploration tab. Scavenge, scout, the collectors
+// and the compass are all in the docked bands at the bottom of the screen now,
+// so the pane no longer has to lead with controls to keep them reachable - it
+// can lead with what the player is reading it for. Level, then the figures,
+// then where you are, then what else you can do here.
+body.layout-small.tab-switch-out #grid-switch-content {
+	display: flex;
+	flex-direction: column;
+}
+
+// gridism gives .wrap .grid auto side margins, which shrink-wrap a flex item
+body.layout-small.tab-switch-out #grid-switch-content > .grid {
+	margin-left: 0;
+	margin-right: 0;
+	align-self: stretch;
+}
+
+// The pane is a fixed-height column now (see APP SHELL), and a flex child in a
+// constrained column shrinks to fit rather than overflowing - the tab squashed
+// itself into the visible band instead of scrolling. Nothing in here may
+// shrink: overflow is exactly what the pane is for.
+body.layout-small.tab-switch-out #grid-switch-content > * {
+	flex-shrink: 0;
+}
+
+body.layout-small.tab-switch-out #container-tab-two-out {
+	order: 1;
+	// a .tabcontainer, so setTab shows it through jQuery on every tab change
+	// and an inline `display` would beat this
+	display: flex !important;
+	flex-direction: column;
+}
+
+body.layout-small.tab-switch-out #container-tab-two-out-actions {
+	order: 2;
+}
+
+// Being last in the markup is not enough here. The pane is a flex column and
+// its other children carry an explicit order, so the dock's default of 0 put it
+// ahead of both of them - it read as the top of the pane, and the room figures
+// appeared underneath the numbers they are meant to push down.
+body.layout-small.tab-switch-out #out-adventurer {
+	order: 3;
+}
+
+body.layout-small.tab-switch-out #container-tab-two-out > .unit-rest {
+	order: 1;
+	// so the figures can be ordered ahead of the header they used to follow
+	display: flex;
+	flex-direction: column;
+}
+
+// The figures come before the prose: what has been taken from this sector and
+// what is left is what a player checks before scavenging it again, and it was
+// at the far end of a paragraph they had to scroll through to reach.
+body.layout-small.tab-switch-out #out-desc-stats {
+	order: 1;
+	margin-bottom: 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--l13-mobile-border);
+}
+
+// an unscouted sector has no figures, and a rule of its own
+body.layout-small.tab-switch-out #out-desc-stats:empty {
+	display: none;
+}
+
+// With the figures gone and the sector h2 replaced by the banner chip, this
+// block is 16px of padding around two hidden elements - and it sits directly
+// above the adventurer dock, which is the one thing left in the pane. The band
+// is 160px, and those 16px were enough to push the last row of gear numbers off
+// the bottom of it.
+//
+// Keyed on :empty, the same condition that hides the figures: the moment a
+// sector has something to report the padding comes back with it, and the
+// numbers move down to make room. That is the intended order - real content
+// first, the adventurer under it.
+//
+// !important because the ≤568px block gives div.grid.tabcontainer > .unit its
+// padding with one, and no amount of specificity beats that.
+body.layout-small.tab-switch-out #container-tab-two-out > .unit:has(> #out-desc-stats:empty) {
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+}
+
+body.layout-small.tab-switch-out #header-sector {
+	order: 2;
+}
+
+body.layout-small.tab-switch-out #out-desc {
+	order: 3;
+}
+
+// The figures themselves, on every layout: two columns, so the values line up
+// down one edge instead of starting wherever the label happened to end. That
+// alignment is the reason they are a table and no longer a run of lines.
+table.sector-stats {
+	margin: 4px 0;
+	border-collapse: collapse;
+}
+
+table.sector-stats td {
+	padding: 1px 0;
+	vertical-align: top;
+}
+
+table.sector-stats .sector-stats-label {
+	padding-right: 12px;
+	white-space: nowrap;
+	opacity: 0.75;
+}
+
+// full width with a shrink-to-fit label column: the values start in one place
+// however long the widest label is, and long lists still get the rest of the
+// row to wrap into
+body.layout-small #out-desc-stats table.sector-stats {
+	width: 100%;
+}
+
+body.layout-small #out-desc-stats .sector-stats-label {
+	width: 1%;
+}
+
+// The map is the thing you check between every move, and it sat at the far end
+// of the tab. Pin it to the bottom of the screen instead.
+//
+// UIOutHeaderSystem measures it, with the action bar, into
+// --l13-out-bottom-height. The log pill clears that height, and
+// getPinnedBottomHeight reads it to keep tooltips off both bands.
+body.layout-small.tab-switch-out #out-container-compass {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 8;
+	order: 2;
+	margin: 0;
+	// gridism pads tabcontainer units by 10px each side with !important, which
+	// is 20px the controls column cannot spare next to a 226px map
+	padding: 4px 5px ~"calc(4px + env(safe-area-inset-bottom))" 5px !important;
+	text-align: center;
+	background: var(--l13-mobile-bg);
+	// the bottom chrome's edge, matching the top one
+	border-top: 3px solid var(--l13-mobile-divider);
+	box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
+
+	// Two named rows: the map column that UIOutHeaderSystem builds beside the
+	// controls it moves in, then the meta strip under both. Grid and not a flex
+	// row because every child is assigned its cell outright - the controls can
+	// never end up underneath the map, at any width, whatever the map measures,
+	// and document order decides nothing. That last part matters: two different
+	// methods append to this panel, so whoever runs last would otherwise win.
+	//
+	// !important because the panel is shown and hidden through jQuery, which
+	// writes an inline `display` when it restores an element - and an inline
+	// style beats a stylesheet. That is the only way this rule's `position` and
+	// `border-top` could land while its `display` did not, which is exactly
+	// what a phone was showing: pinned, bordered, and stacked. An important
+	// author declaration outranks a normal inline style, so it cannot happen
+	// again whatever writes the attribute.
+	display: grid !important;
+	grid-template-columns: 126px minmax(0, 1fr);
+	// The finds row spans both columns above the map and the controls.
+	// Named, like every other child here: this panel is a grid precisely so
+	// that document order decides nothing, and a child without an area of its
+	// own auto-places into an implicit row at the BOTTOM - which is where this
+	// one first landed, under the minimap instead of above it.
+	grid-template-areas:
+		"finds finds"
+		"map controls"
+		"meta meta";
+	// a last-resort bound: if the panel ever fails again it scrolls its own
+	// content instead of swallowing the screen and leaving nothing to read
+	max-height: 42vh;
+	overflow-y: auto;
+	align-items: center;
+	gap: 6px;
+	box-sizing: border-box;
+}
+
+// The map column is sized outright rather than from its content. `auto` had to
+// be resolved from a map that is scaled with `zoom`, and an engine is free to
+// measure that either before or after the scale - which is the one thing that
+// could still push the controls out of the row. 126px is the 226px map at 0.56
+// plus a little slack.
+body.layout-small.tab-switch-out #out-container-compass > #out-map-column {
+	grid-area: map;
+	width: 126px;
+	min-width: 126px;
+	max-width: 126px;
+	box-sizing: border-box;
+}
+
+body.layout-small.tab-switch-out #out-container-compass > #out-container-compass-actions {
+	grid-area: controls;
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+// The bottom row of the panel: version, save and restart at one end, the log
+// pill at the other. Both used to float over the scrolling pane, which on a
+// phone means they cover whatever is under them; here they are out of the
+// scroll entirely and never move.
+body.layout-small.tab-switch-out #out-container-compass > #out-panel-meta {
+	grid-area: meta;
+	width: 100%;
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	// the unread badge hangs 7px off the top corner of the pill, and the panel
+	// clips (overflow-y: auto computes overflow-x to auto as well). This, plus
+	// the grid gap above, is the room it needs.
+	padding-top: 6px;
+	border-top: 1px solid var(--l13-mobile-border);
+	box-sizing: border-box;
+}
+
+// An empty strip is still a strip: it would leave its top border in the panel
+// as a divider under nothing. It empties whenever the two occupants go back
+// where they came from - landscape, and the out tab before scout is unlocked.
+//
+// The first selector exists only to outrank the panel rule above, which is
+// more specific than the layout-small one and would otherwise keep the flex.
+body.layout-small.tab-switch-out #out-container-compass > #out-panel-meta:empty,
+body.layout-small #out-panel-meta:empty {
+	display: none;
+}
+
+body.layout-small #out-panel-meta > #footer {
+	flex: 1 1 auto;
+	min-width: 0;
+	width: auto;
+	height: auto;
+	margin: 0;
+	// The 84px reserved for the floating pill goes: it is a sibling in this row
+	// now, so there is nothing to reserve for. !important because #footer is a
+	// gridism .unit, and gridism pads the first unit in a grid 15px on the left
+	// with !important of its own - the same fight #unit-main has above.
+	padding: 0 !important;
+	gap: 6px;
+}
+
+// The message slot grows to fill the footer, which at this width pushed save
+// and restart onto a second row and made the whole panel taller. Give it a
+// zero basis instead: it takes what is left over rather than claiming it, so
+// the version and the buttons share one row, and a message that does arrive
+// truncates rather than reflowing the panel under the player's thumb.
+body.layout-small #out-panel-meta > #footer > #game-msg {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+body.layout-small #out-panel-meta > #btn-log-toggle {
+	// out of the fixed layer and into the row
+	position: relative;
+	right: auto;
+	bottom: auto;
+	flex: 0 0 auto;
+	// the badge needs the same room on the right as the strip gives it above
+	margin: 0 8px 0 0;
+	min-height: 32px;
+	padding: 4px 12px;
+}
+
+// The minimap is a fixed 226px block - the canvas has a hard 198px minimum, so
+// it cannot be made responsive from css. Scaled down it always leaves room for
+// the compass beside it, at every phone width, and the panel stops eating a
+// third of the screen. `zoom` and not `transform` because zoom scales layout
+// and hit testing together, so the map's own tap targets stay true.
+// scoped to both possible parents, so a stale script that has not built the
+// map column yet still gets a scaled map rather than a full-width one
+body.layout-small.tab-switch-out #out-map-column > #minimap-background-container,
+body.layout-small.tab-switch-out #out-container-compass > #minimap-background-container {
+	zoom: 0.56;
+}
+
+body.layout-small.tab-switch-out #out-map-column > .infobox,
+body.layout-small.tab-switch-out #out-container-compass > .infobox {
+	margin: 2px 0 0 0;
+	padding: 0;
+	// position and distance are a two-line readout under the map; at reading
+	// size they cost as much height as another row of the compass
+	font-size: 0.72rem;
+	line-height: 1.25;
+}
+
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions {
+	padding: 0;
+	margin: 0;
+	// !important because the game shows and hides this with jQuery, which
+	// writes an inline display that would beat the row below; the guard at the
+	// end of the file keeps the hide working
+	display: flex !important;
+}
+
+// the panel is the compass now; the heading over it is a wasted row
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions h3 {
+	display: none;
+}
+
+// 40px keeps the 3x3 grid inside the ~150px column left beside the map.
+// The invisible hit halo on each compass button keeps the target above 44px.
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement button.action-move {
+	width: 40px;
+	min-width: 40px;
+}
+
+// the cell padding is 12px across the row the column cannot spare; the hit
+// halo on each button covers the gap it used to make
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement td {
+	padding: 0;
+}
+
+// The panel and the stats bar are both fixed, and between them they were
+// leaving about 200px of screen to read the game in. The compass buttons
+// cannot shrink - 44px is the touch target - so the height has to come from
+// the stacking instead: "back to camp" and the level moves sit BESIDE the
+// compass rather than under it. The column is about 235px wide and the
+// compass needs 132 of it, which is enough for a stacked button beside it.
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+}
+
+body.layout-small.tab-switch-out #out-container-compass #table-out-actions-movement {
+	margin: 0;
+	flex: 0 0 auto;
+	border-spacing: 0;
+}
+
+body.layout-small.tab-switch-out #out-container-compass #out-actions-movement {
+	margin-top: 0;
+	gap: 2px;
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+body.layout-small.tab-switch-out #out-container-compass #out-actions-movement button {
+	width: 100%;
+	max-width: 150px;
+	// the label wraps in the narrower column, so let the line close up
+	line-height: 1.15;
+	padding: 6px 4px;
+}
+
+// "(4 blocks)" under the camp button: worth keeping, not worth a line of
+// leading above and below it
+body.layout-small.tab-switch-out #out-container-compass #out-action-move-camp-details {
+	margin: 1px 0 0 0;
+	font-size: 0.72rem;
+	line-height: 1.1;
+}
+
+
+// the map panel is the next item in the shell column, so the pane simply ends
+// where it begins - nothing to measure (see APP SHELL)
+body.layout-small.tab-switch-out #grid-switch-content {
+	padding-bottom: 8px;
+}
+
+// Before scout is unlocked there is no map panel, so the pill has nowhere to
+// dock and floats over the pane as it does on every other tab. It still has to
+// clear the action bar, which is the whole of the bottom chrome at that point.
+body.layout-small.tab-switch-out #btn-log-toggle {
+	bottom: ~"calc(var(--l13-out-bottom-height, 300px) + 12px)";
+}
+
+// The bar is a band of the column on these tabs too now, so the pane simply
+// ends where it begins and there is nothing to reserve for it - the 76px that
+// used to clear a fixed bar would be 76px of dead scroll. The only layout where
+// the bar is still fixed is the short-viewport one below, and that block zeroes
+// this padding for its own reasons.
+body.layout-small.tab-switch-embark #grid-switch-content,
+body.layout-small.tab-switch-milestones #grid-switch-content,
+body.layout-small.tab-switch-projects #grid-switch-content {
+	padding-bottom: 8px;
+}
+
+// A bar whose own section is hidden. Docking lifts a mirror out of its tab and
+// hangs it off the shell column, where the container's display no longer
+// reaches it, so the section that owns the bar says here whether it is wanted.
+// UIOutProjectsSystem sets this on the Launch bar, which otherwise held a band
+// of bottom chrome on the projects tab from the first camp to the last.
+body.layout-small .action-mirror.action-mirror-hidden {
+	display: none;
+}
+
+// and the floating log pill sits above the bar rather than on top of it. The
+// bar is measured into --l13-out-bottom-height with every other bottom band,
+// so this is the same sum the exploration tab uses.
+body.layout-small.tab-switch-embark #btn-log-toggle,
+body.layout-small.tab-switch-milestones #btn-log-toggle,
+body.layout-small.tab-switch-projects #btn-log-toggle {
+	bottom: ~"calc(var(--l13-out-bottom-height, 72px) + 12px)";
+}
+
+// With the drawer open there is no bottom chrome left to clear - the drawer
+// covers all of it - so the pill drops back to the corner the drawer's own
+// bottom padding keeps clear for it. Each selector names its tab rather than
+// relying on source order to outrank the rules above.
+body.layout-small.log-drawer-open.tab-switch-out #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-embark #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-milestones #btn-log-toggle,
+body.layout-small.log-drawer-open.tab-switch-projects #btn-log-toggle {
+	bottom: ~"calc(12px + env(safe-area-inset-bottom))";
+}
+
+// landscape: a fixed bar would eat a 390px-tall viewport, so it flows
+@media screen and (max-height: 480px) {
+	body.layout-small .action-mirror {
+		position: static;
+		border-top: none;
+		padding: 0 0 10px 0;
+		justify-content: flex-start;
+	}
+
+	body.layout-small.tab-switch-embark #grid-switch-content,
+	body.layout-small.tab-switch-milestones #grid-switch-content,
+	body.layout-small.tab-switch-projects #grid-switch-content {
+		padding-bottom: 0;
+	}
+
+	// a pinned map would leave nothing to scroll in a 390px-tall viewport
+	body.layout-small.tab-switch-out #out-container-compass {
+		position: static;
+		border-top: none;
+		padding: 0;
+	}
+
+	body.layout-small.tab-switch-out #grid-switch-content {
+		padding-bottom: 0;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LAYOUT DENSITY AT SMALL WIDTHS
+
+// mobile type scale: h1 22 / h2 18.4 / h3 16.8 / body 16 (unchanged).
+// Headings are Arial Narrow uppercase and keep hierarchy at these sizes.
+// The fixed 21.6px body line-height overlaps wrapped 32px headings, so
+// headings also get their own unitless line-height.
+@media screen and (max-width: 850px) {
+	body[class] h1 {
+		font-size: 1.375em;
+		margin: 0.3em 0;
+	}
+
+	body[class] h2 {
+		font-size: 1.15em;
+		margin: 0.4em 0;
+	}
+
+	body[class] h3 {
+		font-size: 1.05em;
+		margin: 0.75em 0 0.4em 0;
+	}
+
+	body[class] h1,
+	body[class] h2,
+	body[class] h3 {
+		line-height: 1.2;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LOCATION TITLE
+// Which level you are on does not change while you read, so it is chrome now
+// rather than the first thing in the scroll - UIOutHeaderSystem docks it at the
+// top of #mobile-chrome, above the stats. It has to pay for the band it holds:
+// the title comes down from the 22px heading scale to body size and the icon
+// comes down to match, which is about half the row the desktop layout takes.
+
+body.layout-small #mobile-chrome > #grid-location {
+	margin: 0;
+	background: var(--l13-mobile-bg);
+}
+
+// One row either way - docked in the chrome or still in the pane, where the
+// short-viewport layout leaves it - because the adventurer chip rides at the
+// right end of it and has to have a row to ride on.
+body.layout-small #grid-location-header {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	// where the title is still in the pane, it just sits close to what is above
+	padding-top: 2px;
+}
+
+// gridism pads the first .unit in a .grid 15px on the left with !important of
+// its own, and #grid-location-header is that unit
+body.layout-small #mobile-chrome #grid-location-header {
+	padding: 3px 10px !important;
+}
+
+// a long camp name must not push the icon or the chip off its own row
+body.layout-small #grid-location-header h1 {
+	margin: 0;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+// Outside, this heading is "LEVEL 11" and the chip beside it holds a room name
+// that can be any length - so the heading is not the thing that should give
+// way. It did: at 393px the banner read "LEVE..." and the level number, which
+// is the one number always on screen, was the part that got cut.
+//
+// In camp there is no chip, the heading is a camp name of any length, and the
+// ellipsis above is exactly right. So this is scoped to being outside.
+body.layout-small.location-outside #grid-location-header h1 {
+	flex: 0 0 auto;
+	overflow: visible;
+}
+
+body.layout-small #mobile-chrome #grid-location-header h1 {
+	font-size: 1rem;
+	line-height: 1.2;
+}
+
+body.layout-small #mobile-chrome #level-icon {
+	width: 20px;
+	height: 20px;
+	margin: 0;
+}
+
+// the icon's callout is placed from the width of its target, so the wrapper
+// has to stay the width of the icon rather than stretching to the row
+body.layout-small #mobile-chrome #grid-location-header > .callout-container {
+	flex: 0 0 auto;
+}
+
+// camp tab: the location h1 directly above already shows camp name + level
+body.layout-small.tab-switch-in #tab-header h2 {
+	display: none;
+}
+
+// map tab: the tab bar is right above it and says "map", so the heading is a
+// row of screen spent repeating it - and on this tab the rows are the map's
+body.layout-small.tab-switch-map #tab-header h2 {
+	display: none;
+}
+
+// projects tab: "Building projects" under a tab that says "projects", above a
+// subheader that says "Available projects". Three labels for one list, and the
+// two that survive are the tab the player pressed and the one that separates
+// available projects from built ones.
+body.layout-small.tab-switch-projects #tab-header h2 {
+	display: none;
+}
+
+// tab content frame: tighter gutters at small layout
+body.layout-small div.grid-content {
+	padding: 8px 10px 10px 10px;
+	margin-bottom: 8px !important;
+}
+
+@media screen and (max-width: 568px) {
+	// gridism keeps desktop 15/30px unit padding after stacking; tighten
+	div.grid.tabcontainer > .unit {
+		padding: 8px 10px !important;
+	}
+
+	// paragraph rhythm: bare-element specificity ON PURPOSE so p.nomargin
+	// and .p-dense p keep winning
+	p {
+		margin: 0.6em 0;
+	}
+
+	// the movement table and the enter/move-up/down actionbox fit side by
+	// side; stacking them wastes ~100px on the most-used tab
+	body[class] #out-container-compass-actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: center;
+		column-gap: 10px;
+	}
+
+	body[class] #out-container-compass-actions h3 {
+		width: 100%;
+		margin: 0.4em 0 0.2em 0;
+	}
+
+	body[class] #table-out-actions-movement {
+		margin-top: 0;
+	}
+
+	// 48px keeps the table + action column under the content width so they
+	// share a row; the hit halo keeps the effective target above 44px
+	body[class] #table-out-actions-movement button.action-move {
+		width: 48px;
+		min-width: 48px;
+	}
+
+	body[class] #out-actions-movement {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin: 0;
+	}
+}
+
+// 569-700px: the fixed 224px compass column + 67% unit-rest overflow the
+// row and wrap around a large empty block; extend phone stacking here
+@media screen and (min-width: 569px) and (max-width: 700px) {
+	body[class] #container-tab-two-out .unit,
+	body[class] #container-tab-two-out-actions .unit {
+		width: 100% !important;
+		float: none;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// FOOTER
+
+body.layout-small #footer {
+	padding-left: 5px;
+}
+
+// safe-area insets for notched phones (any small-layout size)
+body.layout-small .sticky-footer {
+	padding-bottom: ~"calc(10px + env(safe-area-inset-bottom))";
+}
+
+// ---------------------------------------------------------------------------
+// HOME-SCREEN WEB APP
+// Installed to the home screen there is no browser chrome, and the status bar
+// style is black-translucent, so the game paints the whole screen and owns the
+// spacing. UIFunctions puts the .standalone class on body.
+
+// On the chrome and not on #mobile-header: the level title is the first thing
+// in the chrome now, so padding on the stats grid would leave the title above
+// the status bar clearance rather than below it.
+//
+// The inset is the height of the status bar, and that is the whole of what the
+// chrome needs to clear it. There used to be a 20px floor under this, for a
+// flat phone whose status bar overlays the page while reporting no inset. But
+// where iOS lays the web view out BELOW the status bar rather than under it,
+// the inset reads 0 and there is nothing to clear - so the floor was just an
+// empty band of chrome above the stats, on every screen, in camp and outside.
+// The inset the chrome reserves, in one place. It used to be added here and
+// again on #mobile-header, which is a child of this element in the shell
+// layout - two reserves for one status bar on any device that reported a real
+// inset. It never showed, because this device reports 0.
+//
+// var() rather than env(), because the value is measured (see
+// updateSafeAreaTop): rotation can leave iOS laying the view out fullscreen
+// while env() still reads 0, and the chrome ended up behind the clock until a
+// reload. The env() fallback covers the frames before the first measurement.
+body.layout-small #mobile-chrome {
+	padding-top: ~"var(--l13-safe-top, env(safe-area-inset-top))";
+}
+
+// what updateSafeAreaTop measures. It has to be a real box with real padding,
+// and it must not take a tap or paint anything.
+#safe-area-probe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+	padding-top: ~"env(safe-area-inset-top)";
+	visibility: hidden;
+	pointer-events: none;
+	z-index: -1;
+}
+
+// no rubber-band bounce revealing white behind the page (body propagates to
+// the viewport because html does not set the property)
+body.standalone {
+	overscroll-behavior-y: none;
+}
+
+// gridism gives the first unit in a grid `padding-left: 15px !important` at
+// <=850px. #unit-main is that first unit, so the whole game column sat 15px
+// right of centre with nothing on the other side: every panel looked like it
+// was bleeding off the right edge. !important is the only way past it.
+body.layout-small #unit-main {
+	padding-left: ~"env(safe-area-inset-left)" !important;
+	padding-right: ~"env(safe-area-inset-right)" !important;
+}
+
+// #unit-main is four-fifths wide to leave room for the log column, but in
+// small layout the log lives in a drawer instead. gridism only collapses
+// units to full width below 568px, so from 569 to 850 (phone landscape,
+// small tablets) a fifth of the screen stayed empty.
+body.layout-small #unit-main {
+	width: 100% !important;
+}
+
+// reserve room for the floating log toggle so it cannot cover the
+// footer buttons
+body.layout-small #footer {
+	padding-right: 84px;
+}
+
+@media screen and (max-width: 568px) {
+	// at phone widths the footer flows after the content; the fixed-height
+	// sticky-footer spacer trick no longer fits
+	body[class] .sticky-footer {
+		height: auto;
+		min-height: 55px;
+	}
+
+	body[class] .sticky-footer-wrapper {
+		margin-bottom: 0;
+	}
+
+	.sticky-footer-push {
+		display: none;
+	}
+
+	ul#game-options,
+	ul#game-options-extended {
+		float: none;
+	}
+}
+
+// The phone footer is one fixed-height row: version at the left, More and
+// Save at the right. On the out tab this row shares the bottom panel with the
+// direction buttons, so a row that grows moves them under the player's thumb
+// mid-tap. Anything that could change its height mid-play is gone: the save
+// confirmation and the cloud status show in the toast card instead (see
+// NOTIFICATION TOAST), and More opens a popup instead of expanding inline.
+body.layout-small #footer {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	overflow: hidden;
+	white-space: nowrap;
+	// the base sheet gives #footer `height: 100%`, sized for the desktop
+	// sticky-footer strip. Docked inside the scroll pane that makes the row
+	// as tall as the pane and it lands in the middle of the map tab.
+	height: auto;
+}
+
+// their content shows in the toast card instead. !important because
+// uiFunctions.toggle writes an inline display on #cloud-sync-status
+body.layout-small #footer #game-msg,
+body.layout-small #footer #cloud-sync-status,
+body.layout-small #footer .options-separator {
+	display: none !important;
+}
+
+// the inline expansion is the desktop presentation; on the phone the same
+// list shows inside #more-options-popup, where it is not under #footer and
+// this rule cannot reach it
+body.layout-small #footer > ul#game-options-extended {
+	display: none !important;
+}
+
+body.layout-small #footer #game-version {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+body.layout-small #footer ul#game-options {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: auto;
+}
+
+// ---------------------------------------------------------------------------
+// NOTIFICATION TOAST
+// Save and cloud confirmations: a card pinned to the top of the screen that
+// fades on its own (1250ms, UIFunctions.showToast), so nothing in the fixed
+// chrome ever changes size to announce anything. Unscoped: only the phone
+// routes messages here today, but the card is layout-neutral.
+
+#notification-toast {
+	position: fixed;
+	top: ~"calc(var(--l13-safe-top, env(safe-area-inset-top)) + 8px)";
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: 86vw;
+	padding: 7px 16px;
+	box-sizing: border-box;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 0.9rem;
+	line-height: 1.3;
+	text-transform: lowercase;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 11px;
+	// above the fixed chrome and the rotate notice; never interactive
+	z-index: 110;
+	pointer-events: none;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+#notification-toast.visible {
+	opacity: 1;
+	visibility: visible;
+	transition: opacity 0.15s ease;
+}
+
+// ---------------------------------------------------------------------------
+// OPTIONS POPUP
+// The footer's extended list, one full-width button per row. The list node is
+// moved here by showMoreOptionsPopup and moved back by showGameOptions, so
+// these rules only ever apply on the phone path.
+
+#more-options-popup {
+	min-width: 220px;
+}
+
+#more-options-popup-options ul#game-options-extended {
+	display: block;
+	float: none;
+	margin: 0;
+}
+
+// the ul in the selector: the base sheet sets these li table-cell with an
+// ID of its own, so the row rule here has to carry two IDs to win
+#more-options-popup-options ul#game-options-extended li {
+	display: block;
+	margin: 0 0 8px 0;
+}
+
+#more-options-popup-options ul#game-options-extended .options-separator {
+	display: none;
+}
+
+#more-options-popup-options button.btn-meta {
+	display: block;
+	width: 100%;
+	box-sizing: border-box;
+	min-height: 40px;
+	padding: 8px 12px;
+	background: var(--l13-mobile-button-bg);
+	border: 1px solid var(--l13-mobile-border);
+	// btn-meta squares its corners with an !important of its own
+	border-radius: 11px !important;
+}
+
+// the touch hit halo btn-meta buttons carry would overlap in a stacked
+// column; these buttons are full-width rows and need no halo
+#more-options-popup-options button.btn-meta::after {
+	content: none;
+}
+
+// ---------------------------------------------------------------------------
+// LOG: bottom-sheet drawer in small layout
+
+#btn-log-toggle {
+	display: none;
+}
+
+// While a tap callout is open, the content layer paints above the fixed header
+// so callouts near the top of the page are never covered by it. But when the
+// open callout belongs to the header itself, raising the content puts the
+// whole scrolling page over the stats bar - visibly so once the page is
+// scrolled. In that case the header has to keep the top.
+body.callout-open:not(:has(#mobile-header .callout-container.callout-visible)) #grid-switch-content {
+	z-index: 6;
+}
+
+// invisible chrome must not stay tappable while the player is "down"
+body.vision-step-0 #btn-log-toggle {
+	pointer-events: none;
+}
+
+body.layout-small #btn-log-toggle {
+	display: block;
+	position: fixed;
+	right: 10px;
+	bottom: ~"calc(12px + env(safe-area-inset-bottom))";
+	z-index: 9;
+	width: auto;
+	min-width: 3.5em;
+	min-height: 40px;
+	padding: 6px 14px;
+	border-radius: 20px;
+	opacity: 0.9;
+	text-transform: lowercase;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+}
+
+// `button:active` nudges buttons down with `top: 1px`. On this pill that is
+// a fixed box with `bottom` already set, so a press pinned both edges and
+// stretched it the full height of the screen.
+body.layout-small #btn-log-toggle:active {
+	top: auto;
+}
+
+// unread count: UIOutLogSystem sets data-unread to the number of log entries
+// the game itself still calls unseen, and clears it when the drawer opens.
+// Monochrome on purpose - the palette has no accent colour, so the badge is
+// simply the inverse of the pill.
+body.layout-small #btn-log-toggle[data-unread]::before {
+	content: attr(data-unread);
+	position: absolute;
+	top: -7px;
+	right: -7px;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 5px;
+	box-sizing: border-box;
+	border-radius: 10px;
+	background: var(--l13-mobile-badge-bg);
+	color: var(--l13-mobile-badge-fg);
+	font-size: 0.72rem;
+	font-weight: 700;
+	line-height: 20px;
+	text-align: center;
+	text-transform: none;
+	pointer-events: none;
+}
+
+// invisible halo: the pill floats alone, so the free space around it can
+// be tappable
+body.layout-small #btn-log-toggle::after {
+	content: "";
+	position: absolute;
+	inset: -8px;
+	border-radius: 28px;
+}
+
+body.layout-small #log {
+	padding-right: 0;
+	overflow-y: auto;
+}
+
+// closed drawer: the log leaves the page flow entirely instead of adding
+// half a screen of scroll below every tab; the floating toggle opens it
+body.layout-small #log-container {
+	display: none;
+}
+
+body.layout-small.log-drawer-open #log-container {
+	display: block;
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	top: auto;
+	width: 100%;
+	height: 55vh;
+	height: 55dvh;
+	z-index: 8;
+	margin: 0;
+	padding: 10px 10px ~"calc(56px + env(safe-area-inset-bottom))" 10px !important;
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	border-top: 2px solid var(--l13-mobile-border);
+	overflow: hidden;
+}
+
+body.layout-small.log-drawer-open #log {
+	position: static;
+	max-height: 100% !important;
+	height: 100%;
+	width: 100%;
+	overflow-y: auto !important;
+}
+
+// ---------------------------------------------------------------------------
+// LOG TOASTS
+// The drawer, the pill and the badge all work, but a message that arrives
+// while the drawer is closed is invisible: the badge only says that something
+// happened, not what. Each new message also gets a card under the chrome for a
+// few seconds - see UIOutLogSystem.updateToasts, which does not mark anything
+// as read, so the badge is unaffected.
+//
+// Under the chrome and not above the action bar: this is the corner furthest
+// from the thumb, so a card can never land under a finger already on its way
+// to a direction or to Scavenge.
+
+#log-toasts {
+	display: none;
+}
+
+// positioned by #mobile-overlays, which puts it under the room panel rather
+// than on top of it. Static, so it takes only the height of the cards it holds
+// and sits at the column's top when the panel is closed.
+body.layout-small #log-toasts {
+	display: block;
+	// the container spans the width whether or not it holds anything, so the
+	// gaps between cards must not eat taps meant for the page underneath
+	pointer-events: none;
+}
+
+body.layout-small #log-toasts .log-toast {
+	pointer-events: auto;
+	margin-top: 6px;
+	padding: 8px 10px;
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+	font-size: 0.9rem;
+	line-height: 1.25;
+	opacity: 1;
+	// must match UIToastStack.DEFAULT_FADE_MS, which is how long the widget
+	// waits before it removes the element
+	transition: opacity 400ms ease-out;
+}
+
+body.layout-small #log-toasts .log-toast-leaving {
+	opacity: 0;
+	// A fading card is invisible but was still catching taps for the whole
+	// 400ms, and the tap did nothing except bubble to the document handler and
+	// close the room panel. In a burst the evicted cards stack up, so the dead
+	// band could reach well down the screen.
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	body.layout-small #log-toasts .log-toast {
+		transition: none;
+	}
+}
+
+// landscape is the map and nothing else
+body.landscape-map #log-toasts {
+	display: none;
+}
+
+// ---------------------------------------------------------------------------
+// TABLES AND ACTION ROWS AT PHONE WIDTHS
+
+@media screen and (max-width: 568px) {
+	// Action buttons size to their label instead of the fixed desktop widths,
+	// tighter padding keeps three-button rows on one line, and a label that
+	// still will not fit takes a second line rather than running out of the
+	// button.
+	//
+	// body.layout-small is not decoration here. main.less imports every themed
+	// module inside `body.dark` and `body.sunlit`, so the rules this overrides
+	// are emitted as `body.dark button` and `body.dark button.action` - and a
+	// bare `button.action` loses to both on specificity. This whole block did
+	// nothing at all until 0.6.3.m39: every action button stayed 95pt wide and
+	// any label longer than that spilled out of its right-hand edge, which is
+	// what "examine settlement" does. Prefix anything in here that overrides a
+	// themed rule, or it will not land.
+	// No max-width, on purpose. Every box between the button and the actionbox
+	// is a shrink-to-fit inline-block, so a percentage here resolves against a
+	// box the button itself sized - circular, and the browser settles it at
+	// min-content. That wrapped every two-word label that had a whole row to
+	// spare: "get up" came out 77px wide on two lines. Shrink-to-fit already
+	// clamps to the width the actionbox offers, so a label that genuinely does
+	// not fit wraps, and one that does stays on its line.
+	body.layout-small button.action {
+		width: auto;
+		min-width: 70px;
+		padding: 8px 10px;
+		white-space: normal;
+		line-height: 1.15;
+		// only reachable by a label with no spaces in it, which no spot name
+		// has - but an unbreakable word is the one thing wrapping cannot save
+		overflow-wrap: break-word;
+	}
+
+	body.layout-small button.btn-wide,
+	body.layout-small button.btn-x-wide {
+		width: auto;
+	}
+
+	// The compass is the exception, and it has to be stated. Those buttons keep
+	// a fixed width - 40px, so the 3x3 grid fits the column beside the map - and
+	// 10px of side padding leaves 20px for a label that needs 24. Wrapping is
+	// the right answer everywhere else and exactly the wrong one here: every
+	// direction came out stacked a letter to a line, three rows tall.
+	body.layout-small button.action-move {
+		white-space: nowrap;
+		padding-left: 2px;
+		padding-right: 2px;
+	}
+
+	// card-row action buttons: 40px visual, 44px hit via the halo; row
+	// pitch 40 + 2x2px margins = 44, halos meet without overlap
+	body.touch table .container-btn-action > button.action:not(.action-move) {
+		min-height: 40px;
+	}
+
+	body.touch table .container-btn-action > button.action:not(.action-move)::after {
+		content: "";
+		position: absolute;
+		top: -2px;
+		bottom: -2px;
+		left: 0;
+		right: 0;
+	}
+
+	// multi-widget table rows become wrapping card rows
+	#out-improvements table,
+	#out-improvements tbody,
+	#in-improvements table,
+	#in-improvements tbody,
+	#recruits-container table,
+	#recruits-container tbody,
+	#in-improvements-level table,
+	#in-improvements-level tbody,
+	#in-improvements-colony table,
+	#in-improvements-colony tbody,
+	#in-improvements-level-built table,
+	#in-improvements-level-built tbody,
+	#in-improvements-colony-built table,
+	#in-improvements-colony-built tbody,
+	#trade-caravans-incoming-container table,
+	#trade-caravans-incoming-container tbody,
+	#trade-caravans-outgoing-container table,
+	#trade-caravans-outgoing-container tbody {
+		display: block;
+		width: 100%;
+	}
+
+	// The project tables are not in this list: their rows take a grid of their
+	// own further down (PROJECT ROWS), which every declaration here would lose
+	// to anyway. They keep the block display above, which the grid needs.
+	#out-improvements tr,
+	#in-improvements tr,
+	#recruits-container tr,
+	#trade-caravans-incoming-container tr,
+	#trade-caravans-outgoing-container tr {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		width: 100%;
+		// visible row rhythm: consecutive rows of 40-44px buttons would
+		// otherwise abut with zero separation
+		padding: 3px 0;
+		row-gap: 3px;
+		column-gap: 2px;
+	}
+
+	#out-improvements td,
+	#in-improvements td,
+	#recruits-container td,
+	#in-improvements-level td,
+	#in-improvements-colony td,
+	#in-improvements-level-built td,
+	#in-improvements-colony-built td,
+	#trade-caravans-incoming-container td,
+	#trade-caravans-outgoing-container td {
+		display: block;
+	}
+
+	// The collectors had two rows here - a name and level beside the upgrade
+	// arrow - and both are gone: everything a bucket or a trap offers is on its
+	// chip in the sector bar now, the upgrade included. The two forced-display
+	// rules they needed went with them, and so did their guards at the end of
+	// the file.
+
+	// the beacon row keeps this label, and it is the only one left
+	#out-improvements .collector-row-label {
+		flex: 1 1 auto;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	// incoming trader rows: content-width buttons (they have no .action
+	// class, so the global 95pt width would apply)
+	#trade-caravans-incoming-container button {
+		width: auto;
+		min-width: 70px;
+	}
+
+	// the buildings table header row cannot align with flexed card rows;
+	// label the badges in place instead
+	#in-improvements tr.header-mini {
+		display: none;
+	}
+
+	#in-improvements span.improvement-count::before {
+		content: "\00d7";
+		opacity: 0.6;
+		font-size: 0.85em;
+	}
+
+	#in-improvements span.improvement-level::before {
+		content: "lvl ";
+		opacity: 0.6;
+		font-size: 0.85em;
+	}
+
+	// PROJECT ROWS: the name on the first line, its location on the second, the
+	// two meta controls at the end of that line, and the action button spanning
+	// both lines at the right edge. Four tracks, so every part of the row keeps
+	// a column of its own: content, hide, map, action.
+	//
+	// Five table columns - name, location, hide, map, and an action button that
+	// generates with an inline width:138px - cannot share a phone row. Flexed
+	// they overlapped; stacked as three lines they cost 113px each in a pane
+	// 306px tall, so two and a half projects filled the screen. Stacking also
+	// put `map` in a different place from row to row - 2px in on a project that
+	// cannot be hidden, 64px in on one that can, because `hide` led the same
+	// line - which is the part that read as sloppy rather than merely tall.
+	//
+	// Every row in this tab is a project row, so the tab container is the scope
+	// and the four tables do not each have to be named.
+	#container-tab-two-projects tr {
+		display: grid;
+		grid-template-columns: 1fr auto auto auto;
+		align-items: center;
+		column-gap: 6px;
+		row-gap: 1px;
+		// the left padding is where the current-level bar sits, on every row so
+		// that the text does not shift between marked and unmarked ones
+		padding: 6px 0 6px 8px;
+	}
+
+	#container-tab-two-projects tr + tr {
+		border-top: 1px solid var(--l13-mobile-border);
+	}
+
+	// the name leads the first line and takes what the controls leave
+	#container-tab-two-projects td.label {
+		grid-column: 1;
+		grid-row: 1;
+		width: auto;
+		min-width: 0;
+	}
+
+	// the location has the second line to itself, all four tracks of it. It
+	// shared the first attempt's second line with the two controls, which left
+	// it 180px and wrapped "between 11W 1N and 12W 1N on lvl 10" over three.
+	// Smaller and dimmer than the name, so the two lines read as one item
+	// rather than as two entries.
+	#container-tab-two-projects td.list-description {
+		grid-column: 1 / -1;
+		grid-row: 2;
+		width: auto;
+		min-width: 0;
+		font-size: @font-size-small;
+		opacity: 0.75;
+	}
+
+	// hide and map take a track each on the first line. The width override
+	// beats td.minwidth (5%), which is what let the buttons overlap when the
+	// row was flexed.
+	#container-tab-two-projects td.minwidth {
+		grid-row: 1;
+		width: auto;
+	}
+
+	// Each control is named to its own track rather than left to fall into the
+	// next free one. Auto-placement put `map` in the second track on a project
+	// that cannot be hidden and the third on one that can, which is the
+	// misalignment the stacked layout had, moved up a line.
+	#container-tab-two-projects td.minwidth:has(> button.hide-project) {
+		grid-column: 2;
+	}
+
+	#container-tab-two-projects td.minwidth:has(> button.navigation) {
+		grid-column: 3;
+	}
+
+	// a cell whose only button is hidden (built rows, projects that cannot
+	// be hidden) must leave the grid entirely, or it holds an empty track
+	// open in the middle of the row. jQuery hides the button with an inline
+	// display, so that is what there is to match on.
+	#container-tab-two-projects td.minwidth:has(> button[style*="display: none"]),
+	#container-tab-two-projects td.minwidth:has(> button[style*="display:none"]) {
+		display: none;
+	}
+
+	// hide and map are peers of each other, so they carry the same box. `hide`
+	// is a btn-meta, chromeless by design where it stands alone; beside the
+	// boxed `map` it read as a caption rather than a control, and it stood 4px
+	// shorter than its neighbour. border-width alone restores the themed
+	// border colour, which btn-meta zeroes the width of and nothing else.
+	#container-tab-two-projects button.hide-project {
+		border-width: 1px;
+		min-height: 36px;
+		padding: 4px 8px;
+		background: var(--l13-mobile-button-bg);
+		text-transform: lowercase;
+	}
+
+	// the action closes the first line at the right edge. The cell generates
+	// with an inline width:138px, a third of the screen, so it is told to size
+	// to its button instead.
+	#container-tab-two-projects td.td-button {
+		grid-column: 4;
+		grid-row: 1;
+		justify-self: end;
+		width: auto !important;
+		// td.bg-reset fills this cell with the box colour, which showed as a
+		// lighter patch behind the button once the row became a card
+		background: none;
+	}
+
+	// HIDDEN PROJECTS: the heading and the control that undoes the hiding read
+	// as one line, and the count sits under them. `reset` floated right, which
+	// left it hanging half a line below the heading it belongs to, and the
+	// section had no space under it at all - "1 project hidden" sat directly
+	// against the "Built projects" heading of the next section.
+	#container-in-improvements-level-hidden {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		align-items: center;
+		column-gap: 6px;
+		margin-bottom: 14px;
+	}
+
+	// the markup order is control, heading, count; the line each one belongs on
+	// is stated rather than left to it
+	#container-in-improvements-level-hidden > .subheader {
+		grid-area: 1 / 1 / 2 / 2;
+	}
+
+	#container-in-improvements-level-hidden > #in-improvements-reset-hidden {
+		grid-area: 1 / 2 / 2 / 3;
+		float: none;
+	}
+
+	#container-in-improvements-level-hidden > p {
+		grid-area: 2 / 1 / 3 / 3;
+	}
+
+	// `reset` and the row controls are the only buttons on this tab, so they
+	// carry one box between them - see the note on `hide` above
+	#in-improvements-reset-hidden {
+		border-width: 1px;
+		min-height: 36px;
+		padding: 4px 8px;
+		background: var(--l13-mobile-button-bg);
+	}
+
+	// "on your level" was a full-width fill. Two projects on the same level
+	// put two filled rows next to each other, and the pair read as a panel
+	// drawn around them rather than as a mark on each - the built list showed
+	// exactly that, two staircases boxed together and a third outside. A bar on
+	// the leading edge belongs to its own row however many of them there are.
+	// inset rather than a border so it costs no layout.
+	#container-tab-two-projects tr.current {
+		background: none;
+		box-shadow: inset 3px 0 0 0 var(--l13-mobile-divider);
+	}
+
+	// outgoing caravan planner: stack the five widgets full-width
+	.trade-caravans-outgoing-plan td {
+		width: 100%;
+		text-align: center;
+	}
+
+	.trade-caravans-outgoing-plan input[type=range] {
+		width: 80%;
+	}
+
+	// Sell / Get read as two labeled lines; the inline pipe divider is
+	// meaningless once the row wraps
+	.trade-caravans-outgoing-plan .trade-plan-separator {
+		display: none;
+	}
+
+	.trade-caravans-outgoing-plan .trade-caravans-outgoing-buy {
+		display: block;
+		margin-top: 4px;
+	}
+}
+
+// tribe overview: restore the columns upstream hides in small layout and
+// let the full table scroll horizontally instead
+@media screen and (max-width: 850px) {
+	#camp-overview {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	// camp visualization scales down to fit the screen width (see
+	// UIOutCampVisSystem.refreshGrid); only very wide late-game camps
+	// keep a scaled scroll strip, so far-out buildings stay reachable
+	body[class] #tab-vis-in {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CAMP OVERVIEW (tribe tab)
+//
+// Twelve columns of a camp's state: level, name, population, robots,
+// reputation, raid and disease risk, storage, what it produces, what it earns,
+// a notification bubble and a way to travel there. As a table that is far wider
+// than a phone, and the desktop layout drops most of it with
+// .hide-in-small-layout - which leaves a phone with a name and a Go button.
+//
+// So keep every column and stop it being a table: each row becomes a card of
+// labelled cells, three to a line, the way the stats header already reads.
+
+body.layout-small #camp-overview td.hide-in-small-layout {
+	visibility: visible;
+}
+
+body.layout-small #camp-overview span.hide-in-small-layout {
+	display: inline-block;
+	visibility: visible;
+}
+
+// the column headings cannot line up with cards, and each cell carries its own
+// label below instead
+body.layout-small #camp-overview tr#camp-overview-header {
+	display: none;
+}
+
+body.layout-small #camp-overview,
+body.layout-small #camp-overview tbody {
+	display: block;
+	width: 100%;
+}
+
+body.layout-small #camp-overview tr.camp-overview-camp {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	align-items: center;
+	gap: 3px 6px;
+	padding: 8px 0;
+	// one card per camp, and the eye needs to know where each one ends
+	border-top: 1px solid var(--l13-mobile-border);
+}
+
+body.layout-small #camp-overview tr.camp-overview-camp:first-of-type {
+	border-top: none;
+}
+
+body.layout-small #camp-overview td {
+	display: block;
+	padding: 0;
+	// the desktop table right-aligns its numbers against a column edge that no
+	// longer exists
+	text-align: left;
+}
+
+// The top line: which camp this is, and whether it wants attention. Placed by
+// row and column rather than by document order - the bubble is the last cell in
+// the markup and belongs beside the name.
+body.layout-small #camp-overview .camp-overview-level {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+body.layout-small #camp-overview .camp-overview-name {
+	grid-column: 2;
+	grid-row: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+body.layout-small #camp-overview .camp-overview-camp-bubble {
+	grid-column: 3;
+	grid-row: 1;
+	justify-self: end;
+}
+
+// then the six numbers fill the next two lines, three to a line, in the order
+// the markup already has them
+body.layout-small #camp-overview .camp-overview-population::before { content: "pop "; }
+body.layout-small #camp-overview .camp-overview-robots::before { content: "robots "; }
+body.layout-small #camp-overview .camp-overview-reputation::before { content: "rep "; }
+body.layout-small #camp-overview .camp-overview-raid::before { content: "raid "; }
+body.layout-small #camp-overview .camp-overview-disease::before { content: "disease "; }
+body.layout-small #camp-overview .camp-overview-storage::before { content: "storage "; }
+
+body.layout-small #camp-overview .camp-overview-population::before,
+body.layout-small #camp-overview .camp-overview-robots::before,
+body.layout-small #camp-overview .camp-overview-reputation::before,
+body.layout-small #camp-overview .camp-overview-raid::before,
+body.layout-small #camp-overview .camp-overview-disease::before,
+body.layout-small #camp-overview .camp-overview-storage::before {
+	font-size: 0.8rem;
+	opacity: 0.75;
+}
+
+// what it makes and what it earns are strips, not cells: a row of chips that
+// wraps, like the resource strip in the header
+body.layout-small #camp-overview .camp-overview-production,
+body.layout-small #camp-overview .camp-overview-stats {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 2px 6px;
+}
+
+body.layout-small #camp-overview .camp-overview-production {
+	grid-column: ~"1 / -1";
+}
+
+// The three earnings icons need a third of the card at most, so the way there
+// shares their line rather than costing the card another 40px of its own. With
+// fifteen camps on the list that is most of a screen.
+body.layout-small #camp-overview .camp-overview-stats {
+	grid-column: ~"1 / 3";
+}
+
+body.layout-small #camp-overview .camp-overview-btn {
+	grid-column: 3;
+	justify-self: end;
+}
+
+body.layout-small #camp-overview .camp-overview-btn button {
+	width: auto;
+	min-width: 5em;
+}
+
+// The card-row touch rule further up excludes .action-move, because that class
+// belongs to the 55px compass buttons. This Go carries it too and is not one of
+// them, so it gets the same 40px visual and 44px hit halo on its own.
+body.touch #camp-overview .camp-overview-btn button.action {
+	min-height: 40px;
+}
+
+body.touch #camp-overview .camp-overview-btn button.action::after {
+	content: "";
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	left: 0;
+	right: 0;
+}
+
+// the level 14 divider spans a table that is no longer a table
+body.layout-small #camp-overview tr.camp-overview-special-row,
+body.layout-small #camp-overview td.camp-overview-lvl14 {
+	display: block;
+	width: 100%;
+}
+
+// ---------------------------------------------------------------------------
+// MAP: zoom controls (all pointer types; the only touch zoom path)
+
+#mainmap-container-container {
+	position: relative;
+}
+
+#mainmap-zoom-controls {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 6;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+#mainmap-zoom-controls button {
+	margin: 0;
+	width: 40px;
+	min-width: 40px;
+	height: 40px;
+	padding: 0;
+	font-size: 1.2em;
+}
+
+// the buttons sit over a pannable canvas; the 3px halos meet exactly in
+// the 6px gap without overlapping
+body.touch #mainmap-zoom-controls button::after {
+	content: "";
+	position: absolute;
+	inset: -3px;
+}
+
+// ---------------------------------------------------------------------------
+// MAP TAB: the map is the tab, so give it the screen
+//
+// The map grows with the world and it was getting a few hundred pixels between
+// a stats block it does not need and a wall of text about one sector. On this
+// tab the level banner and the stats widget go away entirely, which leaves the
+// tab bar at the top of the chrome where the banner used to be - #mobile-chrome
+// already holds them in that order, so hiding the first two is the whole move -
+// and everything below the tabs belongs to the map.
+//
+// !important because both are toggled through uiFunctions somewhere, which
+// writes an inline display.
+body.layout-small.tab-switch-map #mobile-chrome > #grid-location,
+body.layout-small.tab-switch-map #mobile-header {
+	display: none !important;
+}
+
+// the pane stops being a scroller and becomes the map's column
+body.layout-small.tab-switch-map #grid-switch-content {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	padding: 0;
+	margin-bottom: 0 !important;
+}
+
+body.layout-small.tab-switch-map #grid-tab-header {
+	flex: 0 0 auto;
+	margin: 0;
+}
+
+body.layout-small.tab-switch-map #container-tab-two-map,
+body.layout-small.tab-switch-map #container-tab-two-map > .unit {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	// a flex child will not shrink below its content without this, and the
+	// map's content is a 500px canvas
+	min-height: 0;
+	margin: 0;
+	padding: 0 !important;
+	position: relative;
+}
+
+body.layout-small.tab-switch-map #mainmap-container-container {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+// uiMapHelper.enableScrollingForMap wraps the viewport in a
+// .scroll-position-container at runtime, so the map is a grandchild here, not a
+// child - and that wrapper is what a percentage height on the viewport resolves
+// against. The wrapper's own height is `auto`, so `height: 100%` below fell
+// back to the content: a 580px map viewport inside a 389px box, hanging over
+// the controls under it. It only ever looked right because updateHeight wrote
+// an inline max-height, which is exactly the measuring this layout is meant to
+// be free of.
+//
+// Absolute placement is what gives the wrapper a definite height: it is
+// measured against the used padding box of #mainmap-container-container, which
+// is a real number by the time it is needed - unlike that box's own `height`,
+// which stays `auto` however tall its parent stretches it.
+body.layout-small.tab-switch-map #mainmap-container-container > .scroll-position-container {
+	position: absolute;
+	inset: 0;
+	box-sizing: border-box;
+	margin: 0;
+}
+
+// the viewport onto the canvas: it takes the room the wrapper now has, and the
+// canvas keeps its own size underneath, scrolling inside it
+body.layout-small.tab-switch-map #mainmap-container {
+	width: 100%;
+	height: 100%;
+	// !important because updateHeight runs once from the map system's
+	// constructor, before the body has been told which layout this is, and
+	// writes an inline max-height for the desktop one - 198px, its floor. A
+	// resize clears it again, so a phone that turned sideways looked right and a
+	// phone that opened the game sideways got a 198px map in a 389px box. This
+	// rule is scoped to the small layout's map tab, which is exactly where that
+	// inline value must not win, so nothing else loses its cap.
+	max-height: none !important;
+	margin: 0;
+}
+
+body.layout-small.tab-switch-map #mainmap-container-ascii {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+}
+
+// ---------------------------------------------------------------------------
+// MAP TAB: description out of the flow, controls kept
+//
+// Everything under the map graphic was prose about one sector, and on a phone
+// it cost more room than the map. The controls stay - they are how you move
+// around the map - and the description becomes a panel over the map, which
+// appears when a sector is selected and closes again.
+
+body.layout-small #map-completion-hint,
+body.layout-small #mainmap-sector-details-content-empty,
+body.layout-small #mainmap-sector-details-content-debug {
+	display: none !important;
+}
+
+// what is left of the box is the row of jump-to buttons
+body.layout-small #mainmap-sector-details {
+	flex: 0 0 auto;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	margin: 0 !important;
+	padding: 4px 6px !important;
+	// the panel is positioned against this row, not against the tab: anchored
+	// to the tab it hung below the map and covered these buttons
+	position: relative;
+}
+
+// The panel grows upward out of the control row - bottom: 100% puts its lower
+// edge on that row's upper edge - so it covers the bottom of the map and never
+// the controls. Its height is capped in vh rather than a percentage, because a
+// percentage would resolve against the 50px row it hangs from.
+body.layout-small #mainmap-sector-details-content {
+	position: absolute;
+	left: 4px;
+	right: 4px;
+	bottom: 100%;
+	margin-bottom: 4px;
+	z-index: 7;
+	max-height: 40vh;
+	overflow-y: auto;
+	margin: 0;
+	padding: 8px 10px 10px 10px;
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	border: 1px solid var(--l13-mobile-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 14px -4px var(--l13-mobile-divider-shadow);
+}
+
+body.layout-small #mainmap-sector-details-content h3 {
+	margin: 0 0 4px 0;
+	font-size: 1rem;
+}
+
+// the rows are label and value, and the default spacious table wastes a line of
+// leading on each in a panel this size
+body.layout-small #mainmap-sector-details-content table.spacious td {
+	padding: 1px 4px 1px 0;
+	line-height: 1.2;
+}
+
+body.layout-small #mainmap-sector-details-content td.textwidth {
+	width: 1%;
+	white-space: nowrap;
+	opacity: 0.75;
+}
+
+#btn-mainmap-sector-details-close { display: none; }
+
+// As with the room panel: a tap anywhere closes this, so the button is a
+// duplicate gesture sitting on top of the text it is describing.
+
+// map header controls: stacked flex row instead of floats at phone widths
+@media screen and (max-width: 568px) {
+	#tab-header {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px;
+	}
+
+	#tab-header h2 {
+		order: -1;
+		width: 100%;
+	}
+
+	#tab-header .tabelement {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.tab-options {
+		float: none;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SMALL-SCREEN LEGIBILITY
+
+@media screen and (max-width: 568px) {
+	body[class] div.btn-callout-content,
+	body[class] div.info-callout-content {
+		font-size: 0.95rem;
+	}
+
+	body[class] .progress-label {
+		font-size: 0.9rem;
+	}
+
+	// the tiny (0.75rem) tier carries gameplay state; lift it on phones
+	body[class] .item-count,
+	body[class] span.time,
+	body[class] span.msg-camp-level,
+	body[class] .change-indicator,
+	body[class] .stats-value-container .forecast {
+		font-size: 0.85rem;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// STANDALONE CHANGELOG PAGE
+// The restored #changelog wrapper is a 12em scrollbox in the game's info
+// popup; on the standalone page the full list should just flow.
+
+#changelog-container #changelog {
+	max-height: none;
+	overflow-y: visible;
+}
+
+// ---------------------------------------------------------------------------
+// REDUCED MOTION
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01s !important;
+		animation-duration: 0.01s !important;
+		// without this, "infinite 0.01s" animations become a flicker
+		animation-iteration-count: 1 !important;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// APP SHELL
+//
+// iOS stops honouring `position: fixed` while a momentum scroll of the document
+// is in flight, and leaves the element wherever the scroll took it. On a phone
+// that showed as the stats bar scrolling off the top and the map panel coming
+// to rest halfway down the page, with the footer below it - both elements were
+// still `fixed`, the browser had simply let go of them.
+//
+// Nothing can detach if the document never scrolls. So the document is locked
+// to the viewport and the middle band scrolls instead: the chrome and the map
+// panel are pinned by having nothing to move relative to. This also ends the
+// whole family of "the page slid over the stats bar" defects, because the page
+// no longer slides anywhere.
+// on the root as well as on body: body's overflow only reaches the viewport
+// while the root's stays `visible`, and something in the sheets below sets it,
+// so the document kept 55px of scroll and the chrome kept coming loose
+// The measured viewport height, not 100%. iOS can lay the standalone view out over
+// the whole screen while the page goes on resolving percentages against the height it
+// had before, and the column then stopped a status bar short of the bottom with the
+// background showing through. updateSafeAreaTop writes the number every time the
+// viewport changes, so this tracks whatever the view actually is.
+html:has(> body.layout-small) {
+	height: var(--l13-viewport-height);
+	overflow: hidden;
+}
+
+body.layout-small {
+	height: var(--l13-viewport-height);
+	overflow: hidden;
+}
+
+// The shell is one flex column the height of the viewport: chrome, then the
+// scrolling pane, then the map panel. Nothing in it is `position: fixed` and
+// nothing measures anything - the pane's height is whatever is left over, which
+// is a number the browser keeps right on its own. Every "the panel is stale by
+// one measurement" defect is gone with it, and so is Safari clipping a fixed
+// element that lives inside a scrolling container, which had made the map panel
+// vanish outright.
+//
+// UIOutHeaderSystem reads --l13-shell to tell whether this layout is in force.
+body.layout-small {
+	--l13-shell: 1;
+}
+
+// the sticky-footer trick sets `height: auto !important` and pulls the footer
+// up with a -55px bottom margin; neither survives a viewport-height column
+body.layout-small > .sticky-footer-wrapper,
+body.layout-small #grid-main {
+	height: 100% !important;
+	min-height: 0;
+	margin-bottom: 0;
+	display: block;
+}
+
+body.layout-small #unit-main {
+	// !important because setGameElementsVisibility writes an inline display;
+	// the guard at the end of the file keeps its hide working
+	display: flex !important;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	float: none;
+	// gridism pads every .unit 15px at the bottom, which would leave the map
+	// panel floating short of the bottom edge
+	padding-bottom: 0 !important;
+}
+
+// and the gaps between the bands: the column is flush from edge to edge
+body.layout-small #unit-main > #grid-switch-content,
+body.layout-small #unit-main > #mobile-chrome,
+body.layout-small #unit-main > #out-sector-bar,
+body.layout-small #unit-main > .action-mirror,
+body.layout-small #unit-main > #out-container-compass {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+body.layout-small #mobile-chrome {
+	position: static;
+	flex: 0 0 auto;
+}
+
+body.layout-small #grid-switch-content {
+	position: static;
+	flex: 1 1 auto;
+	// without this a flex item refuses to shrink below its content, and the
+	// pane grows to fit the tab instead of scrolling it
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	// NOT -webkit-overflow-scrolling: touch - it is a no-op on current iOS and
+	// it is the property that makes Safari clip fixed-position descendants
+	//
+	// a scroll that runs out at the end of the pane must not become a
+	// document-level rubber band, which is what used to shake the chrome loose
+	overscroll-behavior: contain;
+	box-sizing: border-box;
+}
+
+// What the room holds, at the top of the band that holds the minimap and the
+// direction buttons: how far it is scavenged, what resources are in it, what
+// items are in it.
+//
+// Each line stays one line and truncates rather than wrapping, and neither
+// comes and goes as finds arrive - the whole point of the row is that the
+// direction buttons under the player's thumb do not move mid-tap.
+body.layout-small #out-container-compass > #out-finds-row {
+	grid-area: finds;
+	display: block;
+	padding: 4px 10px 2px 10px;
+	font-size: 0.85rem;
+}
+
+body.layout-small #out-finds-row > .finds-line {
+	display: flex;
+	gap: 10px;
+	line-height: 1.35;
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+// The items line is absent, not blank, in a room with nothing to report about
+// items - which is most of them. The regular layout's table has always left it
+// out; the row carried "Items: ?" for ever instead, a reading that could never
+// become anything. UIOutLevelSystem sets the class (see hasVisibleItemsToShow),
+// and it changes at scouting rather than during scavenging, so the row does not
+// resize under a thumb.
+body.layout-small #out-finds-row.no-items > .finds-line-items {
+	display: none;
+}
+
+body.layout-small #out-finds-row .finds-part {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+// The percentage is short and exact, so it keeps its width and the lists give
+// theirs up. A truncated number is a wrong number; a truncated list still
+// reads as a list. Nothing else on a phone shows the whole of it - the room
+// panel carries the description and not this table - so if the lists start
+// running past the edge in play, that is the thing to fix, not this order.
+body.layout-small #out-finds-row .finds-part-scavenged {
+	flex: 0 0 auto;
+}
+
+body.layout-small #out-finds-row .finds-part-resources,
+body.layout-small #out-finds-row .finds-part-items {
+	flex: 0 1 auto;
+	min-width: 0;
+}
+
+body.layout-small #out-finds-row .label {
+	opacity: 0.75;
+}
+
+// the regular layout keeps all three in the page, where they already were
+body.layout-regular #out-finds-row {
+	display: none;
+}
+
+body.layout-small #unit-main > #out-container-compass {
+	position: static;
+	flex: 0 0 auto;
+	// it keeps the `order: 2` set on the fixed rule above, which is what puts it
+	// last in this column - every other child of #unit-main is 0. Do not "clean
+	// that up" as dead once the panel is static here.
+}
+
+// The pinned action bar, docked by updateActionMirrorPlacement for the same
+// reason the map panel is: Safari clips a fixed element inside a scroller, and
+// the pane is one. Static here, so there is no fixed positioning left to lose.
+// It keeps its own padding, edge and shadow - it still reads as bottom chrome.
+body.layout-small #unit-main > .action-mirror {
+	position: static;
+	flex: 0 0 auto;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+// The footer carries save and restart, and it sat after the scrolling page.
+// With the document locked it would be off-screen for good, so
+// UIOutHeaderSystem moves it inside the pane, where it scrolls with the rest.
+//
+// The 84px on the right keeps the floating log pill off "save". The reserve
+// is set further up as well, and never reached the footer at phone widths:
+// gridism zeroes the side padding of a .unit inside a .grid inside a .unit
+// with an !important of its own below 568px, and the footer's ancestry is
+// exactly that. So this carries !important too - the same fight #unit-main
+// and the banner already have with the same stylesheet.
+//
+// It is also the only place the reserve is needed. The pill is fixed exactly
+// when the footer is here; on the exploration tab both move into
+// #out-panel-meta and share a row instead.
+body.layout-small #grid-switch-content > #footer {
+	width: 100%;
+	max-width: 100%;
+	margin: 12px 0 0 0;
+	padding: 10px 84px ~"calc(10px + env(safe-area-inset-bottom))" 4px !important;
+	box-sizing: border-box;
+	// the exploration pane is a flex column whose sections are ordered, and an
+	// unordered child sorts to the front - the footer opened the tab
+	order: 99;
+}
+
+// The map panel is docked onto #unit-main (see updateMapDockPlacement), which
+// means the tab switch that used to hide it no longer contains it. Hide it
+// here instead, on every tab that is not the exploration tab.
+body.layout-small:not(.tab-switch-out) #unit-main > #out-container-compass {
+	display: none !important;
+}
+
+// landscape keeps the ordinary document scroll: the bands are static there
+// (see the max-height rules above) and there is no fixed anything to protect
+@media screen and (max-height: 480px) {
+	html:has(> body.layout-small),
+	body.layout-small {
+		height: auto;
+		overflow: visible;
+	}
+
+	body.layout-small {
+		--l13-shell: 0;
+	}
+
+	body.layout-small > .sticky-footer-wrapper,
+	body.layout-small #grid-main,
+	body.layout-small #unit-main {
+		height: auto !important;
+		min-height: 0;
+	}
+
+	body.layout-small #grid-switch-content {
+		overflow: visible;
+		flex: 0 0 auto;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SECTOR ACTION BAR
+//
+// The five controls a player uses on every sector visit: scavenge, scout,
+// refill water, and the two collectors' collect actions. Unprefixed, because
+// the bar looks the same on both layouts - only its pinned form below is
+// scoped to the small layout.
+//
+// Shown and hidden with classes rather than uiFunctions.toggle, so no inline
+// `display` is ever written to it and none of these rules needs !important.
+
+#out-sector-bar { display: none; }
+
+#out-sector-bar.has-actions,
+#out-sector-bar.has-collectors,
+#out-sector-bar.has-finds {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+#out-sector-bar-actions,
+#out-sector-bar-collectors { display: none; }
+
+#out-sector-bar.has-actions #out-sector-bar-actions,
+#out-sector-bar.has-collectors #out-sector-bar-collectors {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0;
+}
+
+// The Search box as a row of the bar (see updateOutActionsPlacement): examine,
+// investigate, scavenge the heap, rest, wait - whichever few of them apply to
+// where the player is standing.
+//
+// !important on both states, unlike the bar's own rows. This box exists on the
+// desktop layout too, so the game keeps toggling it with an inline display of
+// its own; has-finds is set from the same count, and has to outrank it either
+// way round.
+#out-sector-bar #out-actions {
+	display: none !important;
+}
+
+#out-sector-bar.has-finds #out-actions {
+	display: flex !important;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+}
+
+// Whoever is standing here, and where this sector leads on to. Same reasoning
+// and the same !important as the Search box above: both exist on the desktop
+// layout too, so the game keeps writing an inline display to each and the
+// has-* class has to outrank it either way round.
+#out-sector-bar #out-characters,
+#out-sector-bar #out-locales {
+	display: none !important;
+}
+
+#out-sector-bar.has-characters #out-characters,
+#out-sector-bar.has-locales #out-locales {
+	display: flex !important;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+}
+
+// The bar has no room for headings, and what a row is is obvious from what is
+// in it. #out-actions is labelled from outside the box so the level system
+// hides its heading directly; the locales box carries its own, so it is hidden
+// here instead.
+#out-sector-bar #out-locales > .subheader {
+	display: none;
+}
+
+// A locale is a button and a note about it. Left as a table the whole list is
+// one unbreakable block in a row that has to wrap, so let the rows themselves
+// be the things that wrap.
+#out-sector-bar #out-locales table,
+#out-sector-bar #out-locales tbody {
+	display: contents;
+}
+
+#out-sector-bar #out-locales tr {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+#out-sector-bar #out-locales td {
+	display: block;
+	padding: 0;
+	border: none;
+}
+
+// the note is secondary to the button and must not be what sets the row's width
+#out-sector-bar #out-locales .p-meta {
+	margin: 0;
+	font-size: 0.72rem;
+	line-height: 1.15;
+	max-width: 10em;
+}
+
+.collector-chip { display: none; }
+
+// is-buildable is the other half of the chip's life: before there is a bucket
+// here it is the icon and the button that builds one, after it is the fill
+// level and the two collect actions. Never both - see updateCollectorRows.
+.collector-chip.is-built,
+.collector-chip.is-buildable {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+// the fill span has no text until something is built, but it still opens the
+// chip's gap beside an icon with nothing to say
+.collector-chip:not(.is-built) > .collector-chip-fill {
+	display: none;
+}
+
+// Nothing here hides the chip's BUTTONS. updateCollectorRows toggles the build
+// and the collect actions itself, which is the only way UIOutElementsSystem
+// learns they exist: it rebuilds its list of buttons to keep updated from what
+// is visible, and a button hidden by css alone drops out of that list and never
+// earns its way back - the same pass leaves an inline hide on its container, so
+// it stays invisible even after the css stops applying. It then sits there with
+// whatever disabled state it had when it left, which is how a full bucket ended
+// up beside a struck-through "all". Classes here are for the chip's own layout.
+
+.collector-chip-icon {
+	// An empty span, NOT an img. background-color paints behind an img's own
+	// pixels, so masking an <img> of an opaque sprite still renders the sprite's
+	// original grey - the colour never shows. A span has no content of its own,
+	// so the mask cuts the sprite's shape out of the background colour.
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	flex: 0 0 auto;
+	// the res-*.png sprites are monochrome, so a filter cannot tint them - mask
+	// the sprite instead and paint the colour behind it
+	-webkit-mask-image: var(--l13-chip-mask);
+	mask-image: var(--l13-chip-mask);
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+	background-color: var(--l13-chip-color);
+}
+
+// mid-tone so it reads on the dark, dusky and sunlit themes alike
+#out-collector-chip-water .collector-chip-icon {
+	--l13-chip-mask: url(../img/res-water.png);
+	--l13-chip-color: #5a9fd4;
+}
+
+#out-collector-chip-food .collector-chip-icon {
+	--l13-chip-mask: url(../img/res-food.png);
+	--l13-chip-color: #c65a4a;
+}
+
+.collector-chip-fill {
+	white-space: nowrap;
+	font-size: 0.85em;
+}
+
+// Pinned form: a static band of the shell column, between the scrolling pane
+// and the map panel. Static, never fixed - iOS drops a fixed element wherever a
+// momentum scroll left it, which is why the shell locks the document and stacks
+// its bands instead.
+body.layout-small #unit-main > #out-sector-bar {
+	position: static;
+	flex: 0 0 auto;
+	margin: 0;
+	padding: 6px ~"calc(5px + env(safe-area-inset-right))" 6px ~"calc(5px + env(safe-area-inset-left))";
+	box-sizing: border-box;
+	background: var(--l13-mobile-bg);
+	// the top edge of the whole bottom chrome; the map panel below gives up its
+	// own edge so the two read as one panel
+	border-top: 3px solid var(--l13-mobile-divider);
+	box-shadow: 0 -5px 10px -2px var(--l13-mobile-divider-shadow);
+}
+
+// no map panel yet (scouting not unlocked), so the bar is the bottom edge
+body.layout-small #unit-main.out-map-hidden > #out-sector-bar {
+	padding-bottom: ~"calc(6px + env(safe-area-inset-bottom))";
+}
+
+// One continuous surface: the panel drops its own edge whenever a VISIBLE bar
+// sits above it. Keyed on the visibility classes, not on the element, so a
+// hidden bar leaves the panel's divider intact.
+//
+// This selector is DOM-based, but the panel's position is not: it carries
+// `order: 2` while every other child of #unit-main is 0, so it renders last
+// whatever the DOM says. Keep updateSectorBarPlacement inserting the bar
+// BEFORE the panel - if the two ever disagree the column still looks right
+// and this rule silently stops matching, leaving a double border at the seam.
+body.layout-small.tab-switch-out #out-sector-bar.has-actions + #out-container-compass,
+body.layout-small.tab-switch-out #out-sector-bar.has-collectors + #out-container-compass,
+body.layout-small.tab-switch-out #out-sector-bar.has-finds + #out-container-compass {
+	border-top: none;
+	box-shadow: none;
+}
+
+// Docked on #unit-main the bar is outside the tab container, so setTab can no
+// longer hide it - the same problem the map panel has, solved the same way.
+body.layout-small:not(.tab-switch-out) #unit-main > #out-sector-bar {
+	display: none !important;
+}
+
+// The chip is a compact widget, but `button { width: 95pt }` (80pt via
+// btn-narrow) is sized for a full-width action list and makes two chips
+// impossible to fit on one phone row. Size these to their content instead.
+#out-sector-bar .collector-chip button.action {
+	width: auto;
+	min-width: 3em;
+	padding: 8px 10px;
+	margin: 0;
+}
+
+// Each button wrapper adds 6px of side margin, so the pair costs 24px per chip
+// - which is the whole difference between the two chips sharing a row and
+// wrapping onto two. The chip's own gap already separates them. Safe to drop:
+// this is spacing, not a hit halo. The button stays 44px tall, and the compact
+// "1" button keeps the ::after halo it already had.
+#out-sector-bar .collector-chip .container-btn-action {
+	margin: 0;
+}
+
+#out-sector-bar .collector-chip {
+	gap: 6px;
+}
+
+// The upgrade arrow is a glyph, not a word, so the 3em floor the chip's other
+// buttons need would cost it half its width in empty space - and the third
+// button is exactly what decides whether the two chips still share a row.
+// Narrower than the "1" beside it for the same reason, and it earns that: the
+// arrow is one character where the "1" is a digit that has to read as a count.
+// The 36px touch floor from btn-compact still applies, and its ::after halo
+// still reaches the full 44px.
+#out-sector-bar .collector-chip button.action-improve {
+	min-width: 2em;
+	padding-left: 6px;
+	padding-right: 6px;
+}
+
+// ---------------------------------------------------------------------------
+// LANDSCAPE MAP
+//
+// A phone on its side is the map and nothing else. UIOutHeaderSystem sets
+// .landscape-map (see isLandscapeMapLayout) and switches to the map tab, so
+// everything the portrait map tab does is already in force here - this section
+// only turns the one column into two and takes the chrome away.
+//
+// Not scoped to an @media block. The mode is a decision, not a viewport: it
+// also asks whether this is a touch screen and whether the player has a map at
+// all, and a phone turned sideways before the map exists still gets the rotate
+// notice at the top of this file.
+//
+// .landscape-map without .layout-small never happens - the same pass sets both
+// - but the sizing rules the map needs are repeated here rather than left to
+// the portrait ones, because a fullscreen map that quietly falls back to a
+// 198px canvas is a worse failure than a few duplicated lines.
+
+// The shell locks the document again. The `max-height: 480px` block in APP
+// SHELL hands landscape back to the ordinary page scroll, which is right for a
+// stack of bands and wrong for a map that has to fit the viewport exactly.
+html:has(> body.landscape-map),
+body.landscape-map {
+	height: var(--l13-viewport-height);
+	overflow: hidden;
+}
+
+body.landscape-map {
+	--l13-shell: 1;
+}
+
+body.landscape-map > .sticky-footer-wrapper,
+body.landscape-map #grid-main,
+body.landscape-map #unit-main {
+	height: 100% !important;
+	min-height: 0;
+}
+
+// what goes away: the tab bar, the level banner and the stats block (all three
+// are #mobile-chrome), the footer, the log pill and its drawer
+body.landscape-map #mobile-chrome,
+body.landscape-map #footer,
+body.landscape-map #btn-log-toggle,
+body.landscape-map #log-container {
+	display: none !important;
+}
+
+// A tab left mid-fade would otherwise land in the grid beside the map for the
+// length of the animation, and any later tab change would put it there for
+// good. The map tab is the only one that exists in this mode.
+body.landscape-map #grid-switch-content > .tabcontainer:not(#container-tab-two-map) {
+	display: none !important;
+}
+
+// ---------------------------------------------------------------------------
+// The two columns.
+//
+// The map and the controls that belong with it are not siblings: the selects
+// are in #grid-tab-header, and the map and its details are two levels down
+// inside the tab container. `display: contents` drops those two wrappers out
+// of the box tree so all three become items of one grid, which is cheaper and
+// steadier than moving them in the DOM and putting them back.
+//
+// !important because the tab system writes an inline `display` on the
+// container as it shows the tab.
+//
+// .tab-switch-map is carried on these selectors for weight, not for meaning -
+// landscape is always the map tab. The MAP TAB rules above are written
+// `body.layout-small.tab-switch-map`, and without the third class these lose to
+// them and the column never becomes two.
+body.landscape-map.tab-switch-map #grid-switch-content {
+	display: grid;
+	// The rail holds two selects and up to seven glyph buttons and nothing
+	// else, so it takes a width rather than a share. It used to take 30% of
+	// the screen for a description that has moved over the map.
+	grid-template-columns: minmax(0, 1fr) 152px;
+	// the containing block for the description panel below: the panel has to
+	// reach across into the map's column, which it cannot do while its only
+	// positioned ancestor is inside the rail
+	position: relative;
+	// the controls take what they need at the top of the right column and the
+	// details get the rest; minmax(0, 1fr) is what lets that row scroll rather
+	// than push the grid past the viewport
+	grid-template-rows: auto minmax(0, 1fr);
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+	padding: 0;
+	padding-left: env(safe-area-inset-left);
+	padding-right: env(safe-area-inset-right);
+	padding-bottom: env(safe-area-inset-bottom);
+	margin-bottom: 0 !important;
+}
+
+body.landscape-map.tab-switch-map #container-tab-two-map,
+body.landscape-map.tab-switch-map #container-tab-two-map > .unit {
+	display: contents !important;
+}
+
+// the map takes the left column whole, in either style
+body.landscape-map.tab-switch-map #mainmap-container-container,
+body.landscape-map.tab-switch-map #mainmap-container-ascii {
+	grid-column: 1;
+	grid-row: 1 / span 2;
+	// a grid item will not shrink below its content either, and the content is
+	// a 500px canvas
+	min-width: 0;
+	min-height: 0;
+	margin: 0;
+}
+
+// The viewport inside the map box is not repeated here. It is sized by the MAP
+// TAB rules above, which land in landscape too - .layout-small and
+// .tab-switch-map are both set in this mode - and the sizing is a chain of
+// three boxes that must not be stated twice and drift.
+
+body.landscape-map.tab-switch-map #mainmap-container-ascii {
+	overflow: auto;
+}
+
+// ---------------------------------------------------------------------------
+// The right column: the map's own controls, and nothing else.
+//
+// The description used to sit in this column. At 30% of a phone on its side
+// that is about 250px for prose with a heading and a nine-row table, and it
+// was unreadable. It floats over the map now, as it already did in portrait,
+// and the column keeps only the controls - which is why it can be a narrow
+// rail instead of a third of the screen.
+
+body.landscape-map.tab-switch-map #grid-tab-header {
+	grid-column: 2;
+	grid-row: 1;
+	min-width: 0;
+	margin: 0;
+}
+
+body.landscape-map #tab-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+	padding: 4px 6px;
+}
+
+body.landscape-map #tab-header h2 {
+	display: none;
+}
+
+// the selects are sized for a full-width header row; in a 30% column they
+// share what there is and wrap when they cannot
+body.landscape-map #tab-header .tabelement {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	width: 100%;
+}
+
+body.landscape-map #tab-header .tab-options {
+	float: none;
+	flex: 1 1 auto;
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+}
+
+body.landscape-map.tab-switch-map #mainmap-sector-details {
+	grid-column: 2;
+	grid-row: 2;
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+	// the jump-to buttons keep flowing in rows at the top of the column
+	align-content: flex-start;
+	justify-content: flex-start;
+	// Portrait makes this the anchor for the panel over the map. Here it must
+	// NOT be one: the panel has to reach across into the map's column, so its
+	// containing block is #grid-switch-content, and a position other than
+	// static here would capture it back into this rail.
+	position: static;
+}
+
+// Over the map, in the bottom left of its column.
+//
+// Absolute, not fixed. Safari clips a fixed box that lives inside a scrolling
+// container, and #mainmap-sector-details is one. An absolutely positioned box
+// whose containing block sits outside that scroller is not clipped by it,
+// which is why Step 1 put `position: relative` on the grid and why the details
+// box must stay `position: static` here.
+//
+// The card itself - background, border, radius, shadow, padding, and the close
+// button - comes from the portrait rules above and is not repeated.
+body.landscape-map.tab-switch-map #mainmap-sector-details-content {
+	position: absolute;
+	order: 0;
+	flex: none;
+	top: auto;
+	right: auto;
+	left: ~"calc(env(safe-area-inset-left) + 10px)";
+	bottom: ~"calc(env(safe-area-inset-bottom) + 10px)";
+	width: ~"min(56%, 460px)";
+	max-height: ~"calc(100% - 20px)";
+	margin: 0;
+	overflow-y: auto;
+}
+
+// ---------------------------------------------------------------------------
+// HIDE STILL MEANS HIDE
+//
+// Several rules above force `display` with !important, because jQuery writes an
+// inline `display` when it restores an element and an inline style beats a
+// stylesheet rule. But an important author declaration also beats jQuery's
+// inline `display: none`, so those elements could never be hidden again. The
+// game hides the map panel until scouting is unlocked, and it showed anyway.
+// The bucket row taught the same lesson before it left for the sector bar: it
+// stood in sectors where no bucket could be built, complete with a stale "busy
+// moving" reason on a button for an action that was not offered there.
+//
+// So match the inline hide itself. The attribute selector raises specificity
+// over each forced rule, so this wins wherever that rule sits, in a media
+// query or not. Keep this list in step with the forced `display` rules above.
+//
+// One pair lives away from this list rather than in it: the tab strip's
+// `display: inline-block !important` and its guard sit together in the TAB BAR
+// rules, because the reason for that !important is a defect report and the
+// explanation has to be next to the rule it justifies. If you are auditing
+// this list for completeness, that is the one it does not name.
+body.layout-small #out-container-compass[style*="display: none"],
+body.layout-small #out-container-compass[style*="display:none"],
+// the forced rule for this one is written through its parent, so the guard has
+// to carry the same ancestors to outrank it
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions[style*="display: none"],
+body.layout-small.tab-switch-out #out-container-compass #out-container-compass-actions[style*="display:none"],
+body.layout-small #container-tab-two-out[style*="display: none"],
+body.layout-small #container-tab-two-out[style*="display:none"],
+body.layout-small #unit-main[style*="display: none"],
+body.layout-small #unit-main[style*="display:none"] {
+	display: none !important;
+}

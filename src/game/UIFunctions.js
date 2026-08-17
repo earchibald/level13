@@ -35,7 +35,7 @@ define(['ash',
 			contextHotkeyActions: [ "enter_camp", "move_level_up", "move_level_down", "leave_camp" ],
 
 			// hotkeys with custom callbacks whose buttons should still show a badge
-			manualHotkeyHints: { "move_camp_level": "B" },
+			manualHotkeyHints: { "move_camp_level": "B", "take_all": "&#9166;", "accept_inventory": "Esc" },
 
 			texts: [],
 
@@ -63,11 +63,14 @@ define(['ash',
 			},
 			
 			init: function () {
+				$("body").toggleClass("touch", UIConstants.isTouchScreen());
+				this.updateStandaloneMode();
 				this.registerHotkeys();
 				this.generateElements();
 				this.hideElements();
 				this.registerListeners();
 				this.registerGlobalMouseEvents();
+				this.registerTouchAndMobileListeners();
 			},
 
 			registerListeners: function () {
@@ -85,7 +88,12 @@ define(['ash',
 				};
 				$.each($("#switch-tabs li"), function () {
 					$(this).click(onTabClickedInternal);
-					$(this).keydown((e) => uiFunctions.onButtonLikeElementKeyDown(e, onTabClickedInternal));
+					// ENTER on the tab that is already open must not replay the tab transition:
+					// the keypress belongs to that tab's own action (leave camp, enter camp, use passage)
+					$(this).keydown((e) => {
+						if ($(e.currentTarget).hasClass("selected")) return;
+						uiFunctions.onButtonLikeElementKeyDown(e, onTabClickedInternal);
+					});
 					$(this).append("<span class='tab-hotkey-number' aria-hidden='true'></span>");
 				});
 
@@ -106,12 +114,33 @@ define(['ash',
 				});
 				$("#btn-more").click(function (e) {
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					// the phone footer is a fixed row; the options open as a popup there
+					// so the row never changes height under the player's thumb
+					if ($("body").hasClass("layout-small")) {
+						uiFunctions.showMoreOptionsPopup();
+						return;
+					}
 					let wasVisible = $("#game-options-extended").is(":visible");
 					uiFunctions.showGameOptions(!wasVisible);
+				});
+				$("#more-options-popup-close").click(function (e) {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					uiFunctions.popupManager.closePopup("more-options-popup");
+				});
+				// any option chosen closes the options popup. The option button's own
+				// handler runs first (direct binding fires before the bubbled one) and
+				// the overlay counter carries the overlay across the swap, so whatever
+				// the option opens lands on top cleanly.
+				$("#more-options-popup-options").on("click", "button", function (e) {
+					uiFunctions.popupManager.closePopup("more-options-popup");
 				});
 				$("#btn-importexport").click(function (e) {
 					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 					uiFunctions.showManageSave();
+				});
+				$("#btn-reload").click(function (e) {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					uiFunctions.confirmReload();
 				});
 				$("#btn-stats").click(function (e) {
 					uiFunctions.showStatsPopup();
@@ -166,20 +195,495 @@ define(['ash',
 			},
 
 			registerGlobalMouseEvents: function () {
+				// pointer events cover both mouse and touch, so hold-to-repeat works on touch too
 				GameGlobals.gameState.uiStatus.mouseDown = false;
 				GameGlobals.gameState.uiStatus.mouseDownElement = null;
-				$(document).on('mouseleave', function (e) {
+				$(document).on('pointerleave', function (e) {
 					GameGlobals.gameState.uiStatus.mouseDown = false;
 					GameGlobals.gameState.uiStatus.mouseDownElement = null;
 				});
-				$(document).on('mouseup', function (e) {
+				$(document).on('pointerup pointercancel', function (e) {
 					GameGlobals.gameState.uiStatus.mouseDown = false;
 					GameGlobals.gameState.uiStatus.mouseDownElement = null;
 				});
-				$(document).on('mousedown', function (e) {
+				$(document).on('pointerdown', function (e) {
 					GameGlobals.gameState.uiStatus.mouseDown = true;
 					GameGlobals.gameState.uiStatus.mouseDownElement = e.target;
 				});
+			},
+
+			registerTouchAndMobileListeners: function () {
+				let uiFunctions = this;
+				let isTouch = UIConstants.isTouchScreen();
+
+				// checkbox labels toggle their checkbox (all devices)
+				$(document).on("click", ".checkbox-label", function () {
+					let $box = $(this).prevAll("input[type='checkbox']").first();
+					if ($box.length == 0 || $box.prop("disabled")) return;
+					$box.prop("checked", !$box.prop("checked")).trigger("change");
+				});
+
+				// mobile log drawer toggle (small layout only, see mobile css)
+				$("#btn-log-toggle").click(function () {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					let isOpening = !$("body").hasClass("log-drawer-open");
+					$("body").toggleClass("log-drawer-open");
+					// the pill cannot stay docked in the map panel while the
+					// drawer covers it, so the layout has to be re-run
+					GlobalSignals.logDrawerToggledSignal.dispatch(isOpening);
+					// opening the drawer is reading the log: clear the unread
+					// badge through the game's own seen-marking
+					if (isOpening) GlobalSignals.markLogMessagesSeenSignal.dispatch();
+				});
+
+				// adventurer detail in camp (small layout only, see mobile css).
+				// The stats it reveals are already in the header markup and
+				// already current, so this only decides what is on screen.
+				$("#btn-adventurer").click(function () {
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					let isOpen = !$("body").hasClass("adventurer-open");
+					$("body").toggleClass("adventurer-open", isOpen);
+					$(this).attr("aria-expanded", isOpen);
+				});
+
+				// The room description, on a phone. It opens by itself when the
+				// room is new - see UIOutLevelSystem - and this is the way back to
+				// it, and the way out of it.
+				//
+				// Any tap closes it. Every sector is a first visit, so a panel that
+				// waited to be dismissed would cost a tap on almost every move; and
+				// because it never covers the action bar, the tap that closes it is
+				// usually the tap that does the next thing anyway.
+				$("#btn-room").click(function (e) {
+					// without this the document handler below closes the panel and
+					// this handler opens it again, on every tap
+					e.stopPropagation();
+					GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+					uiFunctions.toggleRoomPanel(!$("body").hasClass("room-panel-open"));
+				});
+
+				$("#btn-room-panel-close").click(function (e) {
+					e.stopPropagation();
+					uiFunctions.toggleRoomPanel(false);
+				});
+
+				// This is the whole of the dismiss rule. A tab switch, a direction,
+				// Scavenge and the panel itself are all clicks in the document, so
+				// none of them needs a rule of its own.
+				$(document).on("click", function () {
+					if (!$("body").hasClass("room-panel-open")) return;
+					uiFunctions.toggleRoomPanel(false);
+				});
+
+				// keep popups centered within the VISIBLE viewport (the software
+				// keyboard shrinks it on phones)
+				if (window.visualViewport) {
+					window.visualViewport.addEventListener("resize", function () {
+						uiFunctions.popupManager.repositionPopups();
+						uiFunctions.reclampOpenCallout();
+					});
+				}
+
+				if (!isTouch) return;
+
+				// tap toggles info callouts (hover is not available on touch)
+				$(document).on("click", ".info-callout-target", function (e) {
+					if ($(e.target).closest("button, a, input, select, textarea").length > 0) return;
+					// lists where tap already moves the item (trade, reward selection):
+					// there the callout would fight the primary action
+					if ($(this).closest(".inventorydivision, .resultlist, #resultlist-inventorymanagement").length > 0) return;
+					let $container = $(this).closest(".callout-container");
+					if ($container.length == 0) return;
+					let wasOpen = $container.hasClass("callout-visible");
+					uiFunctions.closeAllCallouts();
+					if (!wasOpen) {
+						uiFunctions.openCallout($container, $(this));
+					}
+				});
+
+				// crafting and location scouting open a dialog instead of a callout
+				// card (see showActionConfirmPopup). Capture phase, so it runs
+				// before the action handler and before the callout handlers below.
+				document.addEventListener("click", function (e) {
+					if (!$("body").hasClass("layout-small")) return;
+					if (!e.target.closest) return;
+					let container = e.target.closest(".container-btn-action");
+					if (!container) return;
+					let button = container.querySelector("button.action");
+					if (!button) return;
+					let $button = $(button);
+					if (!uiFunctions.isDialogActionButton($button)) return;
+					// the popup's own confirm button is an action button too, and
+					// it must be allowed through
+					if (container.closest("#common-popup")) return;
+					e.preventDefault();
+					e.stopPropagation();
+					uiFunctions.closeAllCallouts();
+					uiFunctions.showActionConfirmPopup($button);
+				}, true);
+
+				// tap on a disabled action button shows its callout (costs + disabled
+				// reason). Native disabled buttons swallow clicks, so the handler sits
+				// on the wrapper and CSS gives the disabled button pointer-events:none.
+				$(document).on("click", ".container-btn-action", function (e) {
+					let $btn = $(this).children("button");
+					if (!$btn.hasClass("btn-disabled")) return;
+					if ($(e.target).closest("button:not(.btn-disabled), a").length > 0) return;
+					let $container = $(this).closest(".callout-container");
+					if ($container.length == 0) return;
+					let wasOpen = $container.hasClass("callout-visible");
+					uiFunctions.closeAllCallouts();
+					if (!wasOpen) {
+						uiFunctions.openCallout($container, $btn);
+					}
+				});
+
+				// long-press on an enabled action button previews its callout instead of acting
+				let longPressDelay = 500;
+				$(document).on("pointerdown", ".container-btn-action > button", function (e) {
+					if (e.pointerType === "mouse") return;
+					// these buttons answer a tap with a dialog; a long-press card
+					// would be the very thing that was falling off the screen
+					if ($("body").hasClass("layout-small") && uiFunctions.isDialogActionButton($(this))) return;
+					let btn = this;
+					let $btn = $(btn);
+					// a stale flag from an aborted long-press must not swallow this tap
+					btn.dataset.longPressFired = "false";
+					uiFunctions.cancelLongPress($btn);
+					let timer = setTimeout(function () {
+						btn.dataset.longPressFired = "true";
+						let $container = $btn.closest(".callout-container");
+						uiFunctions.closeAllCallouts();
+						uiFunctions.openCallout($container, $btn);
+					}, longPressDelay);
+					$btn.data("long-press-timer", timer);
+				});
+				$(document).on("pointerup pointercancel pointerleave pointermove", ".container-btn-action > button", function (e) {
+					if (e.type == "pointermove") return; // small jitter should not cancel; click suppression handles fired presses
+					uiFunctions.cancelLongPress($(this));
+				});
+				// suppress the click that follows a long-press (capture phase runs before the action handler)
+				document.addEventListener("click", function (e) {
+					let btn = e.target.closest ? e.target.closest(".container-btn-action > button") : null;
+					if (btn && btn.dataset.longPressFired === "true") {
+						btn.dataset.longPressFired = "false";
+						e.preventDefault();
+						e.stopPropagation();
+					}
+				}, true);
+				// long-press should not open the browser context menu on buttons
+				$(document).on("contextmenu", ".container-btn-action", function (e) {
+					e.preventDefault();
+				});
+
+				// long-press on trade/reward list items previews the item info;
+				// a quick tap keeps its primary meaning there (move the item)
+				let listItemSelector = ".inventorydivision li, .resultlist li, #resultlist-inventorymanagement li";
+				$(document).on("pointerdown", listItemSelector, function (e) {
+					if (e.pointerType === "mouse") return;
+					let li = this;
+					let $li = $(li);
+					li.dataset.lpInfoFired = "false";
+					uiFunctions.cancelLongPress($li);
+					let timer = setTimeout(function () {
+						let $container = $li.find(".callout-container").first();
+						if ($container.length == 0) return;
+						li.dataset.lpInfoFired = "true";
+						uiFunctions.closeAllCallouts();
+						uiFunctions.openCallout($container, $container.children(".info-callout-target").first());
+					}, longPressDelay);
+					$li.data("long-press-timer", timer);
+				});
+				$(document).on("pointerup pointercancel pointerleave", listItemSelector, function (e) {
+					uiFunctions.cancelLongPress($(this));
+				});
+				// after an info long-press, the release click must not move the item
+				document.addEventListener("click", function (e) {
+					let li = e.target.closest ? e.target.closest("li") : null;
+					if (li && li.dataset && li.dataset.lpInfoFired === "true") {
+						li.dataset.lpInfoFired = "false";
+						e.preventDefault();
+						e.stopPropagation();
+					}
+				}, true);
+				$(document).on("contextmenu", listItemSelector, function (e) {
+					e.preventDefault();
+				});
+
+				// tap outside closes open callouts
+				$(document).on("click", function (e) {
+					if ($(e.target).closest(".callout-container").length > 0) return;
+					uiFunctions.closeAllCallouts();
+				});
+			},
+
+			isTouchUI: function () {
+				return UIConstants.isTouchScreen();
+			},
+
+			// installed to the home screen there is no browser chrome, so the game
+			// owns the whole screen: the css uses this to spend the reclaimed space
+			// and to pad for the status bar and home indicator itself
+			isStandalone: function () {
+				if (window.navigator.standalone === true) return true; // iOS
+				if (!window.matchMedia) return false;
+				return window.matchMedia("(display-mode: standalone)").matches
+					|| window.matchMedia("(display-mode: fullscreen)").matches
+					|| window.matchMedia("(display-mode: minimal-ui)").matches;
+			},
+
+			updateStandaloneMode: function () {
+				let uiFunctions = this;
+				$("body").toggleClass("standalone", this.isStandalone());
+				if (!window.matchMedia) return;
+				let query = window.matchMedia("(display-mode: standalone)");
+				if (!query.addEventListener) return;
+				query.addEventListener("change", function () {
+					$("body").toggleClass("standalone", uiFunctions.isStandalone());
+				});
+			},
+
+			openCallout: function ($container, $target) {
+				$container.addClass("callout-visible");
+				// while a tap callout is open the content layer paints above the
+				// fixed header (see mobile css)
+				$("body").addClass("callout-open");
+				// fire the same hooks hover fires so callout content and buttons refresh
+				if ($target) $target.trigger("mouseenter");
+				this.clampCalloutToViewport($container, $target);
+				GlobalSignals.elementToggledSignal.dispatch();
+
+				// the systems listening above fill in costs and requirement lines,
+				// so the card can still grow after this frame. Measuring once
+				// clamped a card that was not its final height yet.
+				let uiFunctions = this;
+				this.openCalloutElements = { $container: $container, $target: $target };
+				requestAnimationFrame(function () {
+					if (!$container.hasClass("callout-visible")) return;
+					uiFunctions.clampCalloutToViewport($container, $target);
+				});
+			},
+
+			// COMMITTING ACTIONS ON A PHONE
+			// Crafting an item and scouting a location both cost real resources,
+			// and both showed those costs on a card hanging off a button in a long
+			// scrolling list, where it ran past the bottom of the screen. On small
+			// layout a tap opens a dialog instead: the same costs and reasons, in a
+			// box that is centred and scrollable, with an explicit confirm.
+
+			isDialogActionButton: function ($btn) {
+				let action = $btn.attr("action");
+				if (!action) return false;
+				if (action.indexOf("craft_") === 0) return true;
+				// scouting a named location. The plain sector scout is deliberately
+				// not here: it is repeated many times per excursion, so a confirm
+				// on it is a tax rather than a safeguard.
+				if (action.indexOf("scout_locale_") === 0) return true;
+				if (action === "clear_workshop") return true;
+				// research, and upgrading a camp building or a collector: one-off
+				// and expensive, and their cost cards were the worst offenders in
+				// a long list
+				if (action.indexOf("unlock_upgrade_") === 0) return true;
+				if (action.indexOf("improve_in_") === 0) return true;
+				if (action.indexOf("improve_out_") === 0) return true;
+				return false;
+			},
+
+			showActionConfirmPopup: function ($btn) {
+				let action = $btn.attr("action");
+				let title = this.getActionPopupTitle($btn, action);
+				let isDisabled = $btn.hasClass("btn-disabled");
+				let msg = this.getActionPopupMessage($btn);
+
+				if (isDisabled) {
+					// nothing to confirm, so the only way out is back
+					this.popupManager.showPopup(title, msg, null, "Cancel", null, null, null, { isDismissable: true });
+					return;
+				}
+
+				// the popup builds a real action button, so the game's own rules
+				// decide what the action costs and does
+				this.popupManager.showPopup(title, msg, this.getActionPopupConfirmLabel($btn, action), "Cancel", null, null, null, {
+					isDismissable: true,
+					action: action,
+				});
+			},
+
+			// the upgrade arrow is a glyph, so it cannot name the dialog itself;
+			// the row it sits in is named by its build button
+			getActionPopupTitle: function ($btn, action) {
+				let label = ($btn.find(".btn-label").text() || $btn.text() || "").trim();
+				let isGlyph = !(label.length > 0 && /[a-z0-9]/i.test(label));
+				// the upgrade arrow is a glyph and every research button just says
+				// "unlock" - in both cases the row names the thing, in its first cell
+				let preferRow = isGlyph || action.indexOf("unlock_upgrade_") === 0;
+
+				if (preferRow) {
+					let rowLabel = this.getRowLabel($btn);
+					if (rowLabel) return rowLabel;
+				}
+
+				if (!isGlyph) return label;
+
+				let name = this.getActionName(action);
+				return name || "Confirm";
+			},
+
+			getActionPopupConfirmLabel: function ($btn, action) {
+				if (action.indexOf("craft_") === 0) return "Craft";
+				if (action.indexOf("scout_locale_") === 0) return "Scout";
+				if (action === "clear_workshop") return "Scout";
+				if (action.indexOf("unlock_upgrade_") === 0) return "Unlock";
+				if (action.indexOf("improve_") === 0) return "Upgrade";
+				let name = this.getActionName(action);
+				if (name) return name;
+				return ($btn.find(".btn-label").text() || "Confirm").trim();
+			},
+
+			// what the row calls itself: its own button's label, or its first cell
+			// with the hidden callout cards stripped out (they carry the whole
+			// description and cost list and would swallow the title)
+			getRowLabel: function ($btn) {
+				let $cell = $btn.closest("tr").children("td").first();
+				if ($cell.length === 0) return null;
+
+				let label = $cell.find(".btn-label").first().text().replace(/\s+/g, " ").trim();
+				if (!label) {
+					let $clone = $cell.clone();
+					$clone.find("div.btn-callout, div.info-callout").remove();
+					label = $clone.text().replace(/\s+/g, " ").trim();
+				}
+
+				if (!label || label.length > 40) return null;
+				return label;
+			},
+
+			getActionName: function (action) {
+				let baseActionID = GameGlobals.playerActionsHelper.getBaseActionID(action);
+				let key = "game.actions." + baseActionID + "_name";
+				let name = Text.t(key);
+				return name && name !== key ? name : null;
+			},
+
+			// reuse the callout's own markup so the costs keep the colours and
+			// wording the rest of the game uses for what you cannot afford
+			getActionPopupMessage: function ($btn) {
+				let $content = $btn.parent().siblings("div.btn-callout").children(".btn-callout-content");
+				if ($content.length == 0) return "";
+				let $clone = $content.clone();
+				$clone.find("[id]").removeAttr("id");
+				return $("<div class='action-dialog'></div>").append($clone).prop("outerHTML");
+			},
+
+			// the phone toolbars hide and show as the page scrolls, which changes
+			// how much room an open card has
+			reclampOpenCallout: function () {
+				let open = this.openCalloutElements;
+				if (!open || !open.$container || !open.$container.hasClass("callout-visible")) return;
+				this.clampCalloutToViewport(open.$container, open.$target);
+			},
+
+			// callout cards anchor to their trigger element; near the screen edge
+			// the card would overflow the viewport, so shift it back inside
+			clampCalloutToViewport: function ($container, $target) {
+				let $callout = $container.children("div.info-callout, div.btn-callout").first();
+				if ($callout.length == 0) return;
+				$callout.css({ "margin-left": "", "margin-top": "", "max-height": "" })
+					.removeClass("callout-flipped callout-scrollable");
+				let margin = 8;
+				let viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+				let rect = $callout[0].getBoundingClientRect();
+				if (rect.width == 0) return;
+				let shift = 0;
+				if (rect.right > viewportWidth - margin) shift = (viewportWidth - margin) - rect.right;
+				// the left edge wins if the card is wider than the viewport
+				if (rect.left + shift < margin) shift = margin - rect.left;
+				if (shift != 0) $callout.css("margin-left", Math.round(shift) + "px");
+
+				this.clampCalloutVertically($callout, $target, margin);
+			},
+
+			// cards open below their trigger, so one near the bottom of a long
+			// list runs under the pinned action bar and off the screen. Flip it
+			// above the trigger when there is room, otherwise slide it up.
+			clampCalloutVertically: function ($callout, $target, margin) {
+				let viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+				let bottomLimit = viewportHeight - this.getPinnedBottomHeight() - margin;
+				let topLimit = this.getPinnedTopHeight() + margin;
+
+				// a card taller than the whole band cannot be placed anywhere
+				// without losing its end, so cap it and let it scroll instead
+				$callout.css("max-height", Math.max(80, Math.round(bottomLimit - topLimit)) + "px");
+				let element = $callout[0];
+				$callout.toggleClass("callout-scrollable", element.scrollHeight > element.clientHeight + 1);
+
+				let rect = $callout[0].getBoundingClientRect();
+				if (rect.height == 0) return;
+				if (rect.bottom <= bottomLimit) return;
+
+				if ($target && $target.length > 0) {
+					let targetRect = $target[0].getBoundingClientRect();
+					let flippedTop = targetRect.top - rect.height - 6;
+					if (flippedTop >= topLimit) {
+						$callout.css("margin-top", Math.round(flippedTop - rect.top) + "px").addClass("callout-flipped");
+						return;
+					}
+				}
+
+				// no room either side: sit as low as fits without hiding the top
+				let up = Math.max(bottomLimit - rect.bottom, topLimit - rect.top);
+				if (up < 0) $callout.css("margin-top", Math.round(up) + "px");
+			},
+
+			// chrome pinned to the bottom of the screen: the main-action bar, and
+			// the minimap on the exploration tab.
+			//
+			// The position test below finds only overlays. In the shell layout the
+			// bottom chrome is instead a static flex band at the end of #unit-main,
+			// so the test misses it and a callout low in the pane gets clipped by
+			// the pane's own overflow. UIOutHeaderSystem already measures that band
+			// for the log pill, so read its value rather than measuring it twice.
+			getPinnedBottomHeight: function () {
+				let shellBand = parseFloat(getComputedStyle(document.documentElement)
+					.getPropertyValue("--l13-out-bottom-height"));
+				let height = isNaN(shellBand) ? 0 : shellBand;
+				$(".action-mirror, #out-container-compass").each(function () {
+					let $bar = $(this);
+					if ($bar.css("position") != "fixed") return;
+					if (!$bar.is(":visible")) return;
+					height = Math.max(height, $bar.outerHeight());
+				});
+				return height;
+			},
+
+			getPinnedTopHeight: function () {
+				let height = 0;
+				$("#mobile-header, #grid-switch").each(function () {
+					let $el = $(this);
+					if ($el.css("position") != "fixed") return;
+					height = Math.max(height, $el[0].getBoundingClientRect().bottom);
+				});
+				return Math.max(0, height);
+			},
+
+			closeAllCallouts: function () {
+				// fire the hover-out hooks so systems clear highlight state
+				$(".callout-container.callout-visible").each(function () {
+					$(this).children(".info-callout-target").trigger("mouseleave");
+					$(this).children("div.info-callout, div.btn-callout")
+						.css({ "margin-left": "", "margin-top": "", "max-height": "" })
+						.removeClass("callout-flipped callout-scrollable");
+				});
+				$(".callout-container.callout-visible").removeClass("callout-visible");
+				$("body").removeClass("callout-open");
+			},
+
+			cancelLongPress: function ($btn) {
+				let timer = $btn.data("long-press-timer");
+				if (timer) {
+					clearTimeout(timer);
+					$btn.data("long-press-timer", null);
+				}
 			},
 
 			registerHotkeys: function () {
@@ -201,6 +705,14 @@ define(['ash',
 				this.registerHotkey("Move SW", "Numpad1", defaultModifier, tabs.out, false, false, "move_sector_sw");
 				this.registerHotkey("Move SE", "KeyC", defaultModifier, tabs.out, false, false, "move_sector_se");
 				this.registerHotkey("Move SE", "Numpad3", defaultModifier, tabs.out, false, false, "move_sector_se");
+
+				// arrows are a plain four-direction alternative to WASD, always available and
+				// independent of the numpad setting, which only chooses between letters and
+				// numpad for the full eight-direction layout
+				this.registerHotkey("Move N", "ArrowUp", defaultModifier, tabs.out, false, false, "move_sector_north", { isHiddenFromList: true, activeCondition: () => true });
+				this.registerHotkey("Move W", "ArrowLeft", defaultModifier, tabs.out, false, false, "move_sector_west", { isHiddenFromList: true, activeCondition: () => true });
+				this.registerHotkey("Move S", "ArrowDown", defaultModifier, tabs.out, false, false, "move_sector_south", { isHiddenFromList: true, activeCondition: () => true });
+				this.registerHotkey("Move E", "ArrowRight", defaultModifier, tabs.out, false, false, "move_sector_east", { isHiddenFromList: true, activeCondition: () => true });
 
 				this.registerHotkey("Scavenge", "KeyN", defaultModifier, tabs.out, false, false, "scavenge");
 				this.registerHotkey("Scout", "KeyM", defaultModifier, tabs.out, false, false, "scout");
@@ -234,15 +746,113 @@ define(['ash',
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
-				// fast-jump hotkeys; these work from any tab
+				// R rests wherever the player is: the camp home on the in tab, a nap outside.
+				// One key, two tab-scoped actions; the second entry stays out of the hotkey list
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.in, false, false, "use_in_home");
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap", { isHiddenFromList: true });
+
+				// the camp buildings a player uses every visit. All three letters are taken
+				// outside (Move S, Back to camp) or on the tribe tab (Go to camp), so they are
+				// scoped to tabs.in and the two sets never meet
+				this.registerHotkey("Sit down", "KeyS", defaultModifier, tabs.in, false, false, "use_in_campfire");
+				this.registerHotkey("Treatment", "KeyT", defaultModifier, tabs.in, false, false, "use_in_hospital");
+
+				// ^ is Shift and 6, and it is the shape printed on the improve button.
+				// The plain 6 stays the tab selector: triggerHotkey skips a hotkey with no
+				// modifier whenever one is held, so the two readings of the key never collide.
+				// displayKeyIncludesModifier stops the badge and the list saying "Shift + ^"
+				this.registerHotkey("Improve campfire", "Digit6", "shiftKey", tabs.in, false, false, "improve_in_campfire", { displayKey: "^", displayKeyIncludesModifier: true });
+
+				this.registerHotkey("Buildings", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
+
+				// G asks for a level number and presses that camp's Go button. KeyG is free
+				// here because the collector binding is scoped to tabs.out; T is an alias.
+				// These keyup bindings are a fallback: UIOutTribeSystem also opens the popup
+				// on keydown, so digits typed right after the letter land in the popup
+				// instead of being dropped
+				this.registerHotkey("Go to camp on level", "KeyG", defaultModifier, tabs.world, false, false, () => GlobalSignals.openGoPopupSignal.dispatch());
+				this.registerHotkey("Go to camp on level", "KeyT", defaultModifier, tabs.world, false, false, () => GlobalSignals.openGoPopupSignal.dispatch(), { isHiddenFromList: true });
+
 				this.registerHotkey("Show map", "KeyP", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.map));
 				this.registerHotkey("Craft", "KeyK", defaultModifier, null, false, false, () => GlobalSignals.openCraftPopupSignal.dispatch());
 				this.registerHotkey("Manage inventory", "KeyI", defaultModifier, null, false, false, () => GameGlobals.uiFunctions.showInventoryContext());
 
+				// the map is driven with the same eight directions as walking. The movement
+				// hotkeys are all scoped to tabs.out, so these letters are free here.
+				// The numpad gating is NOT automatic: registerHotkey derives it from a
+				// "move_" action name and these are callbacks, so it is passed explicitly
+				// or both sets would be live at once and the setting would do nothing
+				let PositionConstants = require("game/constants/PositionConstants");
+				let mapDirections = [
+					{ code: "KeyW", numpad: "Numpad8", dir: PositionConstants.DIRECTION_NORTH, name: "Map N" },
+					{ code: "KeyA", numpad: "Numpad4", dir: PositionConstants.DIRECTION_WEST, name: "Map W" },
+					{ code: "KeyS", numpad: "Numpad2", dir: PositionConstants.DIRECTION_SOUTH, name: "Map S" },
+					{ code: "KeyD", numpad: "Numpad6", dir: PositionConstants.DIRECTION_EAST, name: "Map E" },
+					{ code: "KeyQ", numpad: "Numpad7", dir: PositionConstants.DIRECTION_NW, name: "Map NW" },
+					{ code: "KeyE", numpad: "Numpad9", dir: PositionConstants.DIRECTION_NE, name: "Map NE" },
+					{ code: "KeyZ", numpad: "Numpad1", dir: PositionConstants.DIRECTION_SW, name: "Map SW" },
+					{ code: "KeyC", numpad: "Numpad3", dir: PositionConstants.DIRECTION_SE, name: "Map SE" },
+				];
+				let useLetters = () => !GameGlobals.gameState.settings.hotkeysNumpad;
+				let useNumpad = () => GameGlobals.gameState.settings.hotkeysNumpad;
+				for (let i = 0; i < mapDirections.length; i++) {
+					let entry = mapDirections[i];
+					let move = () => GameGlobals.uiFunctions.moveMapSelection(entry.dir);
+					let options = { isHiddenFromList: i > 0, activeCondition: useLetters };
+					this.registerHotkey(entry.name, entry.code, defaultModifier, tabs.map, false, false, move, options);
+					this.registerHotkey(entry.name, entry.numpad, defaultModifier, tabs.map, false, false, move, { isHiddenFromList: true, activeCondition: useNumpad });
+				}
+
+				// the same four-direction arrow alternative on the map
+				let mapArrows = [
+					{ code: "ArrowUp", dir: PositionConstants.DIRECTION_NORTH, name: "Map N" },
+					{ code: "ArrowLeft", dir: PositionConstants.DIRECTION_WEST, name: "Map W" },
+					{ code: "ArrowDown", dir: PositionConstants.DIRECTION_SOUTH, name: "Map S" },
+					{ code: "ArrowRight", dir: PositionConstants.DIRECTION_EAST, name: "Map E" },
+				];
+				for (let i = 0; i < mapArrows.length; i++) {
+					let arrow = mapArrows[i];
+					this.registerHotkey(arrow.name, arrow.code, defaultModifier, tabs.map, false, false,
+						() => GameGlobals.uiFunctions.moveMapSelection(arrow.dir), { isHiddenFromList: true });
+				}
+
+				// zoom, the same path the + and - buttons take.
+				// On most layouts + is Shift and =, and triggerHotkey skips a no-modifier
+				// hotkey whenever a modifier is held - so binding Equal alone would answer
+				// to = but not to the + actually printed on the key. Both forms are needed.
+				let zoomIn = () => GameGlobals.uiFunctions.zoomMapView(1);
+				let zoomOut = () => GameGlobals.uiFunctions.zoomMapView(-1);
+				this.registerHotkey("Zoom in", "Equal", defaultModifier, tabs.map, false, false, zoomIn, { displayKey: "+" });
+				this.registerHotkey("Zoom in", "Equal", "shiftKey", tabs.map, false, false, zoomIn, { isHiddenFromList: true });
+				this.registerHotkey("Zoom in", "NumpadAdd", defaultModifier, tabs.map, false, false, zoomIn, { isHiddenFromList: true });
+				this.registerHotkey("Zoom out", "Minus", defaultModifier, tabs.map, false, false, zoomOut, { displayKey: "-" });
+				this.registerHotkey("Zoom out", "NumpadSubtract", defaultModifier, tabs.map, false, false, zoomOut, { isHiddenFromList: true });
+
+				// Escape goes back to the exploration tab, but ONLY when there is no popup:
+				// registered before the dismiss binding because triggerHotkey stops at the
+				// first match, and dismissPopups reports nothing back about whether it acted
+				this.registerHotkey("Back to exploration", "Escape", null, null, true, false,
+					() => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.out),
+					{ activeCondition: () => !GameGlobals.uiFunctions.popupManager.hasOpenPopup() });
+
 				this.registerHotkey("Dismiss popup", "Escape", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.dismissPopups());
 
+				// ENTER presses the open popup's marked button - fight, take all, carry on -
+				// and ESC its safe one, above. Which button that is comes from the markup
+				// (.button-popup-enter), so a popup that builds its own buttons instead of
+				// the common ones is reached by the same key. It used to look for one id,
+				// #confirmation-takeall, so the fight popup answered neither key.
+				//
+				// the active condition keeps ENTER free for the location actions when no such popup is open.
+				// It has to stay universal, because triggerHotkey skips non-universal hotkeys whenever a popup
+				// is open and an open popup is the only time this key means anything - so the condition carries
+				// the hotkeys-enabled setting too, which universal would otherwise bypass
+				let hasPopupEnterAction = () => GameGlobals.gameState.settings.hotkeysEnabled && GameGlobals.uiFunctions.popupManager.hasEnterButton();
+				this.registerHotkey("Confirm", "Enter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerEnterButton(), { isHiddenFromList: true, activeCondition: hasPopupEnterAction });
+				this.registerHotkey("Confirm", "NumpadEnter", null, null, true, false, () => GameGlobals.uiFunctions.popupManager.triggerEnterButton(), { isHiddenFromList: true, activeCondition: hasPopupEnterAction });
+
 				// same path as more > settings; the popup contains the hotkey list
-				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?" });
+				this.registerHotkey("Settings & hotkeys", "Slash", "shiftKey", null, false, false, () => $("#btn-settings").click(), { displayKey: "?", displayKeyIncludesModifier: true });
 			},
 
 			registerHotkey: function (description, code, modifier, tab, isUniversal, isDev, cb, options) {
@@ -274,6 +884,8 @@ define(['ash',
 					}
 				}
 
+				if (options.activeCondition) activeCondition = options.activeCondition;
+
 				if (!this.hotkeys[code]) this.hotkeys[code] = [];
 
 				let hotkey = { 
@@ -287,8 +899,11 @@ define(['ash',
 					isUniversal: isUniversal,
 					isDev: isDev,
 					isHiddenFromList: options.isHiddenFromList || false,
-					action: action, 
-					cb: cb 
+					// the display key is the character the modifier already produces (? for
+					// Shift and /, ^ for Shift and 6), so naming the modifier again reads wrong
+					displayKeyIncludesModifier: options.displayKeyIncludesModifier || false,
+					action: action,
+					cb: cb
 				};
 				this.hotkeys[code].push(hotkey);
 			},
@@ -310,12 +925,83 @@ define(['ash',
 				let hotkey = this.getActionHotkey(action);
 				if (hotkey) {
 					let modifier = this.getActualHotkeyModifier(hotkey.modifier);
-					let prefix = modifier == "shiftKey" ? "&#8679;" : "";
+					let prefix = modifier == "shiftKey" && !hotkey.displayKeyIncludesModifier ? "&#8679;" : "";
 					return prefix + hotkey.displayKeyShort;
 				}
 				if (this.contextHotkeyActions.indexOf(action) >= 0) return "&#9166;";
 				if (this.manualHotkeyHints[action]) return this.manualHotkeyHints[action];
 				return null;
+			},
+
+			// switch to a tab by id; false when the tab is not available yet, so callers
+			// can do nothing rather than jump somewhere unlocked
+			showTabById: function (tabID) {
+				let $tab = $("#switch-tabs li#" + tabID);
+				if ($tab.length == 0) return false;
+				if ($tab.attr("data-visible") != "true") return false;
+				if ($("#switch-tabs li.selected")[0] != $tab[0]) {
+					$tab[0].click();
+				}
+				this.scrollToTabTop();
+				return true;
+			},
+
+			showInventoryContext: function () {
+				if (this.popupManager.hasOpenPopup()) return;
+				if (!this.showTabById(this.elementIDs.tabs.bag)) return;
+				// same popup as the bag tab's manage inventory button
+				GameGlobals.playerActionFunctions.startInventoryManagement();
+			},
+
+			// costs of an action as span strings, color coded like the button callouts
+			getActionCostsSpanList: function (action) {
+				let costs = GameGlobals.playerActionsHelper.getCosts(action);
+				let costKeys = costs ? Object.keys(costs) : [];
+				let result = [];
+				for (let i = 0; i < costKeys.length; i++) {
+					let key = costKeys[i];
+					let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
+					let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
+					result.push("<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span>");
+				}
+				return result;
+			},
+
+			// UIOutManageSaveSystem owns loadState, the game's real "load this save" path.
+			// It is an Ash system, so it cannot be held at module load
+			getManageSaveSystemForCloud: function () {
+				if (!this.cloudManageSaveSystem) {
+					try {
+						let UIOutManageSaveSystem = require("game/systems/ui/UIOutManageSaveSystem");
+						this.cloudManageSaveSystem = GameGlobals.engine.getSystem(UIOutManageSaveSystem);
+					} catch (ex) { return null; }
+				}
+				return this.cloudManageSaveSystem;
+			},
+
+			// the map cursor lives in UIOutMapSystem; this is the hotkey's way in
+			moveMapSelection: function (direction) {
+				let system = GameGlobals.uiFunctions.getMapSystem();
+				if (!system) return;
+				system.moveSelectionInDirection(direction);
+			},
+
+			// the same path the + and - buttons take, so the guards on map style and
+			// player position apply to the keys as well
+			zoomMapView: function (steps) {
+				let system = GameGlobals.uiFunctions.getMapSystem();
+				if (!system) return;
+				system.onZoomButton(steps);
+			},
+
+			getMapSystem: function () {
+				if (!this.mapSystem) {
+					try {
+						let UIOutMapSystem = require("game/systems/ui/UIOutMapSystem");
+						this.mapSystem = GameGlobals.engine.getSystem(UIOutMapSystem);
+					} catch (ex) { return null; }
+				}
+				return this.mapSystem;
 			},
 
 			triggerBackToCamp: function () {
@@ -365,12 +1051,17 @@ define(['ash',
 
 			triggerContextEnterAction: function () {
 				for (let i = 0; i < this.contextHotkeyActions.length; i++) {
-					let $btn = $("button.action[action='" + this.contextHotkeyActions[i] + "']");
-					if ($btn.length == 0) continue;
-					if (!$btn.is(":visible")) continue;
-					if ($btn.hasClass("btn-disabled")) continue;
-					$btn.click();
-					return;
+					let $buttons = $("button.action[action='" + this.contextHotkeyActions[i] + "']");
+					// an action can have more than one button (the mobile action bar keeps its own copy)
+					// test them one at a time: on a set, is(":visible") and hasClass() answer for any member,
+					// so a hidden disabled copy hid the usable button and the hotkey did nothing
+					for (let j = 0; j < $buttons.length; j++) {
+						let $btn = $buttons.eq(j);
+						if (!$btn.is(":visible")) continue;
+						if ($btn.hasClass("btn-disabled")) continue;
+						$btn.click();
+						return;
+					}
 				}
 			},
 			
@@ -457,8 +1148,21 @@ define(['ash',
 			},
 
 			generateInfoCallouts: function (scope) {
+				let isTouch = UIConstants.isTouchScreen();
+
 				$.each($(scope + " .info-callout-target"), function () {
 					let $target = $(this);
+
+					// iOS Safari only synthesises a click on elements it considers
+					// clickable. The tap handler is delegated from document, which
+					// does not qualify a plain div or li, so tooltips on the chips
+					// never opened. An empty listener bound to the element itself
+					// does qualify it; the delegated handler then runs as usual.
+					if (isTouch && !$target.data("tap-enabled")) {
+						$target.data("tap-enabled", true);
+						this.addEventListener("click", function () {});
+					}
+
 					let generated = $target.data("callout-generated") || $target.parent().hasClass("callout-container");
 					if (generated) return;
 					
@@ -699,7 +1403,7 @@ define(['ash',
 
 			generateSteppers: function (scope) {
 				$(scope + " .stepper").append("<button type='button' class='btn-glyph' data-type='minus' data-field=''>-</button>");
-				$(scope + " .stepper").append("<input class='amount' type='text' min='0' max='100' autocomplete='off' value='0' name='' tabindex='0'></input>");
+				$(scope + " .stepper").append("<input class='amount' type='text' inputmode='numeric' pattern='[0-9]*' min='0' max='100' autocomplete='off' value='0' name='' tabindex='0'></input>");
 				$(scope + " .stepper").append("<button type='button' class='btn-glyph' data-type='plus' data-field=''>+</button>");
 				$(scope + " .stepper button").attr("data-field", function (i, val) {
 					return $(this).parent().attr("id") + "-input";
@@ -819,6 +1523,26 @@ define(['ash',
 
 			scrollToTabTop: function () {
 				let element = $(document.getElementById("grid-location-header"));
+
+				// on a phone the document is locked and the tab content is its
+				// own scroller (see APP SHELL in mobile.less), so scrolling the
+				// window would do nothing at all
+				let $pane = $("#grid-switch-content");
+				if ($pane.length > 0 && $pane.css("overflow-y") == "auto") {
+					// The title is chrome in the shell layout: it is above the
+					// pane and never scrolls, so the top of the pane is the whole
+					// answer. Measuring to it from in here would read a negative
+					// offset on every call and scroll past the top.
+					let isInPane = element.length > 0 && $.contains($pane[0], element[0]);
+					let offset = isInPane
+						? element.offset().top - $pane.offset().top
+						: -$pane.scrollTop();
+					if (offset < 0) $pane.animate({ scrollTop: $pane.scrollTop() + offset }, 250);
+					return;
+				}
+
+				if (element.length == 0) return;
+
 				let elementTop = element.offset().top;
 			    let offset = elementTop - $(window).scrollTop();
 
@@ -982,6 +1706,14 @@ define(['ash',
 				$("#switch-tabs li").removeClass("selected");
 				$("#switch-tabs li#" + tabID).addClass("selected");
 				$("#tab-header h2").text(tabID);
+				// mobile css keys off the active tab: it hides the camp tab's
+				// duplicate title and reserves room for that tab's pinned action bar
+				let $body = $("body");
+				$body.removeClass(function (i, className) {
+					return (className.match(/(^|\s)tab-\S+/g) || []).join(" ");
+				});
+				$body.addClass("tab-" + tabID);
+				this.scrollTabIntoView();
 
 				GameGlobals.gameState.uiStatus.currentTab = tabID;
 
@@ -998,10 +1730,20 @@ define(['ash',
 				});
 
 				GameGlobals.gameState.markSeenTab(tabID);
-				
+
 				log.i("tabChanged: " + tabID, "ui");
 
 				GlobalSignals.tabChangedSignal.dispatch(tabID, tabProps);
+			},
+
+			// keep the selected tab visible when the tab bar is a horizontal scroller (small layout)
+			scrollTabIntoView: function () {
+				let ul = $("#switch-tabs")[0];
+				let li = $("#switch-tabs li.selected")[0];
+				if (!ul || !li) return;
+				if (ul.scrollWidth <= ul.clientWidth + 1) return;
+				let target = li.offsetLeft - (ul.clientWidth - li.offsetWidth) / 2;
+				ul.scrollLeft = Math.max(0, Math.min(target, ul.scrollWidth - ul.clientWidth));
 			},
 
 			onStepperButtonClicked: function (button, e) {
@@ -1057,15 +1799,25 @@ define(['ash',
 
 			onKeyUp: function (e) {
 				let uiFunctions = GameGlobals.uiFunctions;
-				let code = e.originalEvent.code;
-				let hadPopupOnKeyDown = uiFunctions.keyDownHadPopup && uiFunctions.keyDownHadPopup[code];
-				if (uiFunctions.keyDownHadPopup) uiFunctions.keyDownHadPopup[code] = false;
+				let hadPopupOnKeyDown = uiFunctions.keyDownHadPopup && uiFunctions.keyDownHadPopup[e.originalEvent.code];
+				if (uiFunctions.keyDownHadPopup) uiFunctions.keyDownHadPopup[e.originalEvent.code] = false;
 				if (e.originalEvent.isTextInput) return;
 				// number inputs (steppers) don't set isTextInput; never treat typing in a field as a hotkey
 				let targetTagName = e.target ? e.target.tagName : null;
-				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA") return;
+				// SELECT too: a focused dropdown uses letters for type-ahead and arrows to
+				// change its value, so a hotkey would fire on top of the dropdown's own
+				// handling. The map tab's level and map mode dropdowns share keys with the
+				// map cursor, where this is not theoretical
+				if (targetTagName == "INPUT" || targetTagName == "TEXTAREA" || targetTagName == "SELECT") return;
 				// Enter on a focused button already clicked it on keydown; don't also trigger the hotkey
-				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && $(e.target).is("button, a, [tabindex]")) return;
+				// the tab switches are exempt: they keep focus after a click, and re-selecting the open tab
+				// does nothing, so swallowing the keyup would lose that tab's own ENTER action
+				let code = e.originalEvent.code;
+				// only the OPEN tab is exempt. An unselected tab li still acts on keydown,
+				// so letting its keyup through too would fire the tab switch AND the hotkey,
+				// and the hotkey would read the tab that is on its way out
+				let isButtonLike = $(e.target).is("button, a, [tabindex]") && !$(e.target).is("#switch-tabs li.selected");
+				if ((code == "Enter" || code == "NumpadEnter" || code == "Space") && isButtonLike) return;
 				if (!uiFunctions.triggerHotkey(code, e, hadPopupOnKeyDown)) return;
 			},
 
@@ -1313,11 +2065,35 @@ define(['ash',
 				GlobalSignals.elementToggledSignal.dispatch($element, show);
 			},
 
+			// One place decides whether the panel is on screen: the class drives
+			// the stylesheet, and the chip says so for anything reading the
+			// accessibility tree.
+			toggleRoomPanel: function (show) {
+				let isOpen = show === true;
+				$("body").toggleClass("room-panel-open", isOpen);
+				$("#btn-room").attr("aria-expanded", isOpen);
+			},
+
 			toggle: function (element, show, signalParams, delay) {
 				let $element = typeof (element) === "string" ? $(element) : element;
 
 				if (($element).length === 0)
 					return;
+
+				// The regular and the mobile header hold copies of the same stat,
+				// so a class selector like .stat-indicator-rumours matches both.
+				// Toggled as one set, the callout wrapper cascade below counts the
+				// children of every parent at once, never sees the single child it
+				// looks for, and does nothing - which left rumours and reputation
+				// showing a visible value inside a wrapper that stayed hidden from
+				// when the stat was still zero. Handle each element on its own.
+				if (($element).length > 1) {
+					let uiFunctions = this;
+					$element.each(function () {
+						uiFunctions.toggle($(this), show, signalParams, delay);
+					});
+					return;
+				}
 
 				if (typeof (show) === "undefined")
 					show = false;
@@ -1326,9 +2102,29 @@ define(['ash',
 				if (!show)
 					show = false;
 
-				if (this.isElementToggled($element) === show)
+				// data-visible on its own is not proof that the element is in the
+				// state it claims. showTab fades .tabelement and .tabbutton in and
+				// out with jQuery, which writes an inline display and never touches
+				// data-visible, so a transition that does not finish its pass -
+				// tabs tapped quickly, an action landing mid-fade - leaves an
+				// element marked visible and displaying none. This early-out would
+				// then keep it that way for the rest of the session, because every
+				// later toggle(true) agrees with the flag and returns. Reading
+				// style.display is a property access, not a layout read, so it is
+				// cheap enough for a function called a few hundred times a second.
+				let rawElement = $element[0];
+				let isInlineHidden = rawElement && rawElement.style && rawElement.style.display === "none";
+
+				if (this.isElementToggled($element) === show && !(show && isInlineHidden)) {
+					// The element is already right, but its callout wrappers may
+					// not be: hiding cascades up to them, and a later show that
+					// no-ops here would leave them hidden for good (camp storage
+					// disappeared from the header after leaving and re-entering).
+					this.toggleParentCalloutContainer($element, ".info-callout-target", show);
+					this.toggleParentCalloutContainer($element, ".callout-container", show);
 					return;
-					
+				}
+
 				this.cancelDelayedToggle($element);
 				
 				if (!delay || delay <= 0) {
@@ -1435,25 +2231,46 @@ define(['ash',
 					return;
 				}
 
-				this.texts[selector] = { key: key, options: options };
+				// callers pass jQuery objects as well as selector strings. Used as
+				// an object key every jQuery object collapses to "[object Object]",
+				// so entries overwrite each other and the refresh below throws on
+				// the stringified key, leaving every later label blank.
+				let entry = null;
+				for (let i = 0; i < this.texts.length; i++) {
+					if (this.texts[i].selector === selector) {
+						entry = this.texts[i];
+						break;
+					}
+				}
+				if (!entry) {
+					entry = { selector: selector };
+					this.texts.push(entry);
+				}
+				entry.key = key;
+				entry.options = options;
+
 				this.updateText($(selector), Text.t(key, options));
 			},
 
 			updateTexts: function () {
-				for (let selector in this.texts) {
-					let saved = this.texts[selector];
-					let $elem = typeof selector === "string" ? $(selector) : selector;
-					this.updateText($elem, Text.t(saved.key, saved.options));
+				for (let i = 0; i < this.texts.length; i++) {
+					let saved = this.texts[i];
+					this.updateText($(saved.selector), Text.t(saved.key, saved.options));
 				}
 			},
 
 			updateText: function ($elem, text) {
-				// buttons processed by ActionButton keep their overlay children; the text lives in the label
-				let $label = $elem.children(".btn-label");
-				let $target = $label.length > 0 ? $label : $elem;
-				let current = $target.text();
-				if (current == text) return;
-				$target.text(text);
+				// A selector like ".header-camp-storage .label" matches the mobile
+				// and the desktop copy. Comparing the combined text would skip the
+				// update as soon as one of them already had it, so check each.
+				$elem.each(function () {
+					let $each = $(this);
+					// buttons processed by ActionButton keep their overlay children; the text lives in the label
+					let $label = $each.children(".btn-label");
+					let $target = $label.length > 0 ? $label : $each;
+					if ($target.text() == text) return;
+					$target.text(text);
+				});
 			},
 
 			stopButtonCooldown: function (button) {
@@ -1673,48 +2490,54 @@ define(['ash',
 			},
 
 			registerLongTap: function (element, callback) {
+				// pointer events so hold-to-repeat works with both mouse and touch;
+				// state lives in a per-element closure so timers cannot leak
 				var $element = typeof (element) === "string" ? $(element) : element;
 				var minTime = 1000;
 				var intervalTime = 200;
+				var moveCancelThreshold = 15;
 
-				var cancelLongTap = function () {
-					mouseDown = false;
-					var timer = $(this).attr("data-long-tap-timeout");
-					var interval = $(this).attr("data-long-tap-interval");
-					if (!timer && !interval) return;
-					clearTimeout(timer);
-					clearInterval(interval);
-					$(this).attr("data-long-tap-interval", 0);
-					$(this).attr("data-long-tap-timeout", 0);
-				};
-				$element.on('mousedown', function (e) {
-					var target = e.target;
-					var $target = $(this);
-					cancelLongTap()
-					var timer = setTimeout(function () {
-						cancelLongTap()
-						var interval = setInterval(function () {
-							if (GameGlobals.gameState.uiStatus.mouseDown && GameGlobals.gameState.uiStatus.mouseDownElement == target) {
-								callback.apply($target, e);
-							} else {
-								cancelLongTap();
-							}
-						}, intervalTime);
-						$(this).attr("data-long-tap-interval", interval);
-					}, minTime);
-					$(this).attr("data-long-tap-timeout", timer);
-				});
-				$element.on('mouseleave', function (e) {
-					cancelLongTap();
-				});
-				$element.on('mousemove', function (e) {
-					cancelLongTap();
-				});
-				$element.on('mouseout', function (e) {
-					cancelLongTap();
-				});
-				$element.on('mouseup', function (e) {
-					cancelLongTap();
+				$element.each(function () {
+					var el = this;
+					var state = { timer: null, interval: null, startX: 0, startY: 0 };
+
+					var cancelLongTap = function () {
+						if (state.timer) clearTimeout(state.timer);
+						if (state.interval) clearInterval(state.interval);
+						state.timer = null;
+						state.interval = null;
+					};
+
+					$(el).on('pointerdown', function (e) {
+						var target = e.target;
+						var $target = $(el);
+						state.startX = Math.floor(e.pageX);
+						state.startY = Math.floor(e.pageY);
+						cancelLongTap();
+						state.timer = setTimeout(function () {
+							state.timer = null;
+							state.interval = setInterval(function () {
+								if (GameGlobals.gameState.uiStatus.mouseDown && GameGlobals.gameState.uiStatus.mouseDownElement == target) {
+									callback.apply($target, e);
+								} else {
+									cancelLongTap();
+								}
+							}, intervalTime);
+						}, minTime);
+					});
+					$(el).on('pointerleave pointercancel pointerup pointerout', function (e) {
+						cancelLongTap();
+					});
+					$(el).on('pointermove', function (e) {
+						// small jitter (finger tremor) should not cancel the hold
+						if (Math.abs(e.pageX - state.startX) < moveCancelThreshold && Math.abs(e.pageY - state.startY) < moveCancelThreshold) return;
+						cancelLongTap();
+					});
+					$(el).on('contextmenu', function (e) {
+						// only suppress the long-press context menu on touch screens;
+						// desktop right-click stays available
+						if (UIConstants.isTouchScreen()) e.preventDefault();
+					});
 				});
 			},
 
@@ -1811,6 +2634,15 @@ define(['ash',
 
 			showIncomingCaravanPopup: function () {
 				this.showSpecialPopup("incoming-caravan-popup");
+			},
+
+			// there is no browser chrome in an installed PWA, so this is the only way to
+			// reload. Confirmed because an accidental press mid-session would lose anything
+			// since the last save
+			confirmReload: function () {
+				this.showConfirmation("Reload the game?<br/><br/><span class='p-meta'>Anything since your last save is lost.</span>", function () {
+					location.reload();
+				}, false, true);
 			},
 
 			showManageSave: function () {
@@ -1958,9 +2790,50 @@ define(['ash',
 			},
 
 			showGameOptions: function (show) {
-				$("#game-options-extended").toggle(show);
+				// the phone may have carried the list off into the options popup;
+				// the inline toggle only makes sense with the list back in the footer
+				let $list = $("#game-options-extended");
+				if (!$list.parent().is("#footer")) $("#footer").append($list);
+				$list.toggle(show);
 				$("#btn-more").text(show ? Text.t("ui.meta.more_options_button_label") : Text.t("ui.meta.more_options_button_label"));
-				GlobalSignals.elementToggledSignal.dispatch($("#game-options-extended"), show);
+				GlobalSignals.elementToggledSignal.dispatch($list, show);
+			},
+
+			// The phone footer is a fixed row that must not grow, so More opens the
+			// extended options as a popup instead of expanding them inline. The list
+			// node moves in whole - the footer and the log pill already travel the
+			// same way - so every button keeps its bindings.
+			showMoreOptionsPopup: function () {
+				let $list = $("#game-options-extended");
+				$("#more-options-popup-options").append($list);
+				$list.show();
+				this.showSpecialPopup("more-options-popup", { isMeta: true, isDismissable: true });
+			},
+
+			// Save and cloud confirmations on the phone: a card at the top of the
+			// screen that fades on its own. Class-toggled, never inline display.
+			// A call while a toast is up replaces the text and restarts the clock.
+			// Timed on requestAnimationFrame, not setTimeout: a throttled tab can
+			// hold a timer for a minute, but rAF stops and resumes with the frames
+			// the player actually sees, so the card never sits there stale.
+			showToast: function (text) {
+				let $toast = $("#notification-toast");
+				if ($toast.length === 0) return;
+				$toast.text(text);
+				$toast.addClass("visible");
+				this.toastShownTimestamp = performance.now();
+				if (this.isToastTicking) return;
+				this.isToastTicking = true;
+				let uiFunctions = this;
+				let tick = function () {
+					if (performance.now() - uiFunctions.toastShownTimestamp >= 1250) {
+						$("#notification-toast").removeClass("visible");
+						uiFunctions.isToastTicking = false;
+					} else {
+						requestAnimationFrame(tick);
+					}
+				};
+				requestAnimationFrame(tick);
 			},
 
 			showResultFlyout: function (resultVO) {

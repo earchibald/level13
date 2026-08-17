@@ -614,10 +614,6 @@ div.grid-content {
 	vertical-align: middle;
 }
 
-.layout-small .blueprint-piece-box {
-	width: 2em;
-	height: 2em;
-}
 
 .blueprint-piece-box-found {
 	background: @color-bg-element-2;
@@ -635,11 +631,6 @@ div.grid-content {
 	height: 1.2em;
 }
 
-.layout-small .blueprint-piece-box img {
-	margin: 0.2em;
-	width: 0.8em;
-	height: 0.8em;
-}
 
 // CAMP EVENTS (AND PERKS)
 
@@ -717,7 +708,6 @@ div.grid-content {
 .reqs-checkmark {
 	background-image: @img-indicator-checkmark-default;
     background-repeat: no-repeat;
-    background-image: url(../img/eldorado/icon-checkmark-dark.png);
     background-size: 1em 1em;
     background-position: center;
     display: inline-block;
@@ -855,6 +845,55 @@ div.grid-content {
     text-align: left;
 }
 
+// outside and camp side by side; the two lists have little in common and read
+// far better next to each other than as one alphabet soup down the page
+// #settings-popup-body scrolls, and a scroll container does not pass its content's
+// preferred width up, so the popup would sit at the 30% every popup starts at and
+// wrap the two columns back into one. The width has to be asked for here instead.
+// & is body.dark / body.sunlit: the phone hides the hotkey list altogether, and
+// .fill-on-mobiles cannot override a min-width
+&:not(.layout-small) #settings-popup {
+    min-width: 500px;
+}
+
+#hotkeys-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+// the basis is what asks the popup for its width: the popup is only 30% wide until
+// something inside wants more, and two columns of the old width left every second
+// row wrapping. min-width 0 lets them shrink anyway on a narrow window, and
+// flex-wrap drops them back to one column rather than squeezing both to nothing
+.hotkeys-column {
+    flex: 1 1 220px;
+    min-width: 0;
+    text-align: left;
+}
+
+.hotkeys-column-header {
+    font-weight: bold;
+    margin: 8px 0 2px 0;
+}
+
+// MOBILE OVERLAY
+
+#mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    width: 100%;
+    height: 100%;
+    background: @color-bg-page;
+}
+
+#mobile-overlay p, #mobile-overlay h2 {
+	margin: 1em;
+}
+
 // CRAFT POPUP (hotkey K)
 
 #craft-popup-list {
@@ -907,6 +946,69 @@ div.grid-content {
 	background: @color-bg-box-1;
 }
 
+// BUILDINGS POPUP (hotkey B in camp)
+
+#buildings-popup-list {
+	min-width: 280px;
+	max-height: 55vh;
+	overflow-y: auto;
+	text-align: left;
+	margin: 10px 0;
+}
+
+.buildings-popup-row {
+	padding: 2px 6px;
+	cursor: pointer;
+	border: 1px solid transparent;
+}
+
+.buildings-popup-row.selected {
+	border-color: @color-border-strong;
+	background: @color-bg-box-1;
+}
+
+.buildings-popup-header {
+	font-weight: bold;
+	margin-top: 4px;
+}
+
+.buildings-popup-header .header-count {
+	color: @color-text-meta;
+	font-weight: normal;
+}
+
+.buildings-popup-item-costs {
+	margin-left: 8px;
+	color: @color-text-meta;
+	font-size: @font-size-small;
+}
+
+.buildings-popup-item-unavailable .buildings-popup-item-name {
+	color: @color-text-meta;
+}
+
+// brief highlight when trying to build without sufficient resources
+.buildings-popup-row.buildings-popup-flash .buildings-popup-item-name,
+.buildings-popup-row.buildings-popup-flash span.action-cost-blocker {
+	color: @color-global-warning;
+	font-weight: bold;
+}
+
+// GO TO CAMP POPUP (hotkey G or T on the Tribe tab)
+
+#go-popup {
+	text-align: center;
+	min-width: 200px;
+}
+
+// the typed level number; an en dash holds the line while it is empty
+#go-popup-value {
+	font-size: 1.5em;
+	min-height: 1.2em;
+	letter-spacing: 0.15em;
+	margin: 10px 0;
+}
+
 // brief highlight when trying to craft without sufficient materials
 .craft-popup-row.craft-popup-flash .craft-popup-item-name,
 .craft-popup-row.craft-popup-flash span.action-cost-blocker {
@@ -914,18 +1016,77 @@ div.grid-content {
 	font-weight: bold;
 }
 
-// MOBILE OVERLAY
+// CLOUD SAVES (settings section and setup dialog)
 
-#mobile-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 20;
-    width: 100%;
-    height: 100%;
-    background: @color-bg-page;
+.settings-group {
+	margin: 10px 0;
 }
 
-#mobile-overlay p, #mobile-overlay h2 {
-	margin: 1em;
+.settings-group-header {
+	font-weight: bold;
+	margin-bottom: 4px;
+}
+
+#settings-github-token {
+	min-width: 180px;
+	margin-right: 6px;
+}
+
+// a gist ID is 32 hex characters and gets copied to another device by hand, so it has to be
+// readable in full rather than scrolled through
+#settings-github-gist {
+	min-width: 260px;
+	margin: 4px 0 0 0;
+	font-family: monospace;
+}
+
+// the same column as the gist box above it, but ordinary text: this one is read as a
+// name rather than copied character by character
+#settings-github-device {
+	min-width: 260px;
+	margin: 4px 0 0 0;
+}
+
+#settings-github-status {
+	margin: 4px 0 8px 0;
+	word-break: break-all;
+}
+
+#github-setup-steps {
+	max-height: 55vh;
+	overflow-y: auto;
+	text-align: left;
+}
+
+#github-setup-steps ol {
+	margin: 8px 0 8px 18px;
+	list-style: decimal outside;
+}
+
+#github-setup-steps li {
+	margin-bottom: 6px;
+}
+
+// SETTINGS POPUP HEIGHT
+// The cloud saves section made this tall enough to run off the bottom of a desktop
+// window, taking the close button with it and leaving no way out of the dialog.
+// div.popup has no max-height at all, so a tall popup simply overflows the viewport.
+// Cap it and let the middle scroll, so the close button is always on screen.
+#settings-popup {
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+}
+
+#settings-popup h3,
+#settings-popup .buttonbox {
+	flex: 0 0 auto;
+}
+
+#settings-popup-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	// without this a flex child refuses to shrink below its content, and the
+	// overflow never engages
+	min-height: 0;
 }

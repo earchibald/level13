@@ -39,8 +39,15 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 
 			let action = options.action;
 			
-			let hasResult = resultVO && typeof resultVO !== 'undefined';
-			let showInventoryManagement = hasResult || forceShowInventoryManagement;
+			// Booleans, not maybe-booleans. Both of these reach jQuery's toggleClass as
+			// its second argument, and toggleClass(name, undefined) does not set the
+			// class - it TOGGLES it. With no resultVO and no override both were
+			// undefined, so #info-ok gained and lost inventory-selection-ok, action and
+			// button-popup-escape on alternate popups: ESC worked on every other results
+			// popup and did nothing on the ones in between, which is exactly how it
+			// looked in play.
+			let hasResult = !!resultVO;
+			let showInventoryManagement = !!(hasResult || forceShowInventoryManagement);
 			
 			let isDismissable = options.isDismissable || (typeof options.isDismissable == 'undefined' && !showInventoryManagement && !cancelButtonLabel);
 			
@@ -82,7 +89,9 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 			var $defaultButton = null;
 			$("#common-popup .buttonbox").empty();
 
-			if (!action) {
+			// a popup with neither an action nor an OK label is cancel-only; without
+			// this guard it grew a button captioned "null"
+			if (!action && okButtonLabel) {
 				$("#common-popup .buttonbox").append("<button id='info-ok' class='action'>" + okButtonLabel + "</button>");
 				$("#info-ok").attr("action", showInventoryManagement ? "accept_inventory" : null);
 				$("#info-ok").toggleClass("inventory-selection-ok", showInventoryManagement);
@@ -94,9 +103,15 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 				$defaultButton = $("#info-ok");
 			}
 			
-			let showTakeAll = hasResult && resultVO.hasSelectable();
+			// boolean for the same reason as showInventoryManagement above
+			let showTakeAll = !!(hasResult && resultVO.hasSelectable());
 			if (showTakeAll) {
-				$("#common-popup .buttonbox").append("<button id='confirmation-takeall' class='action' action='take_all'>Take all</button>");
+				// marked for ENTER the same way the fight popup's own take-all is, so the
+				// key means the same thing wherever loot is being claimed. Not also
+				// .inventory-selection-takeall: that class is what hides the fight
+				// popup's button once there is nothing left to take, and this one is
+				// built fresh per popup and has never been hidden that way
+				$("#common-popup .buttonbox").append("<button id='confirmation-takeall' class='action button-popup-enter' action='take_all'>Take all</button>");
 				$("#confirmation-takeall").click(ExceptionHandler.wrapClick(function (e) {
 					popUpManager.handleOkButton(true, okCallback);
 				}));
@@ -105,7 +120,9 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 
 			if (action) {
 				let baseActionID = GameGlobals.playerActionsHelper.getBaseActionID(action);
-				let actionName = Text.t("game.actions." + baseActionID + "_name");
+				// not every base action has a name string (crafting does not), so
+				// callers may name the button themselves
+				let actionName = okButtonLabel || Text.t("game.actions." + baseActionID + "_name");
 				$("#common-popup .buttonbox").append("<button id='info-action' class='action' action='" + action + "'>" + actionName + "</button>");
 				$("#info-action").click(ExceptionHandler.wrapClick(function (e) {
 					popUpManager.handleOkButton(true, okCallback);
@@ -120,6 +137,17 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 					if (cancelCallback) cancelCallback();
 				}));
 			}
+
+			// a results popup can't be dismissed, but ESC still takes its safe option (continue / take selected)
+			// while ENTER goes to "take all"; popups with a cancel button already give ESC something to do
+			$("#info-ok").toggleClass("button-popup-escape", showInventoryManagement && !cancelButtonLabel);
+
+			// and where there is nothing to take all, ENTER is the OK button itself. An
+			// inventory popup with nothing selectable in it answered neither key: ESC had
+			// this button and ENTER had no button at all, so the only way past it was the
+			// mouse. Only when there is no take-all, because #info-ok is appended first
+			// and would otherwise win the ENTER that belongs to "Take all".
+			$("#info-ok").toggleClass("button-popup-enter", showInventoryManagement && !showTakeAll);
 
 			if ($defaultButton == null) {
 				$defaultButton = $("#confirmation-cancel");
@@ -256,13 +284,16 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 		},
 
 		repositionPopup: function ($popup) {
-			let winh = $(window).height();
-			let winw = $(window).width();
+			// visualViewport tracks the area not covered by the software keyboard
+			let winh = window.visualViewport ? window.visualViewport.height : $(window).height();
+			let winw = window.visualViewport ? window.visualViewport.width : $(window).width();
 			let isSmallLayout = winw <= UIConstants.SMALL_LAYOUT_THRESHOLD;
 			let padding = isSmallLayout ? 0 : 20;
 
-			let popuph = Math.min($popup.height(), winh);
-			let popupw = Math.min($popup.width(), winw);
+			// small layout popups are border-box with padding; content-box
+			// height()/width() would under-measure by ~44px and off-center them
+			let popuph = Math.min(isSmallLayout ? $popup.outerHeight() : $popup.height(), winh);
+			let popupw = Math.min(isSmallLayout ? $popup.outerWidth() : $popup.width(), winw);
 			$popup.css("top", Math.max(0, (winh - popuph) / 2 - padding));
 			$popup.css("left", (winw - popupw) / 2);
 		},
@@ -294,9 +325,50 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 				let isDismissable = dataDismissable == true || dataDismissable == "true";
 				if (isDismissable) {
 					popupManager.dismissPopup($(this));
+				} else {
+					popupManager.triggerEscapeButton($(this));
 				}
 			});
 			this.updatePause();
+		},
+
+		// a popup that is not dismissable can still offer a safe option on ESC, such as "take selected"
+		//
+		// :visible, because a popup can hold several states' buttons at once and show one
+		// set at a time - the fight popup keeps all six in the page and toggles them. The
+		// first match won regardless of whether it was on screen, so ESC pressed over the
+		// loot pressed a hidden "Flee".
+		triggerEscapeButton: function ($popup) {
+			if (!GameGlobals.gameState.isPlayerInputAccepted()) return;
+			let $escapeButton = $popup.find(".button-popup-escape:visible").first();
+			if ($escapeButton.length == 0) return;
+			if ($escapeButton.hasClass("btn-disabled")) return;
+			let dataDismissed = $popup.attr("data-dismissed");
+			if (dataDismissed == true || dataDismissed == "true") return;
+			let dataToggling = $popup.attr("data-toggling");
+			if (dataToggling == true || dataToggling == "true") return;
+			$popup.attr("data-dismissed", "true");
+			$escapeButton.trigger("click");
+		},
+
+		// What ENTER means in the popup that is open: fight, take all, carry on. Marked in
+		// the markup rather than found by id, so a popup that builds its own buttons - the
+		// fight popup does - is reachable by the same key as the common one.
+		getEnterButton: function () {
+			return $(".popup:visible").find(".button-popup-enter:visible").first();
+		},
+
+		hasEnterButton: function () {
+			let $button = this.getEnterButton();
+			return $button.length > 0 && !$button.hasClass("btn-disabled");
+		},
+
+		triggerEnterButton: function () {
+			if (!GameGlobals.gameState.isPlayerInputAccepted()) return;
+			let $button = this.getEnterButton();
+			if ($button.length == 0) return;
+			if ($button.hasClass("btn-disabled")) return;
+			$button.trigger("click");
 		},
 
 		dismissPopup: function ($popup) {

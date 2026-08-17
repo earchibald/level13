@@ -63,6 +63,9 @@ define([
         },
 
         createHotkeyIndicator: function ($btn, action) {
+            // the tribe tab's Go buttons get their chip from UIOutTribeSystem before
+            // this runs; a second badge on the same button would show twice
+            if ($btn.children(".hotkey-hint").length > 0) return;
             let hint = GameGlobals.uiFunctions.getActionHotkeyHint(action);
             if (hint) {
                 $btn.append("<div class='hotkey-hint hide-in-small-layout'>" + hint + "</div>");

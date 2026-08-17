@@ -209,15 +209,33 @@ define([
 		
 		updateHiddenMsg: function () {
 			let numHidden = GameGlobals.gameState.uiStatus.hiddenProjects.length;
-			this.elements.hiddenImprovementsMsg.text(numHidden + " projects hidden");
+			// the count reaches 1 as soon as the player uses `hide`, and the first
+			// thing the section said was "1 projects hidden"
+			let word = numHidden === 1 ? "project" : Text.pluralify("project");
+			this.elements.hiddenImprovementsMsg.text(numHidden + " " + word + " hidden");
 		},
 		
 		updateContainers: function () {
 			let visibleColonyProjects = this.tabCounts.current.visible.colony + (this.numBuiltColonyProjects || 0);
-				
+			let showColony = visibleColonyProjects > 0 || GameGlobals.storyHelper.isReadyForLaunch() || GameGlobals.gameState.isLaunched;
+
 			GameGlobals.uiFunctions.toggle("#in-improvements-colony-empty-message", this.tabCounts.lastShown.visible.colony <= 0);
 			GameGlobals.uiFunctions.toggle("#in-improvements-level-empty-message", this.tabCounts.lastShown.visible.regular <= 0);
-			GameGlobals.uiFunctions.toggle("#container-in-improvements-colony", visibleColonyProjects > 0 || GameGlobals.storyHelper.isReadyForLaunch() || GameGlobals.gameState.isLaunched);
+			GameGlobals.uiFunctions.toggle("#container-in-improvements-colony", showColony);
+
+			// The pinned Launch bar belongs to the colony section, but on a phone
+			// UIOutHeaderSystem lifts it out of that container and hangs it off the
+			// shell column, so hiding the container no longer hides the bar. Until
+			// the colony is on the table that left a band of bottom chrome on every
+			// visit to this tab, holding a struck-through Launch and taking 69px
+			// off a list pane only 306px tall.
+			//
+			// A class rather than uiFunctions.toggle: the desktop layout hides every
+			// action mirror in the stylesheet and keeps the page's own copy of the
+			// button instead, and jQuery's show() writes display:block on an element
+			// the stylesheet still hides - which would have put a second Launch
+			// button on the desktop colony page.
+			$("#in-launch-bar").toggleClass("action-mirror-hidden", !showColony);
 		},
 		
 		resetHidden: function () {
@@ -261,13 +279,24 @@ define([
 			// TODO define building projects directions/links better and don't rely on improvement names
 			name = name.replace(" Up", "");
 			name = name.replace(" Down", "");
+
+			// The improvement name carries the parenthetical that separates building
+			// a new elevator shaft from repairing an old one - "Elevator Up (Build)" -
+			// and on an available project the action button beside the name already
+			// says build or repair. "Elevator (Build)" next to a `build` button reads
+			// as a stutter, and the phone has the least room to spend on one. Built
+			// rows show no button, so there the parenthetical stays and carries it.
+			if (isAvailable && actionLabel) {
+				let suffix = " (" + actionLabel.toLowerCase() + ")";
+				if (name.toLowerCase().endsWith(suffix)) name = name.substring(0, name.length - suffix.length);
+			}
 			
 			let info = this.getProjectInfoText(project, isAvailable, isSmallLayout);
 			let showHideButton = isAvailable && !project.isColonyProject && UIConstants.canHideProject(projectID);
 			
 			li.$tdDescription.attr("colspan", isAvailable ? 1 : 4);
 			li.$btnHide.css("display", showHideButton ? "initial" : "none");
-			li.$btnMap.css("display", isAvailable && !isSmallLayout ? "initial" : "none");
+			li.$btnMap.css("display", isAvailable ? "initial" : "none");
 			li.$tdAction.css("display", isAvailable ? "initial" : "none");
 			li.$btnAction.css("display", isAvailable ? "initial" : "none");
 			
