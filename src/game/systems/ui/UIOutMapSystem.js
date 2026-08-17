@@ -1409,8 +1409,6 @@ define([
 		},
 
 		onLevelSelectorChanged: function () {
-			// the map redraws under the cursor; don't leave a stale tooltip hanging
-			this.hideSectorTooltip();
 			let level = parseInt($("#select-header-level").val());
 			if (this.selectedLevel === level) return;
 			this.selectLevel(level);
@@ -1418,8 +1416,6 @@ define([
 		},
 		
 		onMapModeSelectorChanged: function () {
-			// the map redraws under the cursor; don't leave a stale tooltip hanging
-			this.hideSectorTooltip();
 			let mapMode = $("#select-header-mapmode").val();
 			if (this.selectedMapMode === mapMode) return;
 			this.selectMapMode(mapMode);

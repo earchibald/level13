@@ -32649,16 +32649,10 @@ define(['ash',
 					msg += "<span class='btn-disabled-reason action-cost-blocker'>" + Text.t(reqsResult.reason) + "</span><br/><br/>";
 				}
 
-				let costs = GameGlobals.playerActionsHelper.getCosts(action);
-				let costKeys = costs ? Object.keys(costs) : [];
-				if (costKeys.length > 0) {
+				let costSpans = this.getActionCostsSpanList(action);
+				if (costSpans.length > 0) {
 					msg += "<span class='p-meta'>Costs:</span><br/>";
-					for (let i = 0; i < costKeys.length; i++) {
-						let key = costKeys[i];
-						let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
-						let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
-						msg += "<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span><br/>";
-					}
+					msg += costSpans.join("<br/>") + "<br/>";
 				}
 
 				if (msg.length == 0) msg = "Cannot go back to camp right now.";
@@ -68345,6 +68339,8 @@ define([
 		},
 
 		selectLevel: function (level) {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			$("#select-header-level").val(level);
 			this.selectedLevel = level;
 			this.selectedSector = null;
@@ -68447,8 +68443,10 @@ define([
 		},
 		
 		selectMapMode: function (mapMode) {
+			// the map redraws under the cursor; don't leave a stale tooltip hanging
+			this.hideSectorTooltip();
 			$("#select-header-mapmode").val(mapMode);
-			
+
 			this.selectedMapMode = mapMode;
 			$("#mainmap-sector-details-res-sca").closest("tr").toggleClass("current", this.selectedMapMode == MapUtils.MAP_MODE_SCAVENGING);
 			$("#mainmap-sector-details-res-col").closest("tr").toggleClass("current", this.selectedMapMode == MapUtils.MAP_MODE_SCAVENGING);
@@ -69349,8 +69347,6 @@ define([
 		},
 
 		onSectorSelected: function (level, x, y) {
-			// the details panel below the map takes over on click
-			this.hideSectorTooltip();
 			this.selectSector(level, x, y);
 		},
 
@@ -69445,8 +69441,6 @@ define([
 		},
 
 		onLevelSelectorChanged: function () {
-			// the map redraws under the cursor; don't leave a stale tooltip hanging
-			this.hideSectorTooltip();
 			let level = parseInt($("#select-header-level").val());
 			if (this.selectedLevel === level) return;
 			this.selectLevel(level);
@@ -69454,8 +69448,6 @@ define([
 		},
 		
 		onMapModeSelectorChanged: function () {
-			// the map redraws under the cursor; don't leave a stale tooltip hanging
-			this.hideSectorTooltip();
 			let mapMode = $("#select-header-mapmode").val();
 			if (this.selectedMapMode === mapMode) return;
 			this.selectMapMode(mapMode);
