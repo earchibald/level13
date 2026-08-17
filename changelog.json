@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m97",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-17",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The scavenged percentage is back in the room description on the regular layout"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m96",
             "requiredVersion": "0.6.1",
             "phase": "beta",

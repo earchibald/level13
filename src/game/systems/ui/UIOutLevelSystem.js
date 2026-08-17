@@ -833,6 +833,26 @@ define([
 			if (!featuresComponent) return [];
 			let fields = [];
 
+			// The phone reads these from its own row above the minimap, so the
+			// table would be saying them twice. The regular layout has no such
+			// band, and this table is where it has always read them - taking
+			// the lines out for everyone would have quietly cost desktop the
+			// scavenged, resources and items lines altogether.
+			// The phone's row lives in the map panel, and that panel does not
+			// exist until scouting unlocks (see updateUnlockedFeatures) - so
+			// until it does, the table is the only place they can go.
+			let hasFindsRow = $("body").hasClass("layout-small") && GameGlobals.gameState.unlockedFeatures.scout;
+
+			// First line of the table, above the investigated figure, which is
+			// where it has always been read. It is left out rather than shown as
+			// "?" before scavenging unlocks, because a table row that can never
+			// have a value is noise - the phone's row shows "?" instead only
+			// because its two lines have to keep their height. The string itself
+			// carries the "%", so this passes the bare number.
+			if (!hasFindsRow && isScouted && statusComponent && GameGlobals.gameState.unlockedFeatures.scavenge) {
+				fields.push(Text.t("ui.exploration.sector_status_scavenged_percent_field", UIConstants.roundValue(Math.floor(statusComponent.getScavengedPercent()))));
+			}
+
 			if (this.showInvestigate()) {
 				let investigatedPercent = statusComponent.getInvestigatedPercent();
 				let investigationComplete = investigatedPercent >= 100;
@@ -843,15 +863,6 @@ define([
 				}
 			}
 
-			// The phone reads these from its own row above the minimap, so the
-			// table would be saying them twice. The regular layout has no such
-			// band, and this table is where it has always read them - taking
-			// the lines out for everyone would have quietly cost desktop the
-			// resources and items lists altogether.
-			// The phone's row lives in the map panel, and that panel does not
-			// exist until scouting unlocks (see updateUnlockedFeatures) - so
-			// until it does, the table is the only place they can go.
-			let hasFindsRow = $("body").hasClass("layout-small") && GameGlobals.gameState.unlockedFeatures.scout;
 			if (hasFindsRow) return fields;
 
 			fields.push(Text.t("ui.exploration.sector_status_resources_found_field", this.getResourcesFoundText(featuresComponent, statusComponent)));
