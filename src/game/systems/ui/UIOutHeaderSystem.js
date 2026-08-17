@@ -1832,8 +1832,21 @@ define([
 		// carries .action-mirror and its tab container carries the tab id.
 		getCurrentActionMirror: function () {
 			let currentTab = GameGlobals.gameState.uiStatus.currentTab;
+			let marker = this.actionMirrorMarker;
 			return $(".action-mirror").filter(function () {
-				return $(this).closest(".tabcontainer").data("tab") === currentTab;
+				let $container = $(this).closest(".tabcontainer");
+
+				// a docked bar hangs off #unit-main and has no tab container left
+				// to be found by, so it read as "belongs to no tab" and the pass
+				// below sent it home - then the next pass docked it again. Its
+				// marker still holds the place it came from, so ask that instead.
+				// Without this the bar spends every other layout pass back inside
+				// the pane as a fixed element, over the foot of the scrolling page
+				if ($container.length === 0 && marker && marker.parentNode) {
+					$container = $(marker.parentNode).closest(".tabcontainer");
+				}
+
+				return $container.data("tab") === currentTab;
 			}).first();
 		},
 

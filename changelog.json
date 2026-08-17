@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m93",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-16",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The S badge stays on the campfire button while sitting down is unavailable, so the key is still there to read when the rumour pool is empty"
+                },
+                {
+                    "type": "UI",
+                    "summary": "The map opens with the page scrolled to the top of the tab content, so the room details are in view instead of below the fold"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The Go bar on the Outside tab in camp stays docked below the page instead of drifting back over it, so more, save and the version at the foot of the page are no longer covered"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m92",
             "requiredVersion": "0.6.1",
             "phase": "beta",

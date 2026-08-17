@@ -24258,8 +24258,21 @@ define([
 		// carries .action-mirror and its tab container carries the tab id.
 		getCurrentActionMirror: function () {
 			let currentTab = GameGlobals.gameState.uiStatus.currentTab;
+			let marker = this.actionMirrorMarker;
 			return $(".action-mirror").filter(function () {
-				return $(this).closest(".tabcontainer").data("tab") === currentTab;
+				let $container = $(this).closest(".tabcontainer");
+
+				// a docked bar hangs off #unit-main and has no tab container left
+				// to be found by, so it read as "belongs to no tab" and the pass
+				// below sent it home - then the next pass docked it again. Its
+				// marker still holds the place it came from, so ask that instead.
+				// Without this the bar spends every other layout pass back inside
+				// the pane as a fixed element, over the foot of the scrolling page
+				if ($container.length === 0 && marker && marker.parentNode) {
+					$container = $(marker.parentNode).closest(".tabcontainer");
+				}
+
+				return $container.data("tab") === currentTab;
 			}).first();
 		},
 
@@ -69304,7 +69317,11 @@ define([
 		onTabChanged: function (tabID, tabProps) {
 			this.hideSectorTooltip();
 			if (tabID !== GameGlobals.uiFunctions.elementIDs.tabs.map) return;
-			
+
+			// framing depends only on what sits above the pane, so do it before the
+			// map itself is built: the details still come into view if drawing fails
+			this.scrollTabContentToTop();
+
 			this.updateBubble();
 			this.updateHeader();
 			
@@ -69329,7 +69346,23 @@ define([
 			if (!this.selectedSector) this.selectPlayerSectorIfOnLevel();
 			this.updateMapCompletionHint();
 		},
-		
+
+		// the room details sit under the map and land below the fold in a desktop
+		// window. Parking the tab content against the top of the frame scrolls the
+		// banner and the location header away and brings the details into view
+		scrollTabContentToTop: function () {
+			// on a phone the document is locked and the tab content is its own
+			// scroller (see APP SHELL in mobile.less), so the window has nothing to
+			// scroll. The map tab sets the pane to overflow: hidden rather than auto,
+			// so read the layout itself instead of inferring it from the overflow
+			if ($("body").hasClass("layout-small")) return;
+
+			let $pane = $("#grid-switch-content");
+			if ($pane.length == 0) return;
+
+			$("html,body").animate({ scrollTop: $pane.offset().top }, 250);
+		},
+
 		updateHeader: function () {
 			let header = Text.t("ui.map.page_header");
 			if (this.isMapModesVisible()) header += " (" + this.selectedMapMode + ")";

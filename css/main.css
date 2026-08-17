@@ -997,6 +997,9 @@ body.dark button.btn-disabled .hotkey-hint {
 body.dark #out-action-move-camp.btn-disabled .hotkey-hint {
   display: block !important;
 }
+body.dark button[action='use_in_campfire'].btn-disabled .hotkey-hint {
+  display: block !important;
+}
 body.dark #camp-overview .hotkey-hint {
   position: static;
   display: inline-block;
@@ -3891,6 +3894,9 @@ body.sunlit button.btn-disabled .hotkey-hint {
   display: none !important;
 }
 body.sunlit #out-action-move-camp.btn-disabled .hotkey-hint {
+  display: block !important;
+}
+body.sunlit button[action='use_in_campfire'].btn-disabled .hotkey-hint {
   display: block !important;
 }
 body.sunlit #camp-overview .hotkey-hint {
