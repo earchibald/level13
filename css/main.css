@@ -1272,6 +1272,15 @@ body.dark .tab-options {
 body.dark #tab-header .callout-container {
   float: right;
 }
+body.dark #tab-header .callout-container > .tab-options {
+  float: none;
+}
+body.dark #tab-header .callout-container > div.info-callout {
+  pointer-events: none;
+}
+body.dark #tab-header .callout-container:not(.callout-visible) > div.info-callout {
+  display: none !important;
+}
 body.dark .stepper {
   text-align: center;
   min-width: 70px;
@@ -4186,6 +4195,15 @@ body.sunlit .tab-options {
 }
 body.sunlit #tab-header .callout-container {
   float: right;
+}
+body.sunlit #tab-header .callout-container > .tab-options {
+  float: none;
+}
+body.sunlit #tab-header .callout-container > div.info-callout {
+  pointer-events: none;
+}
+body.sunlit #tab-header .callout-container:not(.callout-visible) > div.info-callout {
+  display: none !important;
 }
 body.sunlit .stepper {
   text-align: center;

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m96",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-17",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Map header tooltips wait for the pointer to settle and no longer cover the controls they describe"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m95",
             "requiredVersion": "0.6.1",
             "phase": "beta",

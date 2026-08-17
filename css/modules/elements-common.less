@@ -310,6 +310,27 @@ div.popup-overlay-meta {
 	float: right;
 }
 
+// The control itself keeps .tab-options. Its float took it out of the
+// wrapper's flow, so the tooltip was laid out at the TOP of the wrapper -
+// directly over the control it describes, swallowing the clicks meant for it.
+// The wrapper above floats instead; the control inside does not.
+#tab-header .callout-container > .tab-options {
+	float: none;
+}
+
+// these tooltips are read, never used, and they hang over the neighbouring
+// controls and the map. Clicks must reach what is under them.
+#tab-header .callout-container > div.info-callout {
+	pointer-events: none;
+}
+
+// A tooltip that appears the instant the pointer crosses a control fights the
+// control. These wait for the pointer to settle: UIFunctions arms
+// .callout-visible after a hover delay, so the instant :hover rule is off here.
+#tab-header .callout-container:not(.callout-visible) > div.info-callout {
+	display: none !important;
+}
+
 // STEPPERS
 
 .stepper {

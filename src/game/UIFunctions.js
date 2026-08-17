@@ -284,6 +284,48 @@ define(['ash',
 					});
 				}
 
+				// MAP HEADER TOOLTIPS
+				// The map controls sit in a narrow row and their tooltips hang over
+				// the row and the map. On plain :hover the tooltip appeared the
+				// instant the pointer crossed a control, so simply reaching for the
+				// level selector covered it. These ones wait for the pointer to
+				// settle, and the css makes them pointer-transparent. The tooltip
+				// is armed through the same .callout-visible class the tap system
+				// uses; the instant :hover rule is suppressed in css.
+				if (!isTouch) {
+					let hoverCalloutDelay = 500;
+					let headerCalloutSelector = "#tab-header .callout-container";
+					$(document).on("mouseenter", headerCalloutSelector, function (e) {
+						// openCallout fires mouseenter on the target itself to refresh
+						// callout content. That reaches this delegated handler as
+						// well, and re-opening from here would recurse forever.
+						if (!e.originalEvent) return;
+						let $container = $(this);
+						if ($container.hasClass("callout-visible")) return;
+						let $target = $container.children(".info-callout-target").first();
+						if ($target.length == 0) return;
+						uiFunctions.cancelHoverCallout($container);
+						let timer = setTimeout(function () {
+							uiFunctions.closeAllCallouts();
+							uiFunctions.openCallout($container, $target);
+						}, hoverCalloutDelay);
+						$container.data("hover-callout-timer", timer);
+					});
+					$(document).on("mouseleave", headerCalloutSelector, function (e) {
+						// closeAllCallouts fires mouseleave on the target for the
+						// same reason; ignore the synthetic one (see above)
+						if (!e.originalEvent) return;
+						uiFunctions.cancelHoverCallout($(this));
+						uiFunctions.closeAllCallouts();
+					});
+					// using the control dismisses its tooltip: the native dropdown
+					// opens right where the tooltip sits
+					$(document).on("mousedown change", headerCalloutSelector, function () {
+						uiFunctions.cancelHoverCallout($(this));
+						uiFunctions.closeAllCallouts();
+					});
+				}
+
 				if (!isTouch) return;
 
 				// tap toggles info callouts (hover is not available on touch)
@@ -676,6 +718,14 @@ define(['ash',
 				});
 				$(".callout-container.callout-visible").removeClass("callout-visible");
 				$("body").removeClass("callout-open");
+			},
+
+			cancelHoverCallout: function ($container) {
+				let timer = $container.data("hover-callout-timer");
+				if (timer) {
+					clearTimeout(timer);
+					$container.data("hover-callout-timer", null);
+				}
 			},
 
 			cancelLongPress: function ($btn) {
