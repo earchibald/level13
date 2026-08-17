@@ -998,7 +998,17 @@ define( function () {
 		},
 		
 		gameURL: window.location.origin + window.location.pathname.replace(/\/$/, ""),
-		
+
+		// The candidate is deployed to earchibald.github.io/level13-mobile and the release
+		// to earchibald.github.io/level13. Same host, so the path is what tells them apart.
+		// Local work counts as a candidate, which is why config.js never needs hand-editing
+		// to get cheats during development.
+		isCandidateBuild: function () {
+			let host = window.location.hostname;
+			if (host === "localhost" || host === "127.0.0.1" || host === "") return true;
+			return window.location.pathname.indexOf("/level13-mobile") === 0;
+		},
+
 		getFeedbackLinksHTML: function () {
 			let result = "";
 			var a = [ "level13game", "gmail.com" ];
@@ -82399,10 +82409,15 @@ define([
 			// for mobile" overlay is never shown.
 			GameConstants.isMobileOverlayShown = false;
 
+			// Dev functions are on for the candidate deployment and off for the release.
+			// isDebugVersion is deliberately left alone: it changes worldgen retries and
+			// fires debugger statements, and the candidate has to behave like the release.
+			let isCandidateBuild = GameConstants.isCandidateBuild();
+
 			GameConstants.isDebugVersion = config.isDebugVersion;
-			GameConstants.isCheatsEnabled = config.isCheatsEnabled;
+			GameConstants.isCheatsEnabled = config.isCheatsEnabled || isCandidateBuild;
 			GameConstants.isAutosaveEnabled = config.isAutosaveEnabled;
-			ConsoleLogger.logInfo = config.isDebugOutputEnabled;
+			ConsoleLogger.logInfo = config.isDebugOutputEnabled || isCandidateBuild;
 			
 			if (config.isTrackingEnabled) {
 				try {

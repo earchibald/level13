@@ -20,10 +20,15 @@ define([
 			// for mobile" overlay is never shown.
 			GameConstants.isMobileOverlayShown = false;
 
+			// Dev functions are on for the candidate deployment and off for the release.
+			// isDebugVersion is deliberately left alone: it changes worldgen retries and
+			// fires debugger statements, and the candidate has to behave like the release.
+			let isCandidateBuild = GameConstants.isCandidateBuild();
+
 			GameConstants.isDebugVersion = config.isDebugVersion;
-			GameConstants.isCheatsEnabled = config.isCheatsEnabled;
+			GameConstants.isCheatsEnabled = config.isCheatsEnabled || isCandidateBuild;
 			GameConstants.isAutosaveEnabled = config.isAutosaveEnabled;
-			ConsoleLogger.logInfo = config.isDebugOutputEnabled;
+			ConsoleLogger.logInfo = config.isDebugOutputEnabled || isCandidateBuild;
 			
 			if (config.isTrackingEnabled) {
 				try {
