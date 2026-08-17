@@ -1,25 +1,28 @@
-name: Deploy to GitHub Pages (mobile)
+name: Deploy to GitHub Pages
 
-# Publishes the mobile port to https://earchibald.github.io/level13-mobile
+# Publishes both distributions:
+#   gh-pages        in earchibald/level13        -> earchibald.github.io/level13         (RELEASE)
+#   gh-pages-mobile in earchibald/level13-mobile -> earchibald.github.io/level13-mobile  (CANDIDATE)
 #
-# How this works: this workflow travels with the gh-pages-mobile branch.
-# The branch is pushed to TWO repositories:
-#   - earchibald/level13 (source of truth; the workflow is skipped there
-#     so it can never overwrite the desktop site at /level13)
-#   - earchibald/level13-mobile (hosting repo; the workflow runs there and
-#     deploys this branch to that repo's GitHub Pages)
+# One file, identical on both branches. That is deliberate: the branches are
+# kept byte-identical so promoting the candidate is a fast-forward, and a
+# workflow that differed per branch would conflict on every promotion.
 #
-# To publish an update:
-#   git push origin gh-pages-mobile
-#   git push mobile  gh-pages-mobile
-# where "mobile" is the earchibald/level13-mobile remote.
+# The pairing below is what keeps them apart. gh-pages-mobile is also pushed
+# to earchibald/level13 as the source of truth, and there it must NOT deploy -
+# otherwise the candidate would overwrite the release site at /level13.
 #
-# No secrets or deploy keys are needed: the deploy runs inside
-# level13-mobile with its own GITHUB_TOKEN.
+# To publish:
+#   git push origin gh-pages          # release
+#   git push origin gh-pages-mobile   # source of truth, deploys nothing
+#   git push mobile gh-pages-mobile   # candidate
+#
+# No secrets or deploy keys: each deploy runs in its own repo with GITHUB_TOKEN.
 
 on:
   push:
     branches:
+      - gh-pages
       - gh-pages-mobile
   workflow_dispatch:
 
@@ -36,9 +39,11 @@ concurrency:
 
 jobs:
   deploy:
-    # Guard: only the hosting repo deploys. In earchibald/level13 this job
-    # is skipped, so the desktop site at /level13 is never touched.
-    if: github.repository == 'earchibald/level13-mobile'
+    # Each branch deploys from exactly one repository. Every other combination
+    # is skipped, which is how gh-pages-mobile stays harmless in earchibald/level13.
+    if: >-
+      (github.repository == 'earchibald/level13' && github.ref_name == 'gh-pages') ||
+      (github.repository == 'earchibald/level13-mobile' && github.ref_name == 'gh-pages-mobile')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
