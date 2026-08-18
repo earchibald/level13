@@ -310,24 +310,36 @@ div.popup-overlay-meta {
 	float: right;
 }
 
-// The control itself keeps .tab-options. Its float took it out of the
-// wrapper's flow, so the tooltip was laid out at the TOP of the wrapper -
-// directly over the control it describes, swallowing the clicks meant for it.
-// The wrapper above floats instead; the control inside does not.
-#tab-header .callout-container > .tab-options {
+// The map has two rows of controls: the selects in the header above it, and
+// the jump-to-sector buttons below it. Both rows are narrow and packed, so a
+// tooltip on any one control hangs over its neighbours. The three rules below
+// apply to both rows; UIFunctions delays and arms them with the same pair of
+// selectors.
+
+// div.info-callout is absolutely positioned with no top, so it lands at its
+// static position - under the control, as long as the control is in flow. Both
+// rows of controls float (.tab-options in the header, button.context below the
+// map), which took them out of their wrapper's flow and laid the tooltip out at
+// the TOP of the wrapper instead: directly over the control it describes, where
+// it swallowed the clicks meant for it. In the header the wrapper takes the
+// float over (rule above); the control inside never floats in either row.
+#tab-header .callout-container > .tab-options,
+#mainmap-sector-details > .callout-container > button.context {
 	float: none;
 }
 
 // these tooltips are read, never used, and they hang over the neighbouring
 // controls and the map. Clicks must reach what is under them.
-#tab-header .callout-container > div.info-callout {
+#tab-header .callout-container > div.info-callout,
+#mainmap-sector-details > .callout-container > div.info-callout {
 	pointer-events: none;
 }
 
 // A tooltip that appears the instant the pointer crosses a control fights the
 // control. These wait for the pointer to settle: UIFunctions arms
 // .callout-visible after a hover delay, so the instant :hover rule is off here.
-#tab-header .callout-container:not(.callout-visible) > div.info-callout {
+#tab-header .callout-container:not(.callout-visible) > div.info-callout,
+#mainmap-sector-details > .callout-container:not(.callout-visible) > div.info-callout {
 	display: none !important;
 }
 

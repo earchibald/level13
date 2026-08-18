@@ -1,6 +1,32 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m100",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-17",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound no longer stops for the rest of the session. When the phone takes the audio session away - a call, an alarm, or the app being in the background a while - the game now notices that its audio has gone quiet and rebuilds it on the next tap"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m99",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-17",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The map sector buttons get the same tooltips as the map header: they open below the button rather than over the row, wait for the pointer to settle, and no longer swallow the clicks meant for the buttons they cover"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m97",
             "requiredVersion": "0.6.1",
             "phase": "beta",
