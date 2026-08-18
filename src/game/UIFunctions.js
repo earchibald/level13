@@ -777,9 +777,12 @@ define(['ash',
 				this.registerHotkey("Collect 1 food", "KeyF", "shiftKey", tabs.out, false, false, "use_out_collector_food_one");
 				this.registerHotkey("Refill water", "KeyH", defaultModifier, tabs.out, false, false, "use_spring");
 
-				this.registerHotkey("Teleport home", "KeyH", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TELEPORT_HOME));
-				this.registerHotkey("Pass time", "KeyK", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TIME + " " + 1));
-				this.registerHotkey("Toggle map", "KeyL", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_REVEAL_MAP));
+				// Shift, so a cheat can never take a key a player action wants. K was
+				// plain, and "Pass time" is registered before "Craft", so on any build with
+				// cheats on the cheat answered K everywhere and crafting was unreachable.
+				this.registerHotkey("Teleport home", "KeyH", "shiftKey", null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TELEPORT_HOME));
+				this.registerHotkey("Pass time", "KeyK", "shiftKey", null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TIME + " " + 1));
+				this.registerHotkey("Toggle map", "KeyL", "shiftKey", null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_REVEAL_MAP));
 
 				this.registerHotkey("Previous tab", "ArrowLeft", "shiftKey", null, false, false, () => GameGlobals.uiFunctions.showPreviousTab());
 				this.registerHotkey("Next tab", "ArrowRight", "shiftKey", null, false, false, () => GameGlobals.uiFunctions.showNextTab());
@@ -1864,12 +1867,30 @@ define(['ash',
 
 			triggerHotkey: function (code, modifiers, hadPopupOnKeyDown) {
 				if (!this.hotkeys[code]) return false;
+
+				// Two passes over the same list, dev bindings skipped in the first. A cheat
+				// and a player action can share a key without the registration ORDER deciding
+				// which one answers - the player action always does, and the cheat only gets
+				// the key when nothing else claims it. Registration order still separates two
+				// player bindings, which is what it is good for.
+				let match = this.findHotkey(code, modifiers, hadPopupOnKeyDown, true)
+					|| this.findHotkey(code, modifiers, hadPopupOnKeyDown, false);
+				if (!match) return false;
+
+				log.i("[hotkey] triggered " + match.code + " " + match.modifier + " " + match.tab);
+				match.cb.apply(this);
+				return true;
+			},
+
+			findHotkey: function (code, modifiers, hadPopupOnKeyDown, skipDev) {
+				if (!this.hotkeys[code]) return null;
 				let currentTab = GameGlobals.gameState.uiStatus.currentTab;
 				let hasPopups = GameGlobals.uiFunctions.popupManager.hasOpenPopup();
 				let hasModifier = modifiers.shiftKey || modifiers.altKey || modifiers.ctrlKey || modifiers.metaKey;
 
 				for (let i = 0; i < this.hotkeys[code].length; i++) {
 					let hotkey = this.hotkeys[code][i];
+					if (skipDev && hotkey.isDev) continue;
 					if (hotkey.tab && hotkey.tab !== currentTab) continue;
 					if (!hotkey.isUniversal && hasPopups) continue;
 					// a key pressed while a popup was open belongs to the popup, even if the popup
@@ -1882,13 +1903,10 @@ define(['ash',
 					if (modifier && !modifiers[modifier]) continue;
 					if (!modifier && hasModifier) continue;
 
-					log.i("[hotkey] triggered " + hotkey.code + " " + hotkey.modifier + " " + hotkey.tab);
-
-					hotkey.cb.apply(this);
-					return true;
+					return hotkey;
 				}
 
-				return false;
+				return null;
 			},
 
 			getActualHotkeyModifier: function (modifier) {
