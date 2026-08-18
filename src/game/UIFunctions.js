@@ -284,18 +284,22 @@ define(['ash',
 					});
 				}
 
-				// MAP HEADER TOOLTIPS
-				// The map controls sit in a narrow row and their tooltips hang over
-				// the row and the map. On plain :hover the tooltip appeared the
-				// instant the pointer crossed a control, so simply reaching for the
-				// level selector covered it. These ones wait for the pointer to
-				// settle, and the css makes them pointer-transparent. The tooltip
-				// is armed through the same .callout-visible class the tap system
-				// uses; the instant :hover rule is suppressed in css.
+				// MAP CONTROL TOOLTIPS
+				// The map controls sit in two narrow rows - the selects in the
+				// header above the map, and the jump-to-sector buttons below it -
+				// and their tooltips hang over the rest of the row and the map. On
+				// plain :hover the tooltip appeared the instant the pointer crossed
+				// a control, so simply reaching for the level selector covered it,
+				// and the tooltip then took the clicks meant for the controls it
+				// covered. These ones wait for the pointer to settle, and the css
+				// makes them pointer-transparent. The tooltip is armed through the
+				// same .callout-visible class the tap system uses; the instant
+				// :hover rule is suppressed in css.
 				if (!isTouch) {
 					let hoverCalloutDelay = 500;
-					let headerCalloutSelector = "#tab-header .callout-container";
-					$(document).on("mouseenter", headerCalloutSelector, function (e) {
+					// the same two rows the css rules in elements-common.less cover
+					let mapCalloutSelector = "#tab-header .callout-container, #mainmap-sector-details > .callout-container";
+					$(document).on("mouseenter", mapCalloutSelector, function (e) {
 						// openCallout fires mouseenter on the target itself to refresh
 						// callout content. That reaches this delegated handler as
 						// well, and re-opening from here would recurse forever.
@@ -311,7 +315,7 @@ define(['ash',
 						}, hoverCalloutDelay);
 						$container.data("hover-callout-timer", timer);
 					});
-					$(document).on("mouseleave", headerCalloutSelector, function (e) {
+					$(document).on("mouseleave", mapCalloutSelector, function (e) {
 						// closeAllCallouts fires mouseleave on the target for the
 						// same reason; ignore the synthetic one (see above)
 						if (!e.originalEvent) return;
@@ -319,8 +323,9 @@ define(['ash',
 						uiFunctions.closeAllCallouts();
 					});
 					// using the control dismisses its tooltip: the native dropdown
-					// opens right where the tooltip sits
-					$(document).on("mousedown change", headerCalloutSelector, function () {
+					// opens right where the tooltip sits, and a jump-to button
+					// redraws the row under it
+					$(document).on("mousedown change", mapCalloutSelector, function () {
 						uiFunctions.cancelHoverCallout($(this));
 						uiFunctions.closeAllCallouts();
 					});

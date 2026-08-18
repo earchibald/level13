@@ -1272,13 +1272,16 @@ body.dark .tab-options {
 body.dark #tab-header .callout-container {
   float: right;
 }
-body.dark #tab-header .callout-container > .tab-options {
+body.dark #tab-header .callout-container > .tab-options,
+body.dark #mainmap-sector-details > .callout-container > button.context {
   float: none;
 }
-body.dark #tab-header .callout-container > div.info-callout {
+body.dark #tab-header .callout-container > div.info-callout,
+body.dark #mainmap-sector-details > .callout-container > div.info-callout {
   pointer-events: none;
 }
-body.dark #tab-header .callout-container:not(.callout-visible) > div.info-callout {
+body.dark #tab-header .callout-container:not(.callout-visible) > div.info-callout,
+body.dark #mainmap-sector-details > .callout-container:not(.callout-visible) > div.info-callout {
   display: none !important;
 }
 body.dark .stepper {
@@ -4196,13 +4199,16 @@ body.sunlit .tab-options {
 body.sunlit #tab-header .callout-container {
   float: right;
 }
-body.sunlit #tab-header .callout-container > .tab-options {
+body.sunlit #tab-header .callout-container > .tab-options,
+body.sunlit #mainmap-sector-details > .callout-container > button.context {
   float: none;
 }
-body.sunlit #tab-header .callout-container > div.info-callout {
+body.sunlit #tab-header .callout-container > div.info-callout,
+body.sunlit #mainmap-sector-details > .callout-container > div.info-callout {
   pointer-events: none;
 }
-body.sunlit #tab-header .callout-container:not(.callout-visible) > div.info-callout {
+body.sunlit #tab-header .callout-container:not(.callout-visible) > div.info-callout,
+body.sunlit #mainmap-sector-details > .callout-container:not(.callout-visible) > div.info-callout {
   display: none !important;
 }
 body.sunlit .stepper {
