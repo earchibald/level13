@@ -555,9 +555,11 @@ function (Ash, GameGlobals, GameConstants) {
 						helper.lastError = null;
 					} else if (isBehind) {
 						helper.hasConflict = true;
+						// no "in settings": there is no control there that resolves this. The
+						// game raises the question itself - see updateConflictPrompt
 						helper.lastError = lastSeen
-							? "Another device has saved since this one. Load it or keep this save, in settings."
-							: "This device has not synced with the cloud yet. Load the cloud save or keep this one, in settings.";
+							? "Another device has saved since this one. The game will ask which save to keep."
+							: "This device has not synced with the cloud yet. The game will ask which save to keep.";
 						helper.setSyncState("conflict", helper.lastError);
 						return { ok: false, error: helper.lastError, conflict: true };
 					}

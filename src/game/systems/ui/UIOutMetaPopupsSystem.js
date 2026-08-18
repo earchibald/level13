@@ -16,6 +16,12 @@ define([
 		IDLE_THRESHOLD_MS: 60000,
 		IDLE_CHECK_MIN_GAP_MS: 60000,
 
+		// a push the cloud refused, waiting for a moment when the question can be asked
+		isConflictPromptPending: false,
+		isConflictPromptInFlight: false,
+		conflictPromptRetryAt: null,
+		CONFLICT_PROMPT_RETRY_MS: 30000,
+
 		constructor: function () {
             this.showLanguageSelection = GameConstants.isDebugVersion;
             this.initElements();
@@ -43,6 +49,7 @@ define([
 		},
 
 		update: function (time) {
+			this.updateConflictPrompt();
 			this.updateIdleCloudCheck();
 		},
 
@@ -365,6 +372,15 @@ define([
 				let text = "Cloud save " + (state == "conflict" ? "needs attention" : "failed") + ": " + (message || "unknown");
 				GameGlobals.playerHelper.addLogMessage(null, text, { visibility: LogConstants.MSG_VISIBILITY_GLOBAL });
 			}
+			// A refused push is a question, not a status. Until now the only things that
+			// ASKED it were the once-per-launch arrival check and the idle check, and the
+			// idle check needs a full minute of no input - so a player who kept playing got
+			// the refusal every autosave with nothing to act on, and only saw the prompt
+			// after putting the phone down. Raise it from the refusal itself instead.
+			if (state == "conflict") {
+				this.isConflictPromptPending = true;
+				this.conflictPromptRetryAt = null;
+			}
 		},
 
 		updateCloudSyncStatus: function () {
@@ -480,6 +496,53 @@ define([
 					helper.hasConflict = true;
 					sys.showCloudArrivalPrompt(state);
 				});
+			});
+		},
+
+		// The prompt cannot be raised where the refusal happens: popups do not stack, so one
+		// opened over the manage-save popup (or over the error card reporting the refusal)
+		// would be queued and never seen. Wait here for a clear screen instead.
+		updateConflictPrompt: function () {
+			if (!this.isConflictPromptPending) return;
+			if (this.isConflictPromptInFlight) return;
+
+			let helper = GameGlobals.gistSaveHelper;
+			// resolved some other way - the arrival check accepted the revision, or the
+			// player answered the idle check's prompt. There is nothing left to ask.
+			if (!helper.isInConflict()) { this.isConflictPromptPending = false; return; }
+
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+
+			let now = new Date().getTime();
+			if (this.conflictPromptRetryAt && now < this.conflictPromptRetryAt) return;
+
+			let sys = this;
+			this.isConflictPromptInFlight = true;
+			// the prompt names the other device and when it saved, and both come from the
+			// gist rather than from the refusal, which carries only a message
+			helper.fetchGistState().then(function (state) {
+				sys.isConflictPromptInFlight = false;
+				if (!state.ok || !state.revision) {
+					// unreachable GitHub is not an answer to the question, so keep it
+					// pending - but back off, or this retries every frame
+					sys.conflictPromptRetryAt = new Date().getTime() + sys.CONFLICT_PROMPT_RETRY_MS;
+					return;
+				}
+				// the cloud moved back to where this device left it while we were asking
+				if (state.revision === helper.getLastSeenRevision()) {
+					sys.isConflictPromptPending = false;
+					helper.clearConflictIfResolved();
+					return;
+				}
+				// a popup may have opened during the fetch, and one raised now would be
+				// queued behind it and lost. Leave it pending and try again next frame.
+				if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+				sys.isConflictPromptPending = false;
+				sys.showCloudArrivalPrompt(state);
+			}).catch(function () {
+				sys.isConflictPromptInFlight = false;
+				sys.conflictPromptRetryAt = new Date().getTime() + sys.CONFLICT_PROMPT_RETRY_MS;
 			});
 		},
 

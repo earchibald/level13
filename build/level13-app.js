@@ -32423,9 +32423,12 @@ define(['ash',
 				this.registerHotkey("Collect 1 food", "KeyF", "shiftKey", tabs.out, false, false, "use_out_collector_food_one");
 				this.registerHotkey("Refill water", "KeyH", defaultModifier, tabs.out, false, false, "use_spring");
 
-				this.registerHotkey("Teleport home", "KeyH", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TELEPORT_HOME));
-				this.registerHotkey("Pass time", "KeyK", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TIME + " " + 1));
-				this.registerHotkey("Toggle map", "KeyL", defaultModifier, null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_REVEAL_MAP));
+				// Shift, so a cheat can never take a key a player action wants. K was
+				// plain, and "Pass time" is registered before "Craft", so on any build with
+				// cheats on the cheat answered K everywhere and crafting was unreachable.
+				this.registerHotkey("Teleport home", "KeyH", "shiftKey", null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TELEPORT_HOME));
+				this.registerHotkey("Pass time", "KeyK", "shiftKey", null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_TIME + " " + 1));
+				this.registerHotkey("Toggle map", "KeyL", "shiftKey", null, false, true, () => GlobalSignals.triggerCheatSignal.dispatch(CheatConstants.CHEAT_NAME_REVEAL_MAP));
 
 				this.registerHotkey("Previous tab", "ArrowLeft", "shiftKey", null, false, false, () => GameGlobals.uiFunctions.showPreviousTab());
 				this.registerHotkey("Next tab", "ArrowRight", "shiftKey", null, false, false, () => GameGlobals.uiFunctions.showNextTab());
@@ -33510,12 +33513,30 @@ define(['ash',
 
 			triggerHotkey: function (code, modifiers, hadPopupOnKeyDown) {
 				if (!this.hotkeys[code]) return false;
+
+				// Two passes over the same list, dev bindings skipped in the first. A cheat
+				// and a player action can share a key without the registration ORDER deciding
+				// which one answers - the player action always does, and the cheat only gets
+				// the key when nothing else claims it. Registration order still separates two
+				// player bindings, which is what it is good for.
+				let match = this.findHotkey(code, modifiers, hadPopupOnKeyDown, true)
+					|| this.findHotkey(code, modifiers, hadPopupOnKeyDown, false);
+				if (!match) return false;
+
+				log.i("[hotkey] triggered " + match.code + " " + match.modifier + " " + match.tab);
+				match.cb.apply(this);
+				return true;
+			},
+
+			findHotkey: function (code, modifiers, hadPopupOnKeyDown, skipDev) {
+				if (!this.hotkeys[code]) return null;
 				let currentTab = GameGlobals.gameState.uiStatus.currentTab;
 				let hasPopups = GameGlobals.uiFunctions.popupManager.hasOpenPopup();
 				let hasModifier = modifiers.shiftKey || modifiers.altKey || modifiers.ctrlKey || modifiers.metaKey;
 
 				for (let i = 0; i < this.hotkeys[code].length; i++) {
 					let hotkey = this.hotkeys[code][i];
+					if (skipDev && hotkey.isDev) continue;
 					if (hotkey.tab && hotkey.tab !== currentTab) continue;
 					if (!hotkey.isUniversal && hasPopups) continue;
 					// a key pressed while a popup was open belongs to the popup, even if the popup
@@ -33528,13 +33549,10 @@ define(['ash',
 					if (modifier && !modifiers[modifier]) continue;
 					if (!modifier && hasModifier) continue;
 
-					log.i("[hotkey] triggered " + hotkey.code + " " + hotkey.modifier + " " + hotkey.tab);
-
-					hotkey.cb.apply(this);
-					return true;
+					return hotkey;
 				}
 
-				return false;
+				return null;
 			},
 
 			getActualHotkeyModifier: function (modifier) {
@@ -49027,9 +49045,11 @@ function (Ash, GameGlobals, GameConstants) {
 						helper.lastError = null;
 					} else if (isBehind) {
 						helper.hasConflict = true;
+						// no "in settings": there is no control there that resolves this. The
+						// game raises the question itself - see updateConflictPrompt
 						helper.lastError = lastSeen
-							? "Another device has saved since this one. Load it or keep this save, in settings."
-							: "This device has not synced with the cloud yet. Load the cloud save or keep this one, in settings.";
+							? "Another device has saved since this one. The game will ask which save to keep."
+							: "This device has not synced with the cloud yet. The game will ask which save to keep.";
 						helper.setSyncState("conflict", helper.lastError);
 						return { ok: false, error: helper.lastError, conflict: true };
 					}
@@ -71721,6 +71741,12 @@ define([
 		IDLE_THRESHOLD_MS: 60000,
 		IDLE_CHECK_MIN_GAP_MS: 60000,
 
+		// a push the cloud refused, waiting for a moment when the question can be asked
+		isConflictPromptPending: false,
+		isConflictPromptInFlight: false,
+		conflictPromptRetryAt: null,
+		CONFLICT_PROMPT_RETRY_MS: 30000,
+
 		constructor: function () {
             this.showLanguageSelection = GameConstants.isDebugVersion;
             this.initElements();
@@ -71748,6 +71774,7 @@ define([
 		},
 
 		update: function (time) {
+			this.updateConflictPrompt();
 			this.updateIdleCloudCheck();
 		},
 
@@ -72070,6 +72097,15 @@ define([
 				let text = "Cloud save " + (state == "conflict" ? "needs attention" : "failed") + ": " + (message || "unknown");
 				GameGlobals.playerHelper.addLogMessage(null, text, { visibility: LogConstants.MSG_VISIBILITY_GLOBAL });
 			}
+			// A refused push is a question, not a status. Until now the only things that
+			// ASKED it were the once-per-launch arrival check and the idle check, and the
+			// idle check needs a full minute of no input - so a player who kept playing got
+			// the refusal every autosave with nothing to act on, and only saw the prompt
+			// after putting the phone down. Raise it from the refusal itself instead.
+			if (state == "conflict") {
+				this.isConflictPromptPending = true;
+				this.conflictPromptRetryAt = null;
+			}
 		},
 
 		updateCloudSyncStatus: function () {
@@ -72185,6 +72221,53 @@ define([
 					helper.hasConflict = true;
 					sys.showCloudArrivalPrompt(state);
 				});
+			});
+		},
+
+		// The prompt cannot be raised where the refusal happens: popups do not stack, so one
+		// opened over the manage-save popup (or over the error card reporting the refusal)
+		// would be queued and never seen. Wait here for a clear screen instead.
+		updateConflictPrompt: function () {
+			if (!this.isConflictPromptPending) return;
+			if (this.isConflictPromptInFlight) return;
+
+			let helper = GameGlobals.gistSaveHelper;
+			// resolved some other way - the arrival check accepted the revision, or the
+			// player answered the idle check's prompt. There is nothing left to ask.
+			if (!helper.isInConflict()) { this.isConflictPromptPending = false; return; }
+
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+
+			let now = new Date().getTime();
+			if (this.conflictPromptRetryAt && now < this.conflictPromptRetryAt) return;
+
+			let sys = this;
+			this.isConflictPromptInFlight = true;
+			// the prompt names the other device and when it saved, and both come from the
+			// gist rather than from the refusal, which carries only a message
+			helper.fetchGistState().then(function (state) {
+				sys.isConflictPromptInFlight = false;
+				if (!state.ok || !state.revision) {
+					// unreachable GitHub is not an answer to the question, so keep it
+					// pending - but back off, or this retries every frame
+					sys.conflictPromptRetryAt = new Date().getTime() + sys.CONFLICT_PROMPT_RETRY_MS;
+					return;
+				}
+				// the cloud moved back to where this device left it while we were asking
+				if (state.revision === helper.getLastSeenRevision()) {
+					sys.isConflictPromptPending = false;
+					helper.clearConflictIfResolved();
+					return;
+				}
+				// a popup may have opened during the fetch, and one raised now would be
+				// queued behind it and lost. Leave it pending and try again next frame.
+				if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+				sys.isConflictPromptPending = false;
+				sys.showCloudArrivalPrompt(state);
+			}).catch(function () {
+				sys.isConflictPromptInFlight = false;
+				sys.conflictPromptRetryAt = new Date().getTime() + sys.CONFLICT_PROMPT_RETRY_MS;
 			});
 		},
 

@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m101",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-18",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "A cloud save refused because another device saved first now asks straight away which save to keep, instead of only offering the choice after a minute of no input"
+                },
+                {
+                    "type": "FIX",
+                    "summary": "K opens the crafting screen again everywhere, in camp and outside. A dev-only key took K on the candidate build and answered it first"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m100",
             "requiredVersion": "0.6.1",
             "phase": "beta",
