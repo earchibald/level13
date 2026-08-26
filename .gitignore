@@ -14,3 +14,7 @@ balancing.html
 worldcreator.html
 .vscode/
 *_unused_*
+
+# local credentials and scratch output - never publish
+.env
+flake*.log

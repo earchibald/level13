@@ -999,14 +999,14 @@ define( function () {
 		
 		gameURL: window.location.origin + window.location.pathname.replace(/\/$/, ""),
 
-		// The candidate is deployed to earchibald.github.io/level13-mobile and the release
-		// to earchibald.github.io/level13. Same host, so the path is what tells them apart.
-		// Local work counts as a candidate, which is why config.js never needs hand-editing
-		// to get cheats during development.
-		isCandidateBuild: function () {
+		// Dev functions belong to local work and to nothing else. The candidate at
+		// earchibald.github.io/level13-mobile used to switch them on from its path,
+		// but a candidate that plays differently from the release at /level13 is not
+		// testing what ships, so both deployments now run without them.
+		// config.js still never needs hand-editing to get cheats while developing.
+		isLocalDevBuild: function () {
 			let host = window.location.hostname;
-			if (host === "localhost" || host === "127.0.0.1" || host === "") return true;
-			return window.location.pathname.indexOf("/level13-mobile") === 0;
+			return host === "localhost" || host === "127.0.0.1" || host === "";
 		},
 
 		getFeedbackLinksHTML: function () {
@@ -82825,15 +82825,15 @@ define([
 			// for mobile" overlay is never shown.
 			GameConstants.isMobileOverlayShown = false;
 
-			// Dev functions are on for the candidate deployment and off for the release.
+			// Dev functions are on for local work and off for both deployments.
 			// isDebugVersion is deliberately left alone: it changes worldgen retries and
 			// fires debugger statements, and the candidate has to behave like the release.
-			let isCandidateBuild = GameConstants.isCandidateBuild();
+			let isLocalDevBuild = GameConstants.isLocalDevBuild();
 
 			GameConstants.isDebugVersion = config.isDebugVersion;
-			GameConstants.isCheatsEnabled = config.isCheatsEnabled || isCandidateBuild;
+			GameConstants.isCheatsEnabled = config.isCheatsEnabled || isLocalDevBuild;
 			GameConstants.isAutosaveEnabled = config.isAutosaveEnabled;
-			ConsoleLogger.logInfo = config.isDebugOutputEnabled || isCandidateBuild;
+			ConsoleLogger.logInfo = config.isDebugOutputEnabled || isLocalDevBuild;
 			
 			if (config.isTrackingEnabled) {
 				try {
