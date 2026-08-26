@@ -5,6 +5,7 @@ define([
 	'game/GlobalSignals',
 	'game/constants/PlayerStatConstants',
 	'game/constants/UIConstants',
+	'game/constants/TextConstants',
 	'game/constants/ItemConstants',
 	'game/constants/BagConstants',
 	'game/nodes/PlayerPositionNode',
@@ -14,7 +15,7 @@ define([
 	'game/components/player/StaminaComponent',
 	'game/components/common/CampComponent',
 ], function (
-	Ash, Text, GameGlobals, GlobalSignals, PlayerStatConstants, UIConstants, ItemConstants, BagConstants,
+	Ash, Text, GameGlobals, GlobalSignals, PlayerStatConstants, UIConstants, TextConstants, ItemConstants, BagConstants,
 	PlayerPositionNode, PlayerLocationNode,
 	BagComponent, ItemsComponent, StaminaComponent, CampComponent
 ) {
@@ -55,7 +56,7 @@ define([
 				let indicatorEmbark = UIConstants.createResourceIndicator(name, true, "embark-resources-" + name, true, false, false, false);
 				$("#embark-resources").append(
 					"<tr id='embark-assign-" + name + "'>" +
-					"<td class='dimmable'>" + indicatorEmbark + "</td>" +
+					"<td class='dimmable'><div class='info-callout-target info-callout-target-small' description='" + UIConstants.cleanupText(this.getResourceCallout(name)) + "'>" + indicatorEmbark + "</div></td>" +
 					"<td><div class='stepper' id='stepper-embark-" + name + "'></div></td>" +
 					"</tr>"
 				);
@@ -64,6 +65,19 @@ define([
 		
 		setupElements: function () {
 			this.registerStepperListeners("#embark-resources");
+			GameGlobals.uiFunctions.generateInfoCallouts("#embark-resources");
+		},
+
+		getResourceCallout: function (resourceName, campValue) {
+			let isCurrency = resourceName == "currency";
+			let content = "<b>" + TextConstants.getResourceDisplayName(resourceName) + "</b>";
+			if (!isCurrency) {
+				content += "</br>Weight: " + UIConstants.roundValue(BagConstants.getResourceCapacity(resourceName) * 10) / 10;
+			}
+			if (campValue || campValue === 0) {
+				content += "</br>In camp: " + Math.floor(campValue);
+			}
+			return content;
 		},
 		
 		initLeaveCampRes: function () {
@@ -129,6 +143,7 @@ define([
 				let inputMax = Math.min(Math.floor(campVal));
 				GameGlobals.uiFunctions.toggle($(this), visible);
 				if (visible) {
+					UIConstants.updateCalloutContent($(this).find(".info-callout-target"), sys.getResourceCallout(resourceName, campVal), true);
 					var stepper = $(this).children("td").children(".stepper");
 					var inputMin = 0;
 					var val = $(this).children("td").children(".stepper").children("input").val();
@@ -238,7 +253,7 @@ define([
 				
 				$("#embark-items").append(
 					"<tr id='embark-assign-" + item.id + "'>" +
-					"<td class='dimmable'><img src='" + item.icon + "'/><span>" + itemName + "</span></td>" +
+					"<td class='dimmable'><div class='info-callout-target info-callout-target-small' description='" + UIConstants.cleanupText(UIConstants.getItemCallout(item)) + "'><img src='" + item.icon + "'/><span>" + itemName + "</span></div></td>" +
 					"<td><div class='stepper' id='stepper-embark-" + item.id + "'></div></td>" +
 					"<td class='list-amount dimmable'><span> / " + showCount + "</span></div></td>" +
 					"</tr>"
@@ -246,6 +261,7 @@ define([
 			}
 			GameGlobals.uiFunctions.generateSteppers("#embark-items");
 			GameGlobals.uiFunctions.registerStepperListeners("#embark-items");
+			GameGlobals.uiFunctions.generateInfoCallouts("#embark-items");
 			this.registerStepperListeners("#embark-items");
 		},
 		

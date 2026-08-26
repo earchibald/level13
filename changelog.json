@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m102",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-25",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Every row of the leave camp list has a tooltip now. Resources show their weight and how much the camp has left, items show the same description as the bag"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m101",
             "requiredVersion": "0.6.1",
             "phase": "beta",
