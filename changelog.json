@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m104",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-26",
+            "changes": [
+                {
+                    "type": "DEV",
+                    "summary": "Cheats and debug output are off on both published versions. They used to switch on from the address, so the mobile version played with them on and was not testing the game that ships. They still switch on by themselves when the game is run locally"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m103",
             "requiredVersion": "0.6.1",
             "phase": "beta",

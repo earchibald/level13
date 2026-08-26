@@ -32,14 +32,14 @@ define( function () {
 		
 		gameURL: window.location.origin + window.location.pathname.replace(/\/$/, ""),
 
-		// The candidate is deployed to earchibald.github.io/level13-mobile and the release
-		// to earchibald.github.io/level13. Same host, so the path is what tells them apart.
-		// Local work counts as a candidate, which is why config.js never needs hand-editing
-		// to get cheats during development.
-		isCandidateBuild: function () {
+		// Dev functions belong to local work and to nothing else. The candidate at
+		// earchibald.github.io/level13-mobile used to switch them on from its path,
+		// but a candidate that plays differently from the release at /level13 is not
+		// testing what ships, so both deployments now run without them.
+		// config.js still never needs hand-editing to get cheats while developing.
+		isLocalDevBuild: function () {
 			let host = window.location.hostname;
-			if (host === "localhost" || host === "127.0.0.1" || host === "") return true;
-			return window.location.pathname.indexOf("/level13-mobile") === 0;
+			return host === "localhost" || host === "127.0.0.1" || host === "";
 		},
 
 		getFeedbackLinksHTML: function () {
