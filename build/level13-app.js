@@ -13518,17 +13518,33 @@ define(['ash', 'game/constants/MovementConstants'], function (Ash, MovementConst
 			this.isFallbackInvestigateSector = componentValues.fis ? true : false;
 			this.currentCharacters = componentValues.char ? componentValues.char : [];
 
-			if (this.scouted) {
-				this.visited = true;
-			}
-
-			if (this.scavenged) {
-				this.visited = true;
-			}
+			// the save leaves out flags it can infer from another one, so derive them back
+			// before asking whether the sector was visited - scavenged comes from the scavenge
+			// count, and anything the player could only have done while standing there means
+			// visited, whether or not the sector was ever scouted
 
 			if (this.weightedNumScavenges) {
 				this.scavenged = true;
 			}
+
+			if (this.wasVisitedByEvidence()) {
+				this.visited = true;
+			}
+		},
+
+		wasVisitedByEvidence: function () {
+			if (this.scouted) return true;
+			if (this.scavenged) return true;
+			if (this.investigated || this.weightedNumInvestigates) return true;
+			if (this.weightedNumHeapScavenges) return true;
+			if (this.getNumLocalesScouted() > 0) return true;
+			if (this.wasteClearedDirections.length > 0) return true;
+			if (this.blockerClearedDirections.length > 0) return true;
+			if (this.gapBridgedDirections.length > 0) return true;
+			if (this.stashesFound.length > 0) return true;
+			if (this.discoveredResources.length > 0) return true;
+			if (this.discoveredItems.length > 0) return true;
+			return false;
 		}
 
 	});
