@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m106",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound no longer goes quiet in desktop Safari after a tab has been left alone for a long time. The game now hands its audio back when the page closes, so a reload gets a working one first time instead of needing a second reload, and a sound left waiting on audio that never wakes up rebuilds it rather than being dropped in silence"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m105",
             "requiredVersion": "0.6.1",
             "phase": "beta",
