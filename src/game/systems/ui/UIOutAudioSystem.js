@@ -43,6 +43,7 @@ define([
 		hasGestureListeners: false,
 		hasLifecycleListeners: false,
 		pendingPlayWhileSuspended: 0, // wall time of the oldest sound still waiting for a resume
+		lastGestureTime: 0, // wall time of the last gesture, so an unlocked context can be told from a locked one
 		isWebAudioAbandoned: false, // true once rebuilding has failed too often
 
 		audios: {}, // fallback only: triggerID -> the one Audio element for that sound
@@ -142,6 +143,8 @@ define([
 
 			let sys = this;
 			let onGesture = function () {
+				sys.lastGestureTime = new Date().getTime();
+
 				// a gesture is the only moment the browser lets us build or
 				// start a context, so it is where a pending rebuild is spent
 				if (sys.needsAudioContextRebuild) {
@@ -290,6 +293,18 @@ define([
 
 			if (!this.pendingPlayWhileSuspended) return false;
 			if (document.visibilityState !== "visible") return false;
+
+			// A context nobody has unlocked yet is locked, not stuck: autoplay
+			// policy keeps it suspended until the first gesture, and the game
+			// does play sounds before that gesture ever comes. Only a sound
+			// that came after a gesture says anything about a resume, and a
+			// sound from before one is forgotten rather than held against the
+			// context for the rest of the session.
+			if (!this.lastGestureTime) return false;
+			if (this.pendingPlayWhileSuspended < this.lastGestureTime) {
+				this.pendingPlayWhileSuspended = 0;
+				return false;
+			}
 			if (sample.wallTime - this.pendingPlayWhileSuspended < this.stalledResumeDelay) return false;
 
 			log.w("audio context did not resume for a sound that was played, will rebuild", this);

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m107",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Put back the sound that the previous version took away. The new watchdog treated a page nobody had clicked yet as broken audio, because the browser keeps sound locked until the first click and the game plays a sound or two before then. It rebuilt the audio over and over and gave up on it about a minute after loading. The watchdog now only judges audio that a click should already have unlocked"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m106",
             "requiredVersion": "0.6.1",
             "phase": "beta",
