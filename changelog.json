@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m109",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The file that carries the release stamp is now really fetched from the network. Asking for it the ordinary way was still answered from the browser's own cache with a copy up to ten minutes old, so the previous fix did not go far enough and the game could still load a release behind"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m108",
             "requiredVersion": "0.6.1",
             "phase": "beta",
