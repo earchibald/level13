@@ -12,7 +12,7 @@
  * src/config.js urlArgs, and the ?v= query on the css links in index.html.
  */
 
-var CACHE_VERSION = "0.6.3.m107";
+var CACHE_VERSION = "0.6.3.m108";
 var STATIC_CACHE = "l13-static-" + CACHE_VERSION;
 var SHELL_CACHE = "l13-shell-" + CACHE_VERSION;
 // unversioned on purpose: the sound files change essentially never, and the
@@ -109,6 +109,17 @@ self.addEventListener("fetch", function (event) {
 	// the page itself, and the version metadata the page reads: always try the
 	// network, so a release reaches the device as soon as it is online
 	if (request.mode === "navigate" || url.pathname.indexOf(".json") >= 0) {
+		event.respondWith(networkFirst(request));
+		return;
+	}
+
+	// src/config.js is where the ?v= stamp itself lives, and it is requested
+	// without one. Served from cache it pins the game to the previous release's
+	// stamp, every later request follows it there, and the stale copy is then
+	// written into the new version's cache - so the game stays a release behind
+	// for good, with the caches all correctly named. It is version metadata like
+	// the files above, not a static asset.
+	if (url.pathname.indexOf("/src/config") >= 0) {
 		event.respondWith(networkFirst(request));
 		return;
 	}

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m108",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Releases now actually reach the browser. The one file that carries the release stamp was itself served from the offline cache, so a stale copy asked for every other file at the previous release's stamp and wrote itself into the new cache - the game could sit a release behind for good while everything looked correctly named. That file is now always fetched from the network"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m107",
             "requiredVersion": "0.6.1",
             "phase": "beta",
