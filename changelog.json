@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m105",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-28",
+            "changes": [
+                {
+                    "type": "TWEAK",
+                    "summary": "Fixed a missing word in the description of an overgrown park on the ground level. It read \"now overrun strange plants and mushrooms\""
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m104",
             "requiredVersion": "0.6.1",
             "phase": "beta",
