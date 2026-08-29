@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m110",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Put the sound handling back to how it was in 0.6.3.m105, before this batch of audio changes. They were meant to fix sound going quiet in desktop Safari and made things worse instead. The release and caching fixes from the versions in between are kept"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m109",
             "requiredVersion": "0.6.1",
             "phase": "beta",

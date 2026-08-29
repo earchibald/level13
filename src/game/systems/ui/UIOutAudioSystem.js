@@ -41,9 +41,6 @@ define([
 		audioContextRebuilds: 0,
 		lastAudioContextRebuildTime: 0,
 		hasGestureListeners: false,
-		hasLifecycleListeners: false,
-		pendingPlayWhileSuspended: 0, // wall time of the oldest sound still waiting for a resume
-		lastGestureTime: 0, // wall time of the last gesture, so an unlocked context can be told from a locked one
 		isWebAudioAbandoned: false, // true once rebuilding has failed too often
 
 		audios: {}, // fallback only: triggerID -> the one Audio element for that sound
@@ -56,10 +53,6 @@ define([
 		// what happened within one quiet period, not what happened all session.
 		maxAudioContextRebuilds: 5,
 		audioContextRebuildResetDelay: 1000 * 60,
-
-		// how long a sound may sit waiting for a resume before the context
-		// counts as stuck rather than slow
-		stalledResumeDelay: 3000,
 
 		constructor: function () {
 			return this;
@@ -127,7 +120,6 @@ define([
 			this.audioClockSample = null;
 			this.watchAudioContextState(this.audioContext);
 			this.addGestureListeners();
-			this.addLifecycleListeners();
 
 			return true;
 		},
@@ -143,8 +135,6 @@ define([
 
 			let sys = this;
 			let onGesture = function () {
-				sys.lastGestureTime = new Date().getTime();
-
 				// a gesture is the only moment the browser lets us build or
 				// start a context, so it is where a pending rebuild is spent
 				if (sys.needsAudioContextRebuild) {
@@ -156,39 +146,6 @@ define([
 			document.addEventListener("touchend", onGesture, true);
 			document.addEventListener("pointerdown", onGesture, true);
 			document.addEventListener("keydown", onGesture, true);
-		},
-
-		// A context is not released when its page goes away, and webkit allows
-		// only a few of them per process, so one left behind by the page being
-		// replaced can still hold its slot while the next page builds its own.
-		// That is why a reload sometimes came back silent while a second
-		// reload, or a reload from origin, did not. pagehide also fires on the
-		// way into the back/forward cache, where the page may yet come back -
-		// the rebuild flag then makes the next gesture build a fresh context.
-		addLifecycleListeners: function () {
-			if (this.hasLifecycleListeners) return;
-			this.hasLifecycleListeners = true;
-
-			let sys = this;
-			window.addEventListener("pagehide", function () {
-				if (!sys.audioContext) return;
-				sys.closeAudioContext();
-				sys.needsAudioContextRebuild = true;
-			});
-		},
-
-		// closing is the same three steps wherever the context is dropped: stop
-		// listening to the corpse, forget everything measured about it, and let
-		// the audio session go
-		closeAudioContext: function () {
-			let old = this.audioContext;
-			this.audioContext = null;
-			this.currentSource = null;
-			this.audioClockSample = null;
-			this.pendingPlayWhileSuspended = 0;
-			if (!old) return;
-			old.onstatechange = null;
-			try { old.close(); } catch (e) { }
 		},
 
 		watchAudioContextState: function (ctx) {
@@ -257,60 +214,18 @@ define([
 			this.audioClockSample = sample;
 
 			if (!previous) return;
+			if (previous.state !== "running" || sample.state !== "running") return;
 
 			// a frozen or backgrounded page does not run timers, so a long gap
-			// says nothing about the audio unit - re-baseline and wait. A sound
-			// queued before such a gap proves nothing either.
+			// says nothing about the audio unit - re-baseline and wait
 			let wallDelta = (sample.wallTime - previous.wallTime) / 1000;
-			if (wallDelta < 1.5 || wallDelta > 8) {
-				this.pendingPlayWhileSuspended = 0;
-				return;
-			}
-
-			if (this.checkStalledResume(sample)) return;
-
-			if (previous.state !== "running" || sample.state !== "running") return;
+			if (wallDelta < 1.5 || wallDelta > 8) return;
 
 			let ctxDelta = sample.ctxTime - previous.ctxTime;
 			if (ctxDelta > wallDelta * 0.25) return;
 
 			log.w("audio context is running but its clock is stopped, will rebuild", this);
 			this.needsAudioContextRebuild = true;
-		},
-
-		// A source started on a suspended context is queued and plays the
-		// moment the resume lands. When the resume never lands - webkit neither
-		// rejects it nor changes the state - the sound is simply lost, and the
-		// clock check above cannot see it because that only judges a context
-		// that claims to be running. Only a sound that was actually wanted
-		// counts: a suspended context with nothing to play is ordinary power
-		// saving, not a fault.
-		checkStalledResume: function (sample) {
-			if (sample.state === "running") {
-				this.pendingPlayWhileSuspended = 0;
-				return false;
-			}
-
-			if (!this.pendingPlayWhileSuspended) return false;
-			if (document.visibilityState !== "visible") return false;
-
-			// A context nobody has unlocked yet is locked, not stuck: autoplay
-			// policy keeps it suspended until the first gesture, and the game
-			// does play sounds before that gesture ever comes. Only a sound
-			// that came after a gesture says anything about a resume, and a
-			// sound from before one is forgotten rather than held against the
-			// context for the rest of the session.
-			if (!this.lastGestureTime) return false;
-			if (this.pendingPlayWhileSuspended < this.lastGestureTime) {
-				this.pendingPlayWhileSuspended = 0;
-				return false;
-			}
-			if (sample.wallTime - this.pendingPlayWhileSuspended < this.stalledResumeDelay) return false;
-
-			log.w("audio context did not resume for a sound that was played, will rebuild", this);
-			this.pendingPlayWhileSuspended = 0;
-			this.needsAudioContextRebuild = true;
-			return true;
 		},
 
 		rebuildAudioContext: function () {
@@ -332,7 +247,14 @@ define([
 
 			log.i("rebuilding audio context (" + this.audioContextRebuilds + ")", this);
 
-			this.closeAudioContext();
+			let old = this.audioContext;
+			this.audioContext = null;
+			this.currentSource = null;
+			this.audioClockSample = null;
+			if (old) {
+				old.onstatechange = null;
+				try { old.close(); } catch (e) { }
+			}
 
 			if (!this.initAudioContext()) {
 				this.abandonWebAudio();
@@ -377,7 +299,13 @@ define([
 			this.needsAudioContextRebuild = false;
 			this.stopAudioWatchdog();
 
-			this.closeAudioContext();
+			let old = this.audioContext;
+			this.audioContext = null;
+			this.currentSource = null;
+			if (old) {
+				old.onstatechange = null;
+				try { old.close(); } catch (e) { }
+			}
 
 			this.buffers = {};
 			this.brokenSounds = {};
@@ -512,14 +440,6 @@ define([
 			// waiting for the resume promise would lose the moment - a source
 			// started on a suspended context plays as soon as the resume lands
 			this.resumeAudioContext();
-
-			// remember that a sound is waiting on the resume, so the watchdog
-			// can tell a resume that never lands from an idle context
-			if (ctx.state === "running") {
-				this.pendingPlayWhileSuspended = 0;
-			} else if (!this.pendingPlayWhileSuspended) {
-				this.pendingPlayWhileSuspended = new Date().getTime();
-			}
 
 			if (this.currentSource) {
 				try { this.currentSource.stop(); } catch (e) { }
