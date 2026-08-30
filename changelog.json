@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m111",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sectors next to one you had just walked into could stay hidden on the map for good, because the list of sectors waiting to have their neighbours revealed was only held in memory and was lost when the game was closed. The level then reported unvisited sectors with nothing on the map to walk to. Every visited sector is now checked again on load"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m110",
             "requiredVersion": "0.6.1",
             "phase": "beta",
