@@ -1,6 +1,84 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m111",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sectors next to one you had just walked into could stay hidden on the map for good, because the list of sectors waiting to have their neighbours revealed was only held in memory and was lost when the game was closed. The level then reported unvisited sectors with nothing on the map to walk to. Every visited sector is now checked again on load"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m110",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Put the sound handling back to how it was in 0.6.3.m105, before this batch of audio changes. They were meant to fix sound going quiet in desktop Safari and made things worse instead. The release and caching fixes from the versions in between are kept"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m109",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The file that carries the release stamp is now really fetched from the network. Asking for it the ordinary way was still answered from the browser's own cache with a copy up to ten minutes old, so the previous fix did not go far enough and the game could still load a release behind"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m108",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Releases now actually reach the browser. The one file that carries the release stamp was itself served from the offline cache, so a stale copy asked for every other file at the previous release's stamp and wrote itself into the new cache - the game could sit a release behind for good while everything looked correctly named. That file is now always fetched from the network"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m107",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Put back the sound that the previous version took away. The new watchdog treated a page nobody had clicked yet as broken audio, because the browser keeps sound locked until the first click and the game plays a sound or two before then. It rebuilt the audio over and over and gave up on it about a minute after loading. The watchdog now only judges audio that a click should already have unlocked"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m106",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-08-29",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound no longer goes quiet in desktop Safari after a tab has been left alone for a long time. The game now hands its audio back when the page closes, so a reload gets a working one first time instead of needing a second reload, and a sound left waiting on audio that never wakes up rebuilds it rather than being dropped in silence"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m105",
             "requiredVersion": "0.6.1",
             "phase": "beta",

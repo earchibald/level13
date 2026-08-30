@@ -12,7 +12,7 @@
  * src/config.js urlArgs, and the ?v= query on the css links in index.html.
  */
 
-var CACHE_VERSION = "0.6.3.m105";
+var CACHE_VERSION = "0.6.3.m111";
 var STATIC_CACHE = "l13-static-" + CACHE_VERSION;
 var SHELL_CACHE = "l13-shell-" + CACHE_VERSION;
 // unversioned on purpose: the sound files change essentially never, and the
@@ -113,6 +113,22 @@ self.addEventListener("fetch", function (event) {
 		return;
 	}
 
+	// src/config.js is where the ?v= stamp itself lives, and it is requested
+	// without one. Served from cache it pins the game to the previous release's
+	// stamp, every later request follows it there, and the stale copy is then
+	// written into the new version's cache - so the game stays a release behind
+	// for good, with the caches all correctly named. It is version metadata like
+	// the files above, not a static asset.
+	if (url.pathname.indexOf("/src/config") >= 0) {
+		// and network-first is not enough on its own here: the file has no ?v=
+		// of its own, github pages serves it with max-age=600, and a plain
+		// fetch inside a worker is answered by the browser's own http cache
+		// without ever reaching the network. Only this one path pays the
+		// revalidation, because only this one decides the release.
+		event.respondWith(networkFirst(request, true));
+		return;
+	}
+
 	if (AUDIO_PATTERN.test(url.pathname)) {
 		event.respondWith(cacheFirst(request, AUDIO_CACHE));
 		return;
@@ -139,8 +155,14 @@ function cacheFirst(request, cacheName) {
 	});
 }
 
-function networkFirst(request) {
-	return fetch(request).then(function (response) {
+function networkFirst(request, revalidate) {
+	// "reload" skips the browser cache on the way out and refreshes it on the
+	// way back; a plain fetch would happily return a copy that is minutes old
+	var attempt = revalidate
+		? fetch(request.url, { cache: "reload", credentials: "same-origin" })
+		: fetch(request);
+
+	return attempt.then(function (response) {
 		if (response && response.ok) {
 			var copy = response.clone();
 			caches.open(SHELL_CACHE).then(function (cache) {

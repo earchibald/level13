@@ -77,6 +77,7 @@ define([
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
 			GlobalSignals.add(this, GlobalSignals.campBuiltSignal, this.updateCamps);
 			GlobalSignals.add(this, GlobalSignals.mapPieceUsedSignal, this.onMapPieceUsed);
+			GlobalSignals.add(this, GlobalSignals.gameStateRefreshSignal, this.onGameStateRefresh);
 		},
 
 		removeFromEngine: function (engine) {
@@ -88,6 +89,10 @@ define([
 			GlobalSignals.removeAll(this);
 		},
 
+		onGameStateRefresh: function () {
+			this.revealNeighboursOfVisitedSectors();
+		},
+		
 		onGameStarted: function () {
 			this.lastUpdatePosition = null;
 			this.lastValidPosition = null;
@@ -238,6 +243,36 @@ define([
 			let visitedSector = this.visitedSectorsPendingRevealNeighbours.shift() || this.mapRevealedSectorsPendingRevealNeighbours.shift();
 			if (!visitedSector) return;
 			this.revealSectorNeighbours(visitedSector);
+		},
+		
+		// the queue of sectors waiting to have their neighbours revealed only exists in memory, so a
+		// sector visited just before the game was closed can leave its neighbours hidden for good -
+		// check every visited sector again on load
+		revealNeighboursOfVisitedSectors: function () {
+			let numRevealed = 0;
+			let directions = PositionConstants.getLevelDirections();
+			
+			for (let node = this.sectorNodes.head; node; node = node.next) {
+				if (!GameGlobals.sectorHelper.isVisited(node.entity)) continue;
+				
+				let startingPos = node.entity.get(PositionComponent).getPosition();
+				
+				for (let i in directions) {
+					let neighbourPos = PositionConstants.getPositionOnPath(startingPos, directions[i], 1);
+					let neighbour = GameGlobals.levelHelper.getSectorByPosition(neighbourPos.level, neighbourPos.sectorX, neighbourPos.sectorY);
+					if (!neighbour) continue;
+					if (GameGlobals.sectorHelper.isVisited(neighbour)) continue;
+					if (neighbour.has(RevealedComponent)) continue;
+					
+					neighbour.add(new RevealedComponent());
+					numRevealed++;
+				}
+			}
+			
+			if (numRevealed > 0) {
+				log.i("revealed " + numRevealed + " neighbours of visited sectors on load");
+				GlobalSignals.sectorRevealedSignal.dispatch();
+			}
 		},
 		
 		revealSectorNeighbours: function (sectorEntity) {
