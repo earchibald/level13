@@ -22068,6 +22068,8 @@ define([
 
 		error: null,
 
+		storageNamespace: undefined,
+
 		constructor: function () {},
 
 		addToEngine: function (engine) {
@@ -22165,7 +22167,7 @@ define([
 			}
 			
 			try {
-				let storageKeys = this.getStorageKeysForSaveSlotID(slotID);
+				let storageKeys = this.getWriteStorageKeysForSaveSlotID(slotID);
 				for (let i = 0; i < storageKeys.length; i++) {
 					localStorage.setItem(storageKeys[i], data);
 				}
@@ -22186,7 +22188,7 @@ define([
 			let data = this.getCompressedMetaStateJSON();
 			
 			try {
-				localStorage.setItem("meta-state", data);
+				localStorage.setItem(this.getMetaStateStorageKeys()[0], data);
 				log.i("Saved meta state");
 				return true;
 			} catch (ex) {
@@ -22196,7 +22198,12 @@ define([
 		},
 
 		getMetaStateData: function () {
-			return localStorage.getItem("meta-state") || {};
+			let storageKeys = this.getMetaStateStorageKeys();
+			for (let i = 0; i < storageKeys.length; i++) {
+				let data = localStorage.getItem(storageKeys[i]);
+				if (data) return data;
+			}
+			return {};
 		},
 
 		getDataFromSlot: function (slotID) {
@@ -22312,13 +22319,54 @@ define([
 			return compressed;
 		},
 
+		// The release at earchibald.github.io/level13 and the candidate at
+		// earchibald.github.io/level13-mobile are one origin, so both sites read and
+		// wrote the same localStorage keys and each site's autosave overwrote the
+		// other site's game. Prefix the keys with the first path segment so every
+		// deployment keeps its own save.
+		getStorageNamespace: function () {
+			if (this.storageNamespace === undefined) {
+				let segment = "";
+				try {
+					let parts = window.location.pathname.split("/").filter(part => part.length > 0);
+					// the last segment is a file name when the url names one, and a
+					// game served from the root of a host has no segment to use
+					if (parts.length > 0 && parts[0].indexOf(".") < 0) segment = parts[0];
+				} catch (ex) {
+					segment = "";
+				}
+				this.storageNamespace = segment.length > 0 ? segment + ":" : "";
+			}
+			return this.storageNamespace;
+		},
+
+		// every key the slot may live under, most specific first - reading falls back
+		// to the unprefixed keys so a game started before the prefix existed is picked
+		// up once, and clearing removes them all so cleared data cannot come back
 		getStorageKeysForSaveSlotID: function (slotID) {
-			let result = [ "save-" + slotID ];
+			let result = [];
+			let namespace = this.getStorageNamespace();
+			if (namespace.length > 0) result.push(namespace + "save-" + slotID);
+			result.push("save-" + slotID);
 			if (slotID == GameConstants.SAVE_SLOT_DEFAULT) {
 				// backwards compatibility
 				result.push("save");
 			}
 			return result;
+		},
+
+		// saving writes the prefixed key only, so the other deployment's save is left
+		// alone from the first save onwards
+		getWriteStorageKeysForSaveSlotID: function (slotID) {
+			let namespace = this.getStorageNamespace();
+			if (namespace.length > 0) return [ namespace + "save-" + slotID ];
+			return this.getStorageKeysForSaveSlotID(slotID);
+		},
+
+		getMetaStateStorageKeys: function () {
+			let namespace = this.getStorageNamespace();
+			if (namespace.length > 0) return [ namespace + "meta-state", "meta-state" ];
+			return [ "meta-state" ];
 		},
 
 		onSaveGameSignal: function (slotID, isPlayerInitiated) {

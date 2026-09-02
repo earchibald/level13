@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m112",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-01",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The release and the candidate are two paths on one address, so they shared one set of saved games in the browser and each site's autosave wrote over the other site's progress. Each site now keeps its own saved games, and picks up the game you already have the first time it loads"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m111",
             "requiredVersion": "0.6.1",
             "phase": "beta",
