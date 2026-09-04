@@ -61428,6 +61428,22 @@ define([
 		hasGestureListeners: false,
 		isWebAudioAbandoned: false, // true once rebuilding has failed too often
 
+		// An idle context that is left running is what gets stuck: the browser
+		// hands the audio unit to something else, and what comes back is a
+		// context that still calls itself "running" and still keeps time while
+		// every sound it plays is dropped. Nothing in the api reports this.
+		// howler.js has carried the same fix for years - suspend the context
+		// once nothing has played for a while, and resume it for the next
+		// sound - so the audio unit is only ours while a sound is actually
+		// playing. ctx.state cannot be trusted to say where we are, so our own
+		// view of it is tracked separately.
+		audioState: "suspended", // "running" | "suspending" | "suspended"
+		autoSuspendTimer: null,
+		autoSuspendDelay: 1000 * 30,
+		resumeAfterSuspend: false, // a play that arrived mid-suspend
+		scratchBuffer: null, // silent buffer used to unlock audio on a gesture
+		hasUnlockedAudio: false,
+
 		audios: {}, // fallback only: triggerID -> the one Audio element for that sound
 		paths: {}, // triggerID -> file
 		brokenSounds: {}, // triggerID -> true once the file has failed to load or decode
@@ -61456,6 +61472,7 @@ define([
 		removeFromEngine: function (engine) {
 			GlobalSignals.removeAll(this);
 			this.stopAudioWatchdog();
+			this.clearAutoSuspend();
 		},
 
 		initElements: function () {
@@ -61503,6 +61520,12 @@ define([
 
 			this.needsAudioContextRebuild = false;
 			this.audioClockSample = null;
+			// the scratch buffer belongs to the context that made it, and a new
+			// context has to be unlocked by a gesture of its own
+			this.scratchBuffer = null;
+			this.hasUnlockedAudio = false;
+			this.resumeAfterSuspend = false;
+			this.audioState = this.audioContext.state === "running" ? "running" : "suspended";
 			this.watchAudioContextState(this.audioContext);
 			this.addGestureListeners();
 
@@ -61526,7 +61549,8 @@ define([
 					sys.rebuildAudioContext();
 					return;
 				}
-				sys.resumeAudioContext();
+				sys.unlockAudio();
+				sys.autoResume();
 			};
 			document.addEventListener("touchend", onGesture, true);
 			document.addEventListener("pointerdown", onGesture, true);
@@ -61551,25 +61575,121 @@ define([
 			};
 		},
 
-		resumeAudioContext: function () {
+		// Every sound goes through here first. "interrupted" is webkit's word
+		// for an audio session that was taken away, and it can sit under a
+		// context that still calls itself running, so the two are checked
+		// separately rather than trusting either one alone.
+		autoResume: function () {
 			let ctx = this.audioContext;
 			if (!ctx) return;
-			if (ctx.state === "running") return;
+
+			if (this.audioState === "running" && ctx.state !== "interrupted") {
+				this.clearAutoSuspend();
+				return;
+			}
+
+			// a sound during the suspend round trip is answered when it lands,
+			// because resuming a context that is still suspending does nothing
+			if (this.audioState === "suspending") {
+				this.resumeAfterSuspend = true;
+				return;
+			}
+
+			this.clearAutoSuspend();
 
 			// resume rejects on a context whose session is gone, and an ignored
 			// rejection is exactly how this failure used to stay invisible
+			let sys = this;
 			try {
 				let promise = ctx.resume();
-				if (promise && promise.catch) {
-					let sys = this;
-					promise.catch(function (e) {
+				if (promise && promise.then) {
+					promise.then(function () {
+						if (sys.audioContext !== ctx) return;
+						sys.audioState = "running";
+					}, function (e) {
 						if (sys.audioContext !== ctx) return;
 						log.w("could not resume audio context, will rebuild: " + e, sys);
 						sys.needsAudioContextRebuild = true;
 					});
+				} else {
+					this.audioState = "running";
 				}
 			} catch (e) {
 				log.w("could not resume audio context, will rebuild: " + e, this);
+				this.needsAudioContextRebuild = true;
+			}
+		},
+
+		// Called after every sound: the context stays ours only as long as
+		// sounds keep coming, and a quiet spell hands it back.
+		scheduleAutoSuspend: function () {
+			if (!this.audioContext) return;
+
+			this.clearAutoSuspend();
+
+			let sys = this;
+			this.autoSuspendTimer = setTimeout(function () { sys.autoSuspend(); }, this.autoSuspendDelay);
+		},
+
+		clearAutoSuspend: function () {
+			if (!this.autoSuspendTimer) return;
+			clearTimeout(this.autoSuspendTimer);
+			this.autoSuspendTimer = null;
+		},
+
+		autoSuspend: function () {
+			this.autoSuspendTimer = null;
+
+			let ctx = this.audioContext;
+			if (!ctx) return;
+
+			this.audioState = "suspending";
+
+			// a rejected suspend leaves the context just as unusable as a
+			// successful one, so both answers end in the same place
+			let sys = this;
+			let onSettled = function () {
+				if (sys.audioContext !== ctx) return;
+				sys.audioState = "suspended";
+				if (sys.resumeAfterSuspend) {
+					sys.resumeAfterSuspend = false;
+					sys.autoResume();
+				}
+			};
+
+			try {
+				let promise = ctx.suspend();
+				if (promise && promise.then) promise.then(onSettled, onSettled);
+				else onSettled();
+			} catch (e) {
+				onSettled();
+			}
+		},
+
+		// A gesture is the only moment the browser will hand over the audio
+		// unit, and a silent one-frame buffer started inside that gesture is
+		// what actually takes it. Doing this once per context means the first
+		// real sound does not have to be the one that unlocks.
+		unlockAudio: function () {
+			if (this.hasUnlockedAudio) return;
+
+			let ctx = this.audioContext;
+			if (!ctx) return;
+
+			try {
+				if (!this.scratchBuffer) this.scratchBuffer = ctx.createBuffer(1, 1, 22050);
+
+				let source = ctx.createBufferSource();
+				source.buffer = this.scratchBuffer;
+				source.connect(ctx.destination);
+				source.start(0);
+				source.onended = function () { try { source.disconnect(0); } catch (e) { } };
+
+				this.hasUnlockedAudio = true;
+			} catch (e) {
+				// a context that cannot even play silence is not going to play
+				// anything else either
+				log.w("could not unlock audio, will rebuild: " + e, this);
 				this.needsAudioContextRebuild = true;
 			}
 		},
@@ -61618,6 +61738,9 @@ define([
 
 			this.needsAudioContextRebuild = false;
 
+			// a timer left over from the old context would suspend the new one
+			this.clearAutoSuspend();
+
 			let now = new Date().getTime();
 			let sinceLastRebuild = now - this.lastAudioContextRebuildTime;
 			if (sinceLastRebuild > this.audioContextRebuildResetDelay) this.audioContextRebuilds = 0;
@@ -61655,7 +61778,7 @@ define([
 				this.loadBuffers();
 			}
 
-			this.resumeAudioContext();
+			this.autoResume();
 			return true;
 		},
 
@@ -61683,6 +61806,7 @@ define([
 			this.isWebAudioAbandoned = true;
 			this.needsAudioContextRebuild = false;
 			this.stopAudioWatchdog();
+			this.clearAutoSuspend();
 
 			let old = this.audioContext;
 			this.audioContext = null;
@@ -61824,7 +61948,7 @@ define([
 
 			// waiting for the resume promise would lose the moment - a source
 			// started on a suspended context plays as soon as the resume lands
-			this.resumeAudioContext();
+			this.autoResume();
 
 			if (this.currentSource) {
 				try { this.currentSource.stop(); } catch (e) { }
@@ -61855,6 +61979,9 @@ define([
 			};
 
 			this.currentSource = source;
+
+			// the context is ours only while sounds keep coming
+			this.scheduleAutoSuspend();
 		},
 
 		playFallback: function (soundTriggerID, playTimestamp) {

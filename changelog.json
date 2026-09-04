@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m113",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-04",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound could stop for the rest of a session, most often after the tab had been in the background. The browser had taken the audio device back, but every check the game could make still said the sound was working, so nothing noticed. The game now hands the audio device back itself once nothing has played for a while, and takes it again for the next sound"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m112",
             "requiredVersion": "0.6.1",
             "phase": "beta",
