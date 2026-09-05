@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m114",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-05",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound no longer stops for the rest of a session. Since 0.6.3.m9x sounds were played through the browser's Web Audio system, and that is where every report of sound going quiet came from: after the tab had been in the background, or a call or alarm on the phone, the browser kept reporting that audio was working while it played nothing, and neither the four earlier fixes nor a rebuild of the audio could get it back. Sounds now play through plain audio elements, the same way as before m9x, which kept working in every case where Web Audio had gone silent"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m113",
             "requiredVersion": "0.6.1",
             "phase": "beta",
