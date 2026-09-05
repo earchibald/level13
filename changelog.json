@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m115",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-05",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Sounds start with less delay. Each play no longer stops the previous sound or rewinds an element that has already finished, which was most of the work the browser did between a tap and the sound"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m114",
             "requiredVersion": "0.6.1",
             "phase": "beta",

@@ -61398,8 +61398,6 @@ define([
 
 		elements: {},
 
-		previousSound: null,
-
 		soundTimestamps: {}, // triggerID -> timestamp
 
 		// Sounds play through media elements, one per sound, created and
@@ -61563,13 +61561,16 @@ define([
 
 			if (GameConstants.isDebugVersion) log.i("play sound: " + soundTriggerID, this);
 
-			if (this.previousSound && this.previousSound !== audio) {
-				this.previousSound.pause();
+			// Every sound is under a second, so the previous one is left to
+			// finish rather than paused: a pause and a restart are both main
+			// thread media pipeline work, and that is where the lag lives.
+			//
+			// A seek is the slowest of that work, so the element is only
+			// rewound when it is actually mid-play. play() on an element that
+			// has ended restarts from the beginning by itself.
+			if (!audio.paused || (!audio.ended && audio.currentTime > 0)) {
+				try { audio.currentTime = 0; } catch (e) { }
 			}
-
-			// rewind so a repeated trigger restarts the sound rather than
-			// being ignored because the element is already past the end
-			try { audio.currentTime = 0; } catch (e) { }
 
 			let sys = this;
 			try {
@@ -61585,7 +61586,6 @@ define([
 				if (GameConstants.isDebugVersion) log.w("failed to play audio: " + soundTriggerID + " | " + e, this);
 			}
 
-			this.previousSound = audio;
 			this.soundTimestamps[soundTriggerID] = playTimestamp;
 		},
 
