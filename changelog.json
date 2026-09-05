@@ -1,6 +1,58 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m115",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-05",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Sounds start with less delay. Each play no longer stops the previous sound or rewinds an element that has already finished, which was most of the work the browser did between a tap and the sound"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m114",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-05",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound no longer stops for the rest of a session. Since 0.6.3.m9x sounds were played through the browser's Web Audio system, and that is where every report of sound going quiet came from: after the tab had been in the background, or a call or alarm on the phone, the browser kept reporting that audio was working while it played nothing, and neither the four earlier fixes nor a rebuild of the audio could get it back. Sounds now play through plain audio elements, the same way as before m9x, which kept working in every case where Web Audio had gone silent"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m113",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-04",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "Sound could stop for the rest of a session, most often after the tab had been in the background. The browser had taken the audio device back, but every check the game could make still said the sound was working, so nothing noticed. The game now hands the audio device back itself once nothing has played for a while, and takes it again for the next sound"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m112",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-01",
+            "changes": [
+                {
+                    "type": "FIX",
+                    "summary": "The release and the candidate are two paths on one address, so they shared one set of saved games in the browser and each site's autosave wrote over the other site's progress. Each site now keeps its own saved games, and picks up the game you already have the first time it loads"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m111",
             "requiredVersion": "0.6.1",
             "phase": "beta",
