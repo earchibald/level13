@@ -1064,6 +1064,14 @@ body.dark div.info-callout {
   min-width: 50%;
   max-width: 100%;
 }
+body.dark div.btn-callout.callout-pointer {
+  -webkit-transform: none;
+  transform: none;
+  min-width: 60pt;
+}
+body.dark div.btn-callout.callout-pointer > div.callout-arrow-up {
+  display: none;
+}
 body.dark .btn-callout-empty {
   visibility: hidden;
 }
@@ -4001,6 +4009,14 @@ body.sunlit div.info-callout {
   min-width: 50%;
   max-width: 100%;
 }
+body.sunlit div.btn-callout.callout-pointer {
+  -webkit-transform: none;
+  transform: none;
+  min-width: 60pt;
+}
+body.sunlit div.btn-callout.callout-pointer > div.callout-arrow-up {
+  display: none;
+}
 body.sunlit .btn-callout-empty {
   visibility: hidden;
 }
@@ -6396,6 +6412,10 @@ body.touch button.btn-disabled-vision {
 }
 body.touch .callout-container.callout-visible button.btn-disabled-vision {
   opacity: 0.65;
+}
+body:not(.touch) .callout-container.callout-suppressed > div.btn-callout,
+body:not(.touch) .callout-container.callout-suppressed > div.info-callout {
+  display: none !important;
 }
 body.touch .callout-container:not(.callout-visible) > div.btn-callout,
 body.touch .callout-container:not(.callout-visible) > div.info-callout {

@@ -331,6 +331,36 @@ define(['ash',
 					});
 				}
 
+				// HOVER TOOLTIPS WITH A MOUSE
+				// Two things about the css :hover cards. First, a card centred
+				// directly under its button lands on the row of buttons below it,
+				// so it hides the very things the player is about to read next.
+				// Button cards now sit down and to the right of the pointer, the
+				// way desktop tooltips do, so the pointer, the button and the
+				// buttons to its left stay clear. Second, a click means the
+				// player already knows what the button is, so the card that used
+				// to appear (or stay) after the click only got in the way. A
+				// click hides the card until the pointer leaves the control.
+				if (!isTouch) {
+					$(document).on("mouseenter", ".callout-container", function (e) {
+						if (!e.originalEvent) return;
+						uiFunctions.placeHoverCallout($(this), e);
+					});
+					$(document).on("mouseleave", ".callout-container", function (e) {
+						if (!e.originalEvent) return;
+						let $container = $(this);
+						$container.removeClass("callout-suppressed");
+						$container.children("div.btn-callout.callout-pointer")
+							.removeClass("callout-pointer").css({ "left": "", "top": "" });
+					});
+					$(document).on("mousedown", ".callout-container", function (e) {
+						// buttons inside a card (e.g. explorer and item cards) must
+						// keep their card while they are used
+						if ($(e.target).closest("div.info-callout, div.btn-callout").length > 0) return;
+						$(this).addClass("callout-suppressed");
+					});
+				}
+
 				if (!isTouch) return;
 
 				// tap toggles info callouts (hover is not available on touch)
@@ -488,6 +518,32 @@ define(['ash',
 				query.addEventListener("change", function () {
 					$("body").toggleClass("standalone", uiFunctions.isStandalone());
 				});
+			},
+
+			// place a hover card for a button below and to the right of the
+			// pointer, kept inside the viewport. The card is display: block from
+			// the moment the pointer enters (the css delay only holds it
+			// invisible), so it can be measured here.
+			placeHoverCallout: function ($container, e) {
+				let $callout = $container.children("div.btn-callout").first();
+				if ($callout.length == 0) return;
+				if ($container.hasClass("callout-suppressed")) return;
+				let offsetX = 14;
+				let offsetY = 18;
+				let margin = 8;
+				let containerRect = $container[0].getBoundingClientRect();
+				$callout.addClass("callout-pointer").css({ "left": "0px", "top": "0px" });
+				let rect = $callout[0].getBoundingClientRect();
+				if (rect.width == 0) return;
+				let viewportWidth = window.innerWidth;
+				let viewportHeight = window.innerHeight;
+				let x = e.clientX + offsetX;
+				// below the pointer, and never over the control itself
+				let y = Math.max(e.clientY + offsetY, containerRect.bottom + 4);
+				if (x + rect.width > viewportWidth - margin) x = Math.max(margin, viewportWidth - margin - rect.width);
+				// no room below the pointer: open above it instead
+				if (y + rect.height > viewportHeight - margin) y = Math.max(margin, e.clientY - offsetY - rect.height);
+				$callout.css({ "left": Math.round(x - containerRect.left) + "px", "top": Math.round(y - containerRect.top) + "px" });
 			},
 
 			openCallout: function ($container, $target) {

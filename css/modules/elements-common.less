@@ -61,6 +61,20 @@ div.info-callout {
 	max-width: 100%;
 }
 
+// with a mouse, UIFunctions.placeHoverCallout puts a button's card below and
+// to the right of the pointer instead of centred under the button, so the
+// card no longer covers the row of buttons below. The arrow would point at
+// nothing there.
+div.btn-callout.callout-pointer {
+	-webkit-transform: none;
+	transform: none;
+	min-width: 60pt;
+}
+
+div.btn-callout.callout-pointer > div.callout-arrow-up {
+	display: none;
+}
+
 .btn-callout-empty {
 	visibility: hidden;
 }

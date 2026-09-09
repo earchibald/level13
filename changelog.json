@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m117",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-08",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "With a mouse, a button's tooltip now sits below and to the right of the pointer instead of directly under the button, so it no longer covers the buttons below it"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Clicking a control hides its tooltip until the pointer leaves it. Once you have clicked something you already know what it is, and the tooltip only covered what came next"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m116",
             "requiredVersion": "0.6.1",
             "phase": "beta",
