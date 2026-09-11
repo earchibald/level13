@@ -32491,6 +32491,44 @@ define(['ash',
 			// so the test misses it and a callout low in the pane gets clipped by
 			// the pane's own overflow. UIOutHeaderSystem already measures that band
 			// for the log pill, so read its value rather than measuring it twice.
+			// places a position:fixed tooltip next to a cursor/tap point, inside the
+			// visual viewport and clear of the pinned header and footer bands.
+			// prefers below-right of the point and flips when that would not fit.
+			positionTooltipAtCursor: function ($tooltip, cursor, gap, margin) {
+				cursor = cursor || { x: 0, y: 0 };
+				gap = gap == null ? 16 : gap;
+				margin = margin == null ? 8 : margin;
+
+				// the visual viewport is what the player can actually see: on a phone
+				// window.innerHeight includes the strip behind the browser toolbar
+				let viewportW = window.visualViewport ? window.visualViewport.width : $(window).width();
+				let viewportH = window.visualViewport ? window.visualViewport.height : $(window).height();
+
+				// the pinned header, tab bar and minimap are chrome, not free space
+				let topEdge = margin + this.getPinnedTopHeight();
+				let bottomEdge = viewportH - margin - this.getPinnedBottomHeight();
+
+				// a pane taller than the band between them scrolls rather than
+				// hanging off the screen
+				$tooltip.css("max-height", Math.max(80, Math.round(bottomEdge - topEdge)) + "px");
+
+				let width = $tooltip.outerWidth();
+				let height = $tooltip.outerHeight();
+
+				let left = cursor.x + gap;
+				if (left + width > viewportW - margin) left = cursor.x - gap - width;
+				if (left < margin) left = margin;
+				// if it still cannot fit, pin it to the left edge rather than let it run off screen
+				if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
+
+				let top = cursor.y + gap;
+				if (top + height > bottomEdge) top = cursor.y - gap - height;
+				if (top < topEdge) top = topEdge;
+				if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
+
+				$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
+			},
+
 			getPinnedBottomHeight: function () {
 				let shellBand = parseFloat(getComputedStyle(document.documentElement)
 					.getPropertyValue("--l13-out-bottom-height"));
@@ -53168,8 +53206,31 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 		
 		minGridStep: 0.25,
 		
+		// zoom scales the drawn tree and the overlay cells; layout stays in base units
+		zoom: 1,
+		ZOOM_MIN: 0.5,
+		ZOOM_MAX: 2,
+		ZOOM_STEP: 0.25,
+		
 		constructor: function (engine) {
 			this.tribeNodes = engine.getNodeList(TribeUpgradesNode);
+			// bigger default on touch screens so the cells are usable tap targets
+			this.zoom = UIConstants.isTouchScreen() ? 1.25 : 1;
+		},
+		
+		getZoom: function () {
+			return this.zoom;
+		},
+		
+		setZoom: function (value) {
+			let clamped = Math.min(this.ZOOM_MAX, Math.max(this.ZOOM_MIN, value));
+			let changed = clamped != this.zoom;
+			this.zoom = clamped;
+			return changed;
+		},
+		
+		changeZoom: function (steps) {
+			return this.setZoom(this.zoom + steps * this.ZOOM_STEP);
 		},
 		
 		init: function (canvasId, overlayId, selectioncb) {
@@ -53190,11 +53251,17 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 				y = y + this.positionRoot(tree, tree.roots[i], y);
 			}
 			vis.tree = tree;
-			vis.dimensions = this.getTreeDimensions(vis, tree.maxX, tree.maxY);
-			vis.sunlit = $("body").hasClass("sunlit");
 			
 			// TODO extend to several required tech per tech; currently drawing assumes max 1
 			
+			this.redraw(vis);
+		},
+		
+		// redraws the current tree (no re-layout); used after a zoom change
+		redraw: function (vis) {
+			if (!vis.tree) return;
+			vis.dimensions = this.getTreeDimensions(vis, vis.tree.maxX, vis.tree.maxY);
+			vis.sunlit = $("body").hasClass("sunlit");
 			this.refreshCanvas(vis);
 			this.rebuildOverlay(vis);
 			CanvasConstants.updateScrollEnable(vis.canvasId);
@@ -53210,9 +53277,13 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 			
 			this.ctx.canvas.width = vis.dimensions.canvasWidth;
 			this.ctx.canvas.height = vis.dimensions.canvasHeight;
-			this.ctx.clearRect(0, 0, this.canvas.scrollWidth, this.canvas.scrollWidth);
+			this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 			this.ctx.fillStyle = ColorConstants.getColor(vis.sunlit, "bg_page");
 			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			
+			// everything below draws in base units; the transform applies the zoom
+			this.ctx.scale(this.zoom, this.zoom);
 
 			for (let i = 0; i < vis.tree.roots.length; i++) {
 				this.drawRoot(vis, vis.tree.roots[i], vis.sunlit);
@@ -53224,6 +53295,8 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 			$overlay.empty();
 			$overlay.css("width", vis.dimensions.canvasWidth + "px");
 			$overlay.css("height", vis.dimensions.canvasHeight + "px");
+			// the cells' font-size follows this in css
+			$overlay[0].style.setProperty("--tree-zoom", this.zoom);
 			
 			for (let i = 0; i < vis.tree.roots.length; i++) {
 				var root = vis.tree.roots[i];
@@ -53241,11 +53314,14 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 		},
 		
 		addOverlayNode: function (vis, $overlay, node) {
-			var xpx = this.getPixelPosX(node.x);
-			var ypx = this.getPixelPosY(node.y);
+			var xpx = this.getPixelPosX(node.x) * this.zoom;
+			var ypx = this.getPixelPosY(node.y) * this.zoom;
+			var wpx = this.cellW * this.zoom;
+			var hpx = this.cellH * this.zoom;
 			var data = "data-id='" + node.definition.id + "'";
 			var text = Text.t(UpgradeConstants.getDisplayNameTextKey(node.definition.id))
-			var $div = $("<div class='canvas-overlay-cell upgrades-overlay-cell' style='top: " + ypx + "px; left: " + xpx + "px' " + data +"><p>" + text +"</p></div>");
+			var style = "top: " + ypx + "px; left: " + xpx + "px; width: " + wpx + "px; height: " + hpx + "px";
+			var $div = $("<div class='canvas-overlay-cell upgrades-overlay-cell' style='" + style + "' " + data +"><p>" + text +"</p></div>");
 			var helper = this;
 			$div.click(function (e) {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
@@ -53459,8 +53535,8 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 		getTreeDimensions: function (vis, maxX, maxY) {
 			var dimensions = {};
 			var canvas = vis.$canvas[0];
-			dimensions.treeWidth = (maxX + 1) * this.cellW + maxX * this.cellPX + 2 * this.treePX;
-			dimensions.treeHeight = (maxY + 1) * this.cellH + maxY * this.cellPY + 2 * this.treePY;
+			dimensions.treeWidth = ((maxX + 1) * this.cellW + maxX * this.cellPX + 2 * this.treePX) * this.zoom;
+			dimensions.treeHeight = ((maxY + 1) * this.cellH + maxY * this.cellPY + 2 * this.treePY) * this.zoom;
 			dimensions.canvasWidth = Math.max(dimensions.treeWidth, $(canvas).parent().width());
 			dimensions.canvasHeight = Math.max(dimensions.treeHeight, 100);
 			return dimensions;
@@ -68959,39 +69035,7 @@ define([
 		},
 
 		positionSectorTooltip: function ($tooltip) {
-			let cursor = this.tooltipCursor || { x: 0, y: 0 };
-			let gap = this.SECTOR_TOOLTIP_CURSOR_GAP;
-			let margin = this.SECTOR_TOOLTIP_EDGE_MARGIN;
-
-			// the visual viewport is what the player can actually see: on a phone
-			// window.innerHeight includes the strip behind the browser toolbar
-			let viewportW = window.visualViewport ? window.visualViewport.width : $(window).width();
-			let viewportH = window.visualViewport ? window.visualViewport.height : $(window).height();
-
-			// the pinned header, tab bar and minimap are chrome, not free space
-			let topEdge = margin + GameGlobals.uiFunctions.getPinnedTopHeight();
-			let bottomEdge = viewportH - margin - GameGlobals.uiFunctions.getPinnedBottomHeight();
-
-			// a pane taller than the band between them scrolls rather than
-			// hanging off the screen
-			$tooltip.css("max-height", Math.max(80, Math.round(bottomEdge - topEdge)) + "px");
-
-			let width = $tooltip.outerWidth();
-			let height = $tooltip.outerHeight();
-
-			// prefer below-right of the cursor, flip to the other side when it would not fit
-			let left = cursor.x + gap;
-			if (left + width > viewportW - margin) left = cursor.x - gap - width;
-			if (left < margin) left = margin;
-			// if it still cannot fit, pin it to the left edge rather than let it run off screen
-			if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
-
-			let top = cursor.y + gap;
-			if (top + height > bottomEdge) top = cursor.y - gap - height;
-			if (top < topEdge) top = topEdge;
-			if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
-
-			$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
+			GameGlobals.uiFunctions.positionTooltipAtCursor($tooltip, this.tooltipCursor, this.SECTOR_TOOLTIP_CURSOR_GAP, this.SECTOR_TOOLTIP_EDGE_MARGIN);
 		},
 
 		zoomMap: function (steps, pageX, pageY) {
@@ -70217,12 +70261,13 @@ define([
 	'text/Text',
 	'game/GameGlobals',
 	'game/GlobalSignals',
+	'game/constants/CanvasConstants',
 	'game/constants/GameConstants',
 	'game/constants/UIConstants',
 	'game/constants/UpgradeConstants',
 	'game/constants/TextConstants',
 	'game/nodes/tribe/TribeUpgradesNode',
-], function (Ash, Text, GameGlobals, GlobalSignals, GameConstants, UIConstants, UpgradeConstants, TextConstants, TribeUpgradesNode) {
+], function (Ash, Text, GameGlobals, GlobalSignals, CanvasConstants, GameConstants, UIConstants, UpgradeConstants, TextConstants, TribeUpgradesNode) {
 	
 	let UIOutUpgradesSystem = Ash.System.extend({
 
@@ -70243,11 +70288,20 @@ define([
 			});
 		},
 
+		TOOLTIP_DELAY: 450,
+		TOOLTIP_CURSOR_GAP: 16,
+		TOOLTIP_EDGE_MARGIN: 8,
+
+		tooltipTimeout: null,
+		tooltipCursor: null,
+
 		addToEngine: function (engine) {
 			this.engine = engine;
 			this.tribeNodes = engine.getNodeList(TribeUpgradesNode);
 			this.lastUpdateUpgradeCount = 0;
 			GameGlobals.uiTechTreeHelper.enableScrolling(this.vis);
+			this.initZoomControls();
+			this.initTooltips();
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
 			GlobalSignals.add(this, GlobalSignals.blueprintsChangedSignal, this.onBlueprintsChanged);
@@ -70256,8 +70310,157 @@ define([
 
 		removeFromEngine: function (engine) {
 			GlobalSignals.removeAll(this);
+			this.hideTooltip();
+			$("#btn-upgrades-vis-zoom-in, #btn-upgrades-vis-zoom-out").off("click");
+			$("#upgrades-vis-overlay").off("mouseenter mousemove mouseleave click", ".upgrades-overlay-cell");
+			$("#researched-upgrades-vis-container").off("scroll", this._onTreeScroll);
+			if (this._onDocumentTapHideTooltip) $(document).off("click", this._onDocumentTapHideTooltip);
 			this.engine = null;
 			this.tribeNodes = null;
+		},
+
+		// ZOOM (+/- buttons; the only zoom path on touch)
+
+		initZoomControls: function () {
+			$("#btn-upgrades-vis-zoom-in").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.zoomTree(1);
+			}, this));
+			$("#btn-upgrades-vis-zoom-out").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.zoomTree(-1);
+			}, this));
+			this.updateZoomButtons();
+		},
+
+		zoomTree: function (steps) {
+			let helper = GameGlobals.uiTechTreeHelper;
+			let changed = helper.changeZoom(steps);
+			if (!changed) return;
+			this.hideTooltip();
+
+			let $canvas = this.vis.$canvas;
+			let $scrollContainer = $canvas.parent();
+			let oldWidth = $canvas[0].width;
+			let oldHeight = $canvas[0].height;
+
+			// keep the point at the center of the view in place across the zoom
+			let viewX = $scrollContainer.width() / 2;
+			let viewY = $scrollContainer.height() / 2;
+			let ratioX = oldWidth > 0 ? (viewX + $scrollContainer.scrollLeft()) / oldWidth : 0.5;
+			let ratioY = oldHeight > 0 ? (viewY + $scrollContainer.scrollTop()) / oldHeight : 0.5;
+
+			helper.redraw(this.vis);
+
+			$scrollContainer.scrollLeft(ratioX * $canvas[0].width - viewX);
+			$scrollContainer.scrollTop(ratioY * $canvas[0].height - viewY);
+			CanvasConstants.updateScrollIndicators(this.vis.canvasId);
+			this.updateZoomButtons();
+		},
+
+		updateZoomButtons: function () {
+			let helper = GameGlobals.uiTechTreeHelper;
+			let zoom = helper.getZoom();
+			$("#btn-upgrades-vis-zoom-in").prop("disabled", zoom >= helper.ZOOM_MAX);
+			$("#btn-upgrades-vis-zoom-out").prop("disabled", zoom <= helper.ZOOM_MIN);
+		},
+
+		// TOOLTIPS
+		// one body-level fixed pane (#upgrade-tooltip) like the map's sector
+		// tooltip: hover with a delay on a mouse, tap on touch. a tap also
+		// selects the node (the overlay cell's own click handler does that).
+
+		initTooltips: function () {
+			let sys = this;
+			this._onTreeScroll = $.proxy(this.hideTooltip, this);
+			$("#researched-upgrades-vis-container").on("scroll", this._onTreeScroll);
+
+			$("#upgrades-vis-overlay").on("mouseenter", ".upgrades-overlay-cell", function (e) {
+				// a tap's synthesized mouseenter must not schedule a hover tooltip
+				// that then sticks (no mouseleave follows on touch)
+				if (UIConstants.isTouchScreen()) return;
+				let id = $(this).attr("data-id");
+				sys.cancelTooltip();
+				sys.tooltipCursor = { x: e.clientX, y: e.clientY };
+				sys.tooltipTimeout = setTimeout(function () {
+					sys.tooltipTimeout = null;
+					sys.showTooltip(id);
+				}, sys.TOOLTIP_DELAY);
+			});
+			$("#upgrades-vis-overlay").on("mousemove", ".upgrades-overlay-cell", function (e) {
+				sys.tooltipCursor = { x: e.clientX, y: e.clientY };
+				// once shown the pane stays put, so it does not jitter under the cursor
+			});
+			$("#upgrades-vis-overlay").on("mouseleave", ".upgrades-overlay-cell", function () {
+				// a tap also synthesizes a mouseleave right after the click that
+				// opened the tooltip; on touch a tap elsewhere closes it instead
+				if (UIConstants.isTouchScreen()) return;
+				sys.hideTooltip();
+			});
+
+			if (UIConstants.isTouchScreen()) {
+				$("#upgrades-vis-overlay").on("click", ".upgrades-overlay-cell", function (e) {
+					let id = $(this).attr("data-id");
+					sys.cancelTooltip();
+					sys.tooltipCursor = { x: e.clientX, y: e.clientY };
+					sys.showTooltip(id);
+					e.stopPropagation();
+				});
+				this._onDocumentTapHideTooltip = $.proxy(function (e) {
+					if ($(e.target).closest(".upgrades-overlay-cell, #upgrade-tooltip").length > 0) return;
+					this.hideTooltip();
+				}, this);
+				$(document).on("click", this._onDocumentTapHideTooltip);
+			}
+		},
+
+		cancelTooltip: function () {
+			if (this.tooltipTimeout) {
+				clearTimeout(this.tooltipTimeout);
+				this.tooltipTimeout = null;
+			}
+		},
+
+		hideTooltip: function () {
+			this.cancelTooltip();
+			let $tooltip = $("#upgrade-tooltip");
+			if ($tooltip.length == 0) return;
+			$tooltip.hide().attr("aria-hidden", "true").empty();
+		},
+
+		showTooltip: function (upgradeID) {
+			let $tooltip = $("#upgrade-tooltip");
+			if ($tooltip.length == 0) return;
+			let $content = this.getTooltipContent(upgradeID);
+			if (!$content) return;
+
+			$tooltip.empty().append($content);
+			// show before measuring so the pane has a real size to position against
+			$tooltip.css({ left: "0px", top: "0px" }).show().attr("aria-hidden", "false");
+			GameGlobals.uiFunctions.positionTooltipAtCursor($tooltip, this.tooltipCursor, this.TOOLTIP_CURSOR_GAP, this.TOOLTIP_EDGE_MARGIN);
+		},
+
+		getTooltipContent: function (upgradeID) {
+			let definition = UpgradeConstants.upgradeDefinitions[upgradeID];
+			if (!definition) return null;
+			let isUnlocked = this.tribeNodes.head.upgrades.hasUpgrade(definition.id);
+			let isAvailable = GameGlobals.playerActionsHelper.checkRequirements(definition.id, false).value > 0;
+			let statusS = isUnlocked ? "researched" : isAvailable ? "available" : "locked";
+			let name = Text.t(UpgradeConstants.getDisplayNameTextKey(definition.id));
+			let description = Text.t(UpgradeConstants.getDescriptionTextKey(definition.id));
+			let effects = this.getEffectDescription(definition.id, false);
+			let unlocks = this.getUnlockedResearchDescription(definition.id);
+
+			let $content = $("<div></div>");
+			let $header = $("<div class='upgrade-tooltip-header'></div>");
+			$header.append($("<span></span>").text(name));
+			$header.append(" ");
+			$header.append($("<span class='status-badge'></span>").text(statusS));
+			$content.append($header);
+			if (description) $content.append($("<p class='upgrade-tooltip-desc'></p>").text(description));
+			if (effects) $content.append($("<p class='upgrade-tooltip-effect'></p>").text(effects));
+			if (unlocks) $content.append($("<p class='upgrade-tooltip-unlocks meta'></p>").text(unlocks));
+			return $content;
 		},
 
 		update: function (time) {
@@ -70386,7 +70589,9 @@ define([
 		refreshTechTree: function (resetLists) {
 			if (!resetLists)
 				return;
+			this.hideTooltip();
 			GameGlobals.uiTechTreeHelper.drawTechTree(this.vis);
+			this.updateZoomButtons();
 		},
 
 		refreshTechDetails: function () {
@@ -70426,6 +70631,7 @@ define([
 			
 		onTabChanged: function () {
 			var isActive = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.upgrades;
+			this.hideTooltip();
 			if (isActive) {
 				this.vis.selectedID = null;
 				this.refresh();

@@ -746,6 +746,44 @@ define(['ash',
 			// so the test misses it and a callout low in the pane gets clipped by
 			// the pane's own overflow. UIOutHeaderSystem already measures that band
 			// for the log pill, so read its value rather than measuring it twice.
+			// places a position:fixed tooltip next to a cursor/tap point, inside the
+			// visual viewport and clear of the pinned header and footer bands.
+			// prefers below-right of the point and flips when that would not fit.
+			positionTooltipAtCursor: function ($tooltip, cursor, gap, margin) {
+				cursor = cursor || { x: 0, y: 0 };
+				gap = gap == null ? 16 : gap;
+				margin = margin == null ? 8 : margin;
+
+				// the visual viewport is what the player can actually see: on a phone
+				// window.innerHeight includes the strip behind the browser toolbar
+				let viewportW = window.visualViewport ? window.visualViewport.width : $(window).width();
+				let viewportH = window.visualViewport ? window.visualViewport.height : $(window).height();
+
+				// the pinned header, tab bar and minimap are chrome, not free space
+				let topEdge = margin + this.getPinnedTopHeight();
+				let bottomEdge = viewportH - margin - this.getPinnedBottomHeight();
+
+				// a pane taller than the band between them scrolls rather than
+				// hanging off the screen
+				$tooltip.css("max-height", Math.max(80, Math.round(bottomEdge - topEdge)) + "px");
+
+				let width = $tooltip.outerWidth();
+				let height = $tooltip.outerHeight();
+
+				let left = cursor.x + gap;
+				if (left + width > viewportW - margin) left = cursor.x - gap - width;
+				if (left < margin) left = margin;
+				// if it still cannot fit, pin it to the left edge rather than let it run off screen
+				if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
+
+				let top = cursor.y + gap;
+				if (top + height > bottomEdge) top = cursor.y - gap - height;
+				if (top < topEdge) top = topEdge;
+				if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
+
+				$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
+			},
+
 			getPinnedBottomHeight: function () {
 				let shellBand = parseFloat(getComputedStyle(document.documentElement)
 					.getPropertyValue("--l13-out-bottom-height"));

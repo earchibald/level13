@@ -2892,11 +2892,11 @@ body.layout-small #camp-overview td.camp-overview-lvl14 {
 // ---------------------------------------------------------------------------
 // MAP: zoom controls (all pointer types; the only touch zoom path)
 
-#mainmap-container-container {
+#mainmap-container-container, #upgrades-vis-container-container {
 	position: relative;
 }
 
-#mainmap-zoom-controls {
+.canvas-zoom-controls {
 	position: absolute;
 	top: 10px;
 	right: 10px;
@@ -2906,7 +2906,7 @@ body.layout-small #camp-overview td.camp-overview-lvl14 {
 	gap: 6px;
 }
 
-#mainmap-zoom-controls button {
+.canvas-zoom-controls button {
 	margin: 0;
 	width: 40px;
 	min-width: 40px;
@@ -2917,7 +2917,7 @@ body.layout-small #camp-overview td.camp-overview-lvl14 {
 
 // the buttons sit over a pannable canvas; the 3px halos meet exactly in
 // the 6px gap without overlapping
-body.touch #mainmap-zoom-controls button::after {
+body.touch .canvas-zoom-controls button::after {
 	content: "";
 	position: absolute;
 	inset: -3px;

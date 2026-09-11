@@ -74,7 +74,7 @@
 // lives at body level and is positioned with position:fixed, so the map scroll
 // container cannot clip it. pointer-events are off so it never blocks the map.
 
-#map-sector-tooltip {
+#map-sector-tooltip, #upgrade-tooltip {
 	position: fixed;
 	z-index: 20;
 	pointer-events: none;
@@ -95,7 +95,7 @@
 	text-align: left;
 }
 
-#map-sector-tooltip .map-tooltip-header {
+#map-sector-tooltip .map-tooltip-header, #upgrade-tooltip .upgrade-tooltip-header {
 	margin: 0 0 5px 0;
 	padding-bottom: 4px;
 	border-bottom: 1px solid @color-border-box-1;
@@ -149,10 +149,26 @@
 	max-height: 300px;
 }
 
+// width and height are set inline per cell (they follow the tree zoom);
+// --tree-zoom is set on the overlay by UITechTreeHelper.rebuildOverlay
 .upgrades-overlay-cell {
 	width: 85px;
 	height: 22px;
 	color: @color-text-dark;
+	font-size: ~"calc(@{font-size-tiny} * var(--tree-zoom, 1))";
+}
+
+#upgrade-tooltip .upgrade-tooltip-header .status-badge {
+	font-size: @font-size-tiny;
+	vertical-align: middle;
+}
+
+#upgrade-tooltip p {
+	margin: 0 0 4px 0;
+}
+
+#upgrade-tooltip p:last-child {
+	margin-bottom: 0;
 }
 
 .upgrades-overlay-cell:hover {

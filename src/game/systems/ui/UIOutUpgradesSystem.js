@@ -3,12 +3,13 @@ define([
 	'text/Text',
 	'game/GameGlobals',
 	'game/GlobalSignals',
+	'game/constants/CanvasConstants',
 	'game/constants/GameConstants',
 	'game/constants/UIConstants',
 	'game/constants/UpgradeConstants',
 	'game/constants/TextConstants',
 	'game/nodes/tribe/TribeUpgradesNode',
-], function (Ash, Text, GameGlobals, GlobalSignals, GameConstants, UIConstants, UpgradeConstants, TextConstants, TribeUpgradesNode) {
+], function (Ash, Text, GameGlobals, GlobalSignals, CanvasConstants, GameConstants, UIConstants, UpgradeConstants, TextConstants, TribeUpgradesNode) {
 	
 	let UIOutUpgradesSystem = Ash.System.extend({
 
@@ -29,11 +30,20 @@ define([
 			});
 		},
 
+		TOOLTIP_DELAY: 450,
+		TOOLTIP_CURSOR_GAP: 16,
+		TOOLTIP_EDGE_MARGIN: 8,
+
+		tooltipTimeout: null,
+		tooltipCursor: null,
+
 		addToEngine: function (engine) {
 			this.engine = engine;
 			this.tribeNodes = engine.getNodeList(TribeUpgradesNode);
 			this.lastUpdateUpgradeCount = 0;
 			GameGlobals.uiTechTreeHelper.enableScrolling(this.vis);
+			this.initZoomControls();
+			this.initTooltips();
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.tabChangedSignal, this.onTabChanged);
 			GlobalSignals.add(this, GlobalSignals.blueprintsChangedSignal, this.onBlueprintsChanged);
@@ -42,8 +52,157 @@ define([
 
 		removeFromEngine: function (engine) {
 			GlobalSignals.removeAll(this);
+			this.hideTooltip();
+			$("#btn-upgrades-vis-zoom-in, #btn-upgrades-vis-zoom-out").off("click");
+			$("#upgrades-vis-overlay").off("mouseenter mousemove mouseleave click", ".upgrades-overlay-cell");
+			$("#researched-upgrades-vis-container").off("scroll", this._onTreeScroll);
+			if (this._onDocumentTapHideTooltip) $(document).off("click", this._onDocumentTapHideTooltip);
 			this.engine = null;
 			this.tribeNodes = null;
+		},
+
+		// ZOOM (+/- buttons; the only zoom path on touch)
+
+		initZoomControls: function () {
+			$("#btn-upgrades-vis-zoom-in").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.zoomTree(1);
+			}, this));
+			$("#btn-upgrades-vis-zoom-out").click($.proxy(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				this.zoomTree(-1);
+			}, this));
+			this.updateZoomButtons();
+		},
+
+		zoomTree: function (steps) {
+			let helper = GameGlobals.uiTechTreeHelper;
+			let changed = helper.changeZoom(steps);
+			if (!changed) return;
+			this.hideTooltip();
+
+			let $canvas = this.vis.$canvas;
+			let $scrollContainer = $canvas.parent();
+			let oldWidth = $canvas[0].width;
+			let oldHeight = $canvas[0].height;
+
+			// keep the point at the center of the view in place across the zoom
+			let viewX = $scrollContainer.width() / 2;
+			let viewY = $scrollContainer.height() / 2;
+			let ratioX = oldWidth > 0 ? (viewX + $scrollContainer.scrollLeft()) / oldWidth : 0.5;
+			let ratioY = oldHeight > 0 ? (viewY + $scrollContainer.scrollTop()) / oldHeight : 0.5;
+
+			helper.redraw(this.vis);
+
+			$scrollContainer.scrollLeft(ratioX * $canvas[0].width - viewX);
+			$scrollContainer.scrollTop(ratioY * $canvas[0].height - viewY);
+			CanvasConstants.updateScrollIndicators(this.vis.canvasId);
+			this.updateZoomButtons();
+		},
+
+		updateZoomButtons: function () {
+			let helper = GameGlobals.uiTechTreeHelper;
+			let zoom = helper.getZoom();
+			$("#btn-upgrades-vis-zoom-in").prop("disabled", zoom >= helper.ZOOM_MAX);
+			$("#btn-upgrades-vis-zoom-out").prop("disabled", zoom <= helper.ZOOM_MIN);
+		},
+
+		// TOOLTIPS
+		// one body-level fixed pane (#upgrade-tooltip) like the map's sector
+		// tooltip: hover with a delay on a mouse, tap on touch. a tap also
+		// selects the node (the overlay cell's own click handler does that).
+
+		initTooltips: function () {
+			let sys = this;
+			this._onTreeScroll = $.proxy(this.hideTooltip, this);
+			$("#researched-upgrades-vis-container").on("scroll", this._onTreeScroll);
+
+			$("#upgrades-vis-overlay").on("mouseenter", ".upgrades-overlay-cell", function (e) {
+				// a tap's synthesized mouseenter must not schedule a hover tooltip
+				// that then sticks (no mouseleave follows on touch)
+				if (UIConstants.isTouchScreen()) return;
+				let id = $(this).attr("data-id");
+				sys.cancelTooltip();
+				sys.tooltipCursor = { x: e.clientX, y: e.clientY };
+				sys.tooltipTimeout = setTimeout(function () {
+					sys.tooltipTimeout = null;
+					sys.showTooltip(id);
+				}, sys.TOOLTIP_DELAY);
+			});
+			$("#upgrades-vis-overlay").on("mousemove", ".upgrades-overlay-cell", function (e) {
+				sys.tooltipCursor = { x: e.clientX, y: e.clientY };
+				// once shown the pane stays put, so it does not jitter under the cursor
+			});
+			$("#upgrades-vis-overlay").on("mouseleave", ".upgrades-overlay-cell", function () {
+				// a tap also synthesizes a mouseleave right after the click that
+				// opened the tooltip; on touch a tap elsewhere closes it instead
+				if (UIConstants.isTouchScreen()) return;
+				sys.hideTooltip();
+			});
+
+			if (UIConstants.isTouchScreen()) {
+				$("#upgrades-vis-overlay").on("click", ".upgrades-overlay-cell", function (e) {
+					let id = $(this).attr("data-id");
+					sys.cancelTooltip();
+					sys.tooltipCursor = { x: e.clientX, y: e.clientY };
+					sys.showTooltip(id);
+					e.stopPropagation();
+				});
+				this._onDocumentTapHideTooltip = $.proxy(function (e) {
+					if ($(e.target).closest(".upgrades-overlay-cell, #upgrade-tooltip").length > 0) return;
+					this.hideTooltip();
+				}, this);
+				$(document).on("click", this._onDocumentTapHideTooltip);
+			}
+		},
+
+		cancelTooltip: function () {
+			if (this.tooltipTimeout) {
+				clearTimeout(this.tooltipTimeout);
+				this.tooltipTimeout = null;
+			}
+		},
+
+		hideTooltip: function () {
+			this.cancelTooltip();
+			let $tooltip = $("#upgrade-tooltip");
+			if ($tooltip.length == 0) return;
+			$tooltip.hide().attr("aria-hidden", "true").empty();
+		},
+
+		showTooltip: function (upgradeID) {
+			let $tooltip = $("#upgrade-tooltip");
+			if ($tooltip.length == 0) return;
+			let $content = this.getTooltipContent(upgradeID);
+			if (!$content) return;
+
+			$tooltip.empty().append($content);
+			// show before measuring so the pane has a real size to position against
+			$tooltip.css({ left: "0px", top: "0px" }).show().attr("aria-hidden", "false");
+			GameGlobals.uiFunctions.positionTooltipAtCursor($tooltip, this.tooltipCursor, this.TOOLTIP_CURSOR_GAP, this.TOOLTIP_EDGE_MARGIN);
+		},
+
+		getTooltipContent: function (upgradeID) {
+			let definition = UpgradeConstants.upgradeDefinitions[upgradeID];
+			if (!definition) return null;
+			let isUnlocked = this.tribeNodes.head.upgrades.hasUpgrade(definition.id);
+			let isAvailable = GameGlobals.playerActionsHelper.checkRequirements(definition.id, false).value > 0;
+			let statusS = isUnlocked ? "researched" : isAvailable ? "available" : "locked";
+			let name = Text.t(UpgradeConstants.getDisplayNameTextKey(definition.id));
+			let description = Text.t(UpgradeConstants.getDescriptionTextKey(definition.id));
+			let effects = this.getEffectDescription(definition.id, false);
+			let unlocks = this.getUnlockedResearchDescription(definition.id);
+
+			let $content = $("<div></div>");
+			let $header = $("<div class='upgrade-tooltip-header'></div>");
+			$header.append($("<span></span>").text(name));
+			$header.append(" ");
+			$header.append($("<span class='status-badge'></span>").text(statusS));
+			$content.append($header);
+			if (description) $content.append($("<p class='upgrade-tooltip-desc'></p>").text(description));
+			if (effects) $content.append($("<p class='upgrade-tooltip-effect'></p>").text(effects));
+			if (unlocks) $content.append($("<p class='upgrade-tooltip-unlocks meta'></p>").text(unlocks));
+			return $content;
 		},
 
 		update: function (time) {
@@ -172,7 +331,9 @@ define([
 		refreshTechTree: function (resetLists) {
 			if (!resetLists)
 				return;
+			this.hideTooltip();
 			GameGlobals.uiTechTreeHelper.drawTechTree(this.vis);
+			this.updateZoomButtons();
 		},
 
 		refreshTechDetails: function () {
@@ -212,6 +373,7 @@ define([
 			
 		onTabChanged: function () {
 			var isActive = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.upgrades;
+			this.hideTooltip();
 			if (isActive) {
 				this.vis.selectedID = null;
 				this.refresh();

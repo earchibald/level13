@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m118",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-10",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The All Upgrades tree on the camp's upgrades tab has + and - zoom buttons. Zoom keeps the middle of the view in place, and the tree starts a little larger on touch screens"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Every upgrade in the tree has a tooltip with its status, description, effects and what it unlocks. Hover over it with a mouse, or tap it on a touch screen"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m117",
             "requiredVersion": "0.6.1",
             "phase": "beta",

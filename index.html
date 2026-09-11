@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m117" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m117" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m117" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m118" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m118" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m118" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -620,7 +620,7 @@
 									<canvas id="mainmap" width="500" height="500" role="img" aria-label="level map"></canvas>
 									<div id="mainmap-overlay" class="canvas-overlay"></div>
 								</div>
-								<div id="mainmap-zoom-controls">
+								<div id="mainmap-zoom-controls" class="canvas-zoom-controls">
 									<button id="btn-mainmap-zoom-in" class="btn-glyph-big" aria-label="Zoom in">+</button>
 									<button id="btn-mainmap-zoom-out" class="btn-glyph-big" aria-label="Zoom out">&minus;</button>
 								</div>
@@ -760,9 +760,15 @@
 								<div class="subheader"><h3 class="text-key" data-text-key="ui.upgrades.all_upgrades_header"></h3></div>
 								<p id="world-upgrades-count">Completed upgrades: 0</p>
 								<div class ="infobox">
-								<div id="researched-upgrades-vis-container" class="canvas-container lvl13-box-1">
-									<canvas id="researched-upgrades-vis" width="100" height="100" role="img" aria-label="technology tree"></canvas>
-									<div id="upgrades-vis-overlay" class="canvas-overlay"></div>
+								<div id="upgrades-vis-container-container">
+									<div id="researched-upgrades-vis-container" class="canvas-container lvl13-box-1">
+										<canvas id="researched-upgrades-vis" width="100" height="100" role="img" aria-label="technology tree"></canvas>
+										<div id="upgrades-vis-overlay" class="canvas-overlay"></div>
+									</div>
+									<div id="upgrades-vis-zoom-controls" class="canvas-zoom-controls">
+										<button id="btn-upgrades-vis-zoom-in" class="btn-glyph-big" aria-label="Zoom in">+</button>
+										<button id="btn-upgrades-vis-zoom-out" class="btn-glyph-big" aria-label="Zoom out">&minus;</button>
+									</div>
 								</div>
 								<div id="upgrade-details" class="lvl13-box-1" style="margin: 5px; padding: 5px;">
 									<div id="upgrade-details-content-empty">
@@ -895,6 +901,7 @@
 	<!-- map sector hover tooltip (body level so the map scroll container cannot clip it) -->
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
+	<div id="upgrade-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 
 	<!-- transient notification card: save and cloud confirmations, top of screen, auto-fades.
 	     Shown/hidden with a class, never inline display, so nothing can fight the CSS. -->
