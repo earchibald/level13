@@ -67265,7 +67265,8 @@ define([
 	'game/components/sector/events/RecruitComponent',
 	'game/nodes/PlayerLocationNode',
 	'game/nodes/player/PlayerStatsNode',
-], function (Ash, UIState, UIList, ValueCache, GameGlobals, GlobalSignals, UIConstants, DialogueConstants, ExplorerConstants, RecruitComponent, PlayerLocationNode, PlayerStatsNode) {
+	'text/Text',
+], function (Ash, UIState, UIList, ValueCache, GameGlobals, GlobalSignals, UIConstants, DialogueConstants, ExplorerConstants, RecruitComponent, PlayerLocationNode, PlayerStatsNode, Text) {
 
 	let UIOutExplorersSystem = Ash.System.extend({
 		
@@ -67275,6 +67276,9 @@ define([
 		explorerSlotElementsByType: {},
 
 		isPendingExplorerStatusUpdate: false,
+
+		// ability type the "Other explorers" list is filtered to, null for all (session only)
+		explorerFilterAbilityType: null,
 
 		constructor: function () {
 			this.initElements();
@@ -67325,6 +67329,12 @@ define([
 				this.explorerSlotElementsByType[explorerType].slot = $slot;
 				this.explorerSlotElementsByType[explorerType].container = $slot.find(".explorer-slot-container");
 			}
+
+			$("#explorers-filter").on("click", ".explorers-filter-chip", function (e) {
+				e.preventDefault();
+				let abilityType = $(this).attr("data-abilitytype");
+				sys.setExplorerFilter(sys.explorerFilterAbilityType == abilityType ? null : abilityType);
+			});
 		},
 
 		update: function (time) {
@@ -67446,15 +67456,19 @@ define([
 			// other (non-selected) explorers
 			explorers.sort(UIConstants.sortExplorersByType);
 			$("#list-explorers").empty();
+			let unselectedExplorers = [];
 			for (let i = 0; i < explorers.length; i++) {
 				var explorer = explorers[i];
 				if (selectedExplorers.indexOf(explorer) >= 0) continue;
+				unselectedExplorers.push(explorer);
 				let questTextKey = this.getQuestTextKey(explorer);
 				let isForced = explorer.id == forcedExplorerID;
 				explorer.hasUrgentDialogue = this.hasExplorerUrgentDialogue(explorer);
-				var li = "<li>" + UIConstants.getExplorerDivWithOptions(explorer, true, inCamp, questTextKey, isForced) + "</li>";
+				var li = "<li data-abilitytype='" + explorer.abilityType + "'>" + UIConstants.getExplorerDivWithOptions(explorer, true, inCamp, questTextKey, isForced) + "</li>";
 				$("#list-explorers").append(li);
 			}
+
+			this.updateExplorerFilterChips(unselectedExplorers);
 			
 			let sys = this;
 			$("#list-explorers .npc").each(function () {
@@ -67477,6 +67491,7 @@ define([
 			GameGlobals.uiFunctions.toggle("#explorers-empty", showExplorers && !hasUnselectedExplorers);
 			
 			GameGlobals.uiFunctions.generateInfoCallouts("#list-explorers");
+			GameGlobals.uiFunctions.generateInfoCallouts("#explorers-filter");
 			GameGlobals.uiFunctions.generateInfoCallouts("#container-party-slots");
 			GameGlobals.uiFunctions.createButtons("#list-explorers");
 			GameGlobals.uiFunctions.createButtons("#container-party-slots");
@@ -67484,6 +67499,67 @@ define([
 			GlobalSignals.elementCreatedSignal.dispatch();
 		},
 		
+		// one chip per ability type among the unselected explorers, in list order, with a count;
+		// the row only shows when there is something to choose between
+		updateExplorerFilterChips: function (unselectedExplorers) {
+			let countsByType = {};
+			let orderedTypes = [];
+			let sampleByType = {};
+			for (let i = 0; i < unselectedExplorers.length; i++) {
+				let explorer = unselectedExplorers[i];
+				let abilityType = explorer.abilityType;
+				if (!countsByType[abilityType]) {
+					countsByType[abilityType] = 0;
+					orderedTypes.push(abilityType);
+					sampleByType[abilityType] = explorer;
+				}
+				countsByType[abilityType]++;
+			}
+
+			if (this.explorerFilterAbilityType && !countsByType[this.explorerFilterAbilityType]) {
+				this.explorerFilterAbilityType = null;
+			}
+
+			let isTouch = UIConstants.isTouchScreen();
+			let $container = $("#explorers-filter");
+			$container.empty();
+			for (let i = 0; i < orderedTypes.length; i++) {
+				let abilityType = orderedTypes[i];
+				let name = Text.t(ExplorerConstants.getAbilityTypeDisplayNameKey(abilityType));
+				let description = Text.t(UIConstants.getExplorerAbilityDescriptionTextVO(sampleByType[abilityType], []));
+				// on touch a tap must filter, so the description goes in a title instead of a callout
+				let classes = "explorers-filter-chip" + (isTouch ? "" : " info-callout-target info-callout-target-small");
+				let chip = "<span class='" + classes + "' data-abilitytype='" + abilityType + "'";
+				let callout = "<b>" + name + "</b><br/>" + description;
+				chip += " description='" + UIConstants.cleanupText(callout) + "' title='" + UIConstants.cleanupText(description) + "'>";
+				chip += "<span class='explorers-filter-chip-name'>" + name + "</span>";
+				chip += "<span class='explorers-filter-chip-count'>" + countsByType[abilityType] + "</span>";
+				chip += "</span>";
+				$container.append(chip);
+			}
+
+			GameGlobals.uiFunctions.toggle("#explorers-filter", orderedTypes.length > 1);
+			this.applyExplorerFilter();
+		},
+
+		setExplorerFilter: function (abilityType) {
+			this.explorerFilterAbilityType = abilityType;
+			this.applyExplorerFilter();
+			GlobalSignals.elementToggledSignal.dispatch();
+		},
+
+		// show and hide list items in place; nothing is rebuilt on a chip tap
+		applyExplorerFilter: function () {
+			let filter = this.explorerFilterAbilityType;
+			$("#explorers-filter .explorers-filter-chip").each(function () {
+				$(this).toggleClass("selected", $(this).attr("data-abilitytype") == filter);
+			});
+			$("#list-explorers > li").each(function () {
+				let matches = !filter || $(this).attr("data-abilitytype") == filter;
+				$(this).toggleClass("explorers-filter-hidden", !matches);
+			});
+		},
+
 		updateSelectedExplorerSlot: function (explorerType, explorer, inCamp) {
 			let elements = this.explorerSlotElementsByType[explorerType];
 			let $slot = elements.slot;

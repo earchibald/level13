@@ -1200,6 +1200,47 @@ hr.warning {
 	position: relative;
 }
 
+// EXPLORERS TAB ABILITY FILTER (chips above "Other explorers")
+
+#explorers-filter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 0 2px 6px 2px;
+}
+
+.explorers-filter-chip {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.4em;
+	padding: 1px 8px;
+	border: 1px solid @color-border-strong;
+	background: @color-bg-element-1;
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+	font-size: 0.9em;
+}
+
+.explorers-filter-chip:hover {
+	border-color: lighten(@color-border-strong, 15%);
+}
+
+.explorers-filter-chip.selected {
+	background: @color-bg-box-1;
+	border-color: @color-text-default;
+	font-weight: bold;
+}
+
+.explorers-filter-chip-count {
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+#list-explorers > li.explorers-filter-hidden {
+	display: none !important;
+}
+
 .npc-container.highlighted {
 	border-color: lighten(@color-border-strong, 15%);
 	color: lighten(@color-text-default, 15%);

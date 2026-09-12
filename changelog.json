@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m122",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The party tab's Other explorers list has ability filter chips above it, one per ability with a count. Tap a chip to show only those explorers, tap it again to clear. The row appears when there is more than one ability to choose from"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m121",
             "requiredVersion": "0.6.1",
             "phase": "beta",
