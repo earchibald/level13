@@ -82,6 +82,11 @@
 			this.characterList = UIList.create(this, $("#in-characters ul"), this.createCharacterListItem, this.updateCharacterListItem, (d1, d2) => d1.instanceID == d2.instanceID);
 
 			this.elements.populationAutoassignedLabel = $("#in-population #in-population-autoassigned");
+
+			// the badge on the Buildings header advertises the B menu and opens it on a tap
+			$("#in-improvements-menu-hint").click(function () {
+				GlobalSignals.openBuildingsPopupSignal.dispatch();
+			});
 			this.elements.populationAutoAssignToggle = $(".in-assign-workers-auto-toggle");
 			this.elements.populationDecreaseHint = $("#in-population-decrease-hint");
 			this.elements.populationDetailsContainer = $("#in-population-details");
@@ -158,6 +163,7 @@
 			if (!this.playerLocationNodes.head) return;
 
 			this.updateImprovements();
+			this.updateBuildingsMenuHint();
 			if (this.buildingsPopupOpen) this.renderBuildingsPopupList();
 			this.updateBubble();
 			this.updateStats();
@@ -861,6 +867,8 @@
 				sys.renderBuildingsPopupList();
 			});
 
+			$("#buildings-popup-header-hint-text").text(UIConstants.isTouchScreen() ? "tap for help" : "hover for details");
+
 			let $list = $("#buildings-popup-list");
 			$list.on("click", ".buildings-popup-row", function (e) {
 				if ($(e.target).closest(".buildings-popup-info").length > 0) return;
@@ -872,10 +880,11 @@
 
 			// tooltips: hover with a delay on a mouse, the row's info glyph on touch.
 			// the checkbox line takes part as row -1, like the craft popup's toggle
-			let tooltipTargets = ".buildings-popup-row, #buildings-popup-toggle-container";
+			let tooltipTargets = ".buildings-popup-row, #buildings-popup-toggle-container, #buildings-popup-header-hint";
 			let rowIndexOf = function (el) {
 				let $el = $(el);
 				if ($el.is("#buildings-popup-toggle-container")) return -1;
+				if ($el.is("#buildings-popup-header-hint")) return -2;
 				let index = parseInt($el.attr("data-index"));
 				return isNaN(index) ? null : index;
 			};
@@ -928,6 +937,14 @@
 			let tagName = e.target ? e.target.tagName : null;
 			if (tagName == "INPUT" || tagName == "TEXTAREA" || tagName == "SELECT") return;
 			this.onOpenBuildingsPopup();
+		},
+
+		// "B for menu" when the key works, plain "menu" on touch or with hotkeys off
+		updateBuildingsMenuHint: function () {
+			let hasKey = GameGlobals.gameState.settings.hotkeysEnabled && !UIConstants.isTouchScreen();
+			let text = hasKey ? "B for menu" : "menu";
+			let $hint = $("#in-improvements-menu-hint");
+			if ($hint.text() != text) $hint.text(text);
 		},
 
 		onOpenBuildingsPopup: function (screen) {
@@ -1192,6 +1209,12 @@
 				let level = improvements.getLevel(improvementName);
 				let buildingName = Text.t(ImprovementConstants.getImprovementDisplayNameKey(improvementID, level));
 				let status = this.getBuildingsEntryStatus(action);
+				// a cooling-down action fails the availability check without a reason;
+				// the row says how long is left instead of looking unaffordable
+				let cooldownLeft = status.available ? 0 : GameGlobals.playerActionsHelper.getCooldownForCurrentLocation(action);
+				let isCooldown = !status.available && status.reqsMet && cooldownLeft > 0;
+				let reason = status.reason;
+				if (isCooldown) reason = "Cooldown " + UIConstants.getTimeToNum(cooldownLeft);
 				result.push({
 					key: "action-" + action,
 					name: actionName || Text.t(GameGlobals.playerActionsHelper.getActionDisplayNameKey(action)),
@@ -1201,8 +1224,10 @@
 					improvementID: improvementID,
 					available: status.available,
 					hidden: false,
-					reason: status.reason,
+					reason: reason,
 					isBusy: status.isBusy,
+					isCooldown: isCooldown,
+					cooldownLeft: cooldownLeft,
 				});
 			}
 			return result;
@@ -1259,13 +1284,18 @@
 				html += "<span class='buildings-popup-key'>" + (keyLabel || "&nbsp;") + "</span>";
 				html += "<span class='buildings-popup-item-name'>" + entry.name;
 				if (!isMenu && screen == "action") html += "<span class='buildings-popup-item-sub'>" + entry.buildingName + "</span>";
-				if (!isMenu && screen == "improve") html += "<span class='buildings-popup-item-sub'>lvl " + entry.level + " &rarr; " + (entry.level + 1) + (entry.isNextLevelMajor ? " &#9650;" : "") + "</span>";
+				if (!isMenu && screen == "build" && entry.count > 0) html += "<span class='buildings-popup-item-sub'>" + entry.count + " built" + (entry.level > 1 ? ", lvl " + entry.level : "") + "</span>";
+				if (!isMenu && screen == "improve") {
+					let atMax = entry.maxLevel <= 1 || entry.level >= entry.maxLevel;
+					let levelText = atMax ? "lvl " + entry.level + " (max)" : "lvl " + entry.level + "/" + entry.maxLevel + " &rarr; " + (entry.level + 1) + (entry.isNextLevelMajor ? " &#9650;" : "");
+					html += "<span class='buildings-popup-item-sub'>" + levelText + "</span>";
+				}
 				html += "</span>";
 				if (isMenu) {
 					html += "<span class='buildings-popup-item-costs header-count'>" + entry.count + "</span>";
 				} else {
 					let detail = "";
-					if (entry.reason && !entry.available && (entry.hidden || entry.isBusy)) {
+					if (entry.reason && !entry.available && (entry.hidden || entry.isBusy || entry.isCooldown)) {
 						detail = "<span class='buildings-popup-item-reason'>" + entry.reason + "</span>";
 					} else {
 						detail = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action).join(" ");
@@ -1526,6 +1556,14 @@
 				$content.append($("<p></p>").addClass(cls || "").html(html));
 			};
 
+			if (index == -2) {
+				let isTouch = UIConstants.isTouchScreen();
+				addHeader("Buildings menu");
+				addLine(isTouch ? "Tap a row's \u24d8 for what it does, what it costs and why it is blocked." : "Hover any row for what it does, what it costs and why it is blocked.");
+				addHTML("<span class='meta'>B, I, A or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; space: show unavailable<br/>esc: back &middot; &#8679;esc: close</span>");
+				return $content;
+			}
+
 			if (index == -1) {
 				addHeader("Show unavailable");
 				let what = screen == "build" ? "buildings this camp cannot put up right now: at their limit, not yet unlocked, or damaged" : "buildings at their top level, or damaged";
@@ -1545,7 +1583,7 @@
 				return $content;
 			}
 
-			let badge = entry.available ? "available" : entry.isBusy ? "busy" : entry.reason ? entry.reason : "unaffordable";
+			let badge = entry.available ? "available" : entry.isBusy ? "busy" : entry.isCooldown ? "cooldown" : entry.reason ? entry.reason : "unaffordable";
 			if (screen == "build") {
 				addHeader(entry.name, badge);
 				addLine(ImprovementConstants.getImprovementDescription(entry.improvementID, entry.level), "buildings-tooltip-desc");

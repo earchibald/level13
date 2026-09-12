@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m121" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m121" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m121" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m125" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m125" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m125" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -267,7 +267,7 @@
 					<!-- camp basic stuff: buildings & population -->
 					<div class="grid tabcontainer" id="container-tab-two-in" data-tab="switch-in" style="display:none">
 						<div class="unit golden-large">
-							<h3 class="text-key" data-text-key="ui.camp.improvements_header">Buildings</h3>
+							<h3><span class="text-key" data-text-key="ui.camp.improvements_header">Buildings</span> <span id="in-improvements-menu-hint" role="button" aria-label="Open the buildings menu">B for menu</span></h3>
 							<div id="in-improvements" class="actionbox">
 								<table>
 								</table>
@@ -597,6 +597,7 @@
 							<div id="tab-explorers-section-unselected" class="unit-section">
 								<div class="subheader" id="header-explorers"><h3>Other explorers</h3></div>
 								<div class="infobox">
+									<div id="explorers-filter"></div>
 									<ul id="list-explorers" class="itemlist"></ul>
 									<p id="explorers-empty" class="p-meta">Nothing here.</p>
 								</div>
@@ -1134,6 +1135,7 @@
 			<div id="buildings-popup-header-row">
 				<button id="buildings-popup-back" class="btn-meta" style="display: none" title="Back (esc)">&lsaquo; Back</button>
 				<h3 id="buildings-popup-header">Buildings<span id="buildings-popup-header-screen"></span></h3>
+				<span id="buildings-popup-header-hint" class="buildings-popup-info" role="button" aria-label="How this menu works">&#9432; <span id="buildings-popup-header-hint-text">hover for details</span></span>
 			</div>
 			<span class="settings-entry" id="buildings-popup-toggle-container" style="display: none">
 				<input type="checkbox" class="checkbox" id="buildings-popup-show-unavailable" /><p class="checkbox-label" id="buildings-popup-show-unavailable-label">Show unavailable</p>
