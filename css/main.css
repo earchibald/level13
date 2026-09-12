@@ -3419,8 +3419,8 @@ body.dark .map-overlay-cell.selected.map-cell-pulse {
   }
 }
 body.dark .map-overlay-cell.map-cell-flash {
-  background: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 0 1px #282a28, 0 0 0 3px #fff;
+  background: rgba(255, 90, 60, 0.35);
+  box-shadow: 0 0 0 1px #282a28, 0 0 0 4px #FF5A3C;
   z-index: 1;
   animation: map-cell-flash 0.4s step-end 3;
 }
@@ -6588,8 +6588,8 @@ body.sunlit .map-overlay-cell.selected.map-cell-pulse {
   }
 }
 body.sunlit .map-overlay-cell.map-cell-flash {
-  background: rgba(0, 0, 0, 0.25);
-  box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000;
+  background: rgba(232, 64, 31, 0.35);
+  box-shadow: 0 0 0 1px #fff, 0 0 0 4px #E8401F;
   z-index: 1;
   animation: map-cell-flash 0.4s step-end 3;
 }

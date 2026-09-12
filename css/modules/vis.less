@@ -70,8 +70,10 @@
 
 // shift-click on a selection chip: every sector of that type flashes a few times
 .map-overlay-cell.map-cell-flash {
-	background: fade(@color-text-highlight, 25%);
-	box-shadow: 0 0 0 1px @color-bg-box-1, 0 0 0 3px @color-text-highlight;
+	// a warm highlight rather than the selection's white, so a flashed set reads apart
+	// from the selected sector even when both are on screen
+	background: fade(@color-map-flash, 35%);
+	box-shadow: 0 0 0 1px @color-bg-box-1, 0 0 0 4px @color-map-flash;
 	z-index: 1;
 	animation: map-cell-flash 0.4s step-end 3;
 }

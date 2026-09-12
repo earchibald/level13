@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m127",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "Cloud saves compare play time before replacing a save: a cloud save that is behind this device is no longer loaded in silence, and keeping this device's save over a cloud save that is further along asks first. The cloud prompt shows how far along each side is, and the notice after a cloud load now actually appears"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Shift-click flash on the map uses a warm highlight colour and a wider ring"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m126",
             "requiredVersion": "0.6.1",
             "phase": "beta",
