@@ -947,19 +947,60 @@ div.grid-content {
 }
 
 // BUILDINGS POPUP (hotkey B in camp)
+//
+// a two-level menu: the chooser (Build / Improve / Action) and one numbered list
+// per choice. Every row is key badge, name, right-aligned costs or reason
+
+// a fixed width on the regular layout, so the popup does not jump when a list
+// grows or the toggle adds wider rows. & is body.dark / body.sunlit; the phone
+// goes full-bleed through .fill-on-mobiles
+&:not(.layout-small) #buildings-popup {
+	width: 480px;
+	min-width: 0;
+	max-width: 90%;
+	box-sizing: border-box;
+}
+
+#buildings-popup-header-row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+#buildings-popup-header-row h3 {
+	margin: 0;
+	flex: 1 1 auto;
+}
+
+#buildings-popup-header-screen {
+	color: @color-text-meta;
+	font-weight: normal;
+}
+
+#buildings-popup-back {
+	flex: 0 0 auto;
+	order: 2;
+}
 
 #buildings-popup-list {
-	min-width: 280px;
 	max-height: 55vh;
 	overflow-y: auto;
 	text-align: left;
-	margin: 10px 0;
+	margin: 8px 0;
 }
 
 .buildings-popup-row {
-	padding: 2px 6px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 3px 6px;
 	cursor: pointer;
 	border: 1px solid transparent;
+	border-radius: 2px;
+}
+
+.buildings-popup-row:hover {
+	background: fade(@color-text-default, 6%);
 }
 
 .buildings-popup-row.selected {
@@ -967,28 +1008,103 @@ div.grid-content {
 	background: @color-bg-box-1;
 }
 
-.buildings-popup-header {
-	font-weight: bold;
-	margin-top: 4px;
+.buildings-popup-menu-row {
+	padding: 6px 6px;
+	margin-bottom: 2px;
 }
 
-.buildings-popup-header .header-count {
+.buildings-popup-menu-row .buildings-popup-item-name {
+	font-weight: bold;
+}
+
+// the key badge is the same shape as a button's hotkey badge
+.buildings-popup-key {
+	flex: 0 0 auto;
+	display: inline-block;
+	min-width: 1.4em;
+	height: 1.4em;
+	line-height: 1.4em;
+	padding: 0 2px;
+	text-align: center;
+	text-transform: uppercase;
+	font-size: @font-size-tiny;
+	color: @color-text-secondary;
+	border: 1px solid @color-border-box-2;
+	border-radius: 0.25em;
+	opacity: 0.85;
+}
+
+.buildings-popup-row.selected .buildings-popup-key {
+	color: @color-text-default;
+	border-color: @color-border-strong;
+	opacity: 1;
+}
+
+.buildings-popup-item-name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.buildings-popup-item-sub {
+	margin-left: 6px;
 	color: @color-text-meta;
-	font-weight: normal;
+	font-size: @font-size-small;
 }
 
 .buildings-popup-item-costs {
-	margin-left: 8px;
+	flex: 0 1 auto;
+	text-align: right;
 	color: @color-text-meta;
 	font-size: @font-size-small;
+	white-space: nowrap;
+}
+
+.buildings-popup-item-reason {
+	font-style: italic;
 }
 
 .buildings-popup-item-unavailable .buildings-popup-item-name {
 	color: @color-text-meta;
 }
 
-// brief highlight when trying to build without sufficient resources
+.buildings-popup-item-hidden .buildings-popup-item-name {
+	color: @color-text-meta;
+	font-style: italic;
+}
+
+// touch has no hover: the glyph opens the row's tooltip, the rest of the row acts.
+// UIOutCampSystem only renders the glyph on touch screens (a body.touch rule here
+// would compile under the theme wrapper as body.dark body.touch and never match)
+.buildings-popup-info {
+	display: inline-block;
+	flex: 0 0 auto;
+	padding: 0 4px;
+	color: @color-text-secondary;
+	font-size: @font-size-default;
+}
+
+.buildings-popup-empty {
+	padding: 6px;
+}
+
+// the show unavailable toggle is part of the keyboard navigation (cursor -1)
+#buildings-popup-toggle-container {
+	display: block;
+	padding: 2px 6px;
+	border: 1px solid transparent;
+}
+
+#buildings-popup-toggle-container.selected {
+	border-color: @color-border-strong;
+	background: @color-bg-box-1;
+}
+
+// brief highlight when pressing a row that cannot act right now
 .buildings-popup-row.buildings-popup-flash .buildings-popup-item-name,
+.buildings-popup-row.buildings-popup-flash .buildings-popup-item-reason,
 .buildings-popup-row.buildings-popup-flash span.action-cost-blocker {
 	color: @color-global-warning;
 	font-weight: bold;

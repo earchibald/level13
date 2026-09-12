@@ -898,24 +898,15 @@ define(['ash',
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
-				// R rests wherever the player is: the camp home on the in tab, a nap outside.
-				// One key, two tab-scoped actions; the second entry stays out of the hotkey list
-				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.in, false, false, "use_in_home");
-				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap", { isHiddenFromList: true });
+				// R naps outside. In camp, resting goes through the buildings menu below
+				// with every other building action, so the letter is free there
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap");
 
-				// the camp buildings a player uses every visit. All three letters are taken
-				// outside (Move S, Back to camp) or on the tribe tab (Go to camp), so they are
-				// scoped to tabs.in and the two sets never meet
-				this.registerHotkey("Sit down", "KeyS", defaultModifier, tabs.in, false, false, "use_in_campfire");
-				this.registerHotkey("Treatment", "KeyT", defaultModifier, tabs.in, false, false, "use_in_hospital");
-
-				// ^ is Shift and 6, and it is the shape printed on the improve button.
-				// The plain 6 stays the tab selector: triggerHotkey skips a hotkey with no
-				// modifier whenever one is held, so the two readings of the key never collide.
-				// displayKeyIncludesModifier stops the badge and the list saying "Shift + ^"
-				this.registerHotkey("Improve campfire", "Digit6", "shiftKey", tabs.in, false, false, "improve_in_campfire", { displayKey: "^", displayKeyIncludesModifier: true });
-
-				this.registerHotkey("Buildings", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
+				// B opens the camp's buildings menu: build, improve, and the use actions
+				// (rest, sit down, treatment...) as numbered lists. UIOutCampSystem also
+				// opens it on keydown so the keys typed right after land in the menu; this
+				// keyup binding is the fallback and the hotkey list entry
+				this.registerHotkey("Buildings menu", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
 
 				// G asks for a level number and presses that camp's Go button. KeyG is free
 				// here because the collector binding is scoped to tabs.out; T is an alias.
@@ -1112,6 +1103,8 @@ define(['ash',
 				let result = [];
 				for (let i = 0; i < costKeys.length; i++) {
 					let key = costKeys[i];
+					// a cost scaled down to nothing is not worth a line
+					if (!(costs[key] > 0)) continue;
 					let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
 					let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
 					result.push("<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span>");

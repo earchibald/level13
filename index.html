@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m118" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m118" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m118" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m119" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m119" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m119" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -902,6 +902,7 @@
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 	<div id="upgrade-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
+	<div id="buildings-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 
 	<!-- transient notification card: save and cloud confirmations, top of screen, auto-fades.
 	     Shown/hidden with a class, never inline display, so nothing can fight the CSS. -->
@@ -1129,10 +1130,17 @@
 			</div>
 		</div>
 
-		<div id="buildings-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="buildings-popup-header" aria-modal="true">
-			<h3 id="buildings-popup-header">Buildings</h3>
+		<div id="buildings-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame popup-nopause" style="display: none" aria-labelledby="buildings-popup-header" aria-modal="true">
+			<div id="buildings-popup-header-row">
+				<button id="buildings-popup-back" class="btn-meta" style="display: none" title="Back (esc)">&lsaquo; Back</button>
+				<h3 id="buildings-popup-header">Buildings<span id="buildings-popup-header-screen"></span></h3>
+			</div>
+			<span class="settings-entry" id="buildings-popup-toggle-container" style="display: none">
+				<input type="checkbox" class="checkbox" id="buildings-popup-show-unavailable" /><p class="checkbox-label" id="buildings-popup-show-unavailable-label">Show unavailable</p>
+			</span>
 			<div id="buildings-popup-list" class="scrollable-container"></div>
-			<p class="p-meta hide-in-small-layout">arrows: navigate and fold &middot; enter: build &middot; esc: close</p>
+			<p id="buildings-popup-hint-menu" class="p-meta hide-in-small-layout">letter or number: open &middot; arrows + enter: open &middot; esc: close</p>
+			<p id="buildings-popup-hint-list" class="p-meta hide-in-small-layout" style="display: none">number or enter: <span id="buildings-popup-hint-verb">build</span> &middot; arrows, pgup/pgdn, home/end: move &middot; space: show unavailable &middot; esc: back &middot; &#8679;esc: close</p>
 			<div class="buttonbox">
 				<button id="buildings-popup-close" class="button-popup-default">Close</button>
 			</div>
