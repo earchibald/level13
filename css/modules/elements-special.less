@@ -1000,6 +1000,28 @@ div.grid-content {
 	color: @color-text-default;
 }
 
+// the Camp tab's Buildings header carries a badge that names the B menu and
+// opens it on a click, so the menu is discoverable without the hotkey list
+#in-improvements-menu-hint {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 0 6px;
+	border: 1px solid @color-border-strong;
+	border-radius: 0.25em;
+	color: @color-text-secondary;
+	font-size: @font-size-small;
+	font-weight: normal;
+	line-height: 1.4em;
+	vertical-align: 2px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+#in-improvements-menu-hint:hover {
+	border-color: lighten(@color-border-strong, 15%);
+	color: @color-text-default;
+}
+
 // the camp's stock of the resources the list costs
 #buildings-popup-resources {
 	display: flex;

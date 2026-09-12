@@ -82,6 +82,11 @@
 			this.characterList = UIList.create(this, $("#in-characters ul"), this.createCharacterListItem, this.updateCharacterListItem, (d1, d2) => d1.instanceID == d2.instanceID);
 
 			this.elements.populationAutoassignedLabel = $("#in-population #in-population-autoassigned");
+
+			// the badge on the Buildings header advertises the B menu and opens it on a tap
+			$("#in-improvements-menu-hint").click(function () {
+				GlobalSignals.openBuildingsPopupSignal.dispatch();
+			});
 			this.elements.populationAutoAssignToggle = $(".in-assign-workers-auto-toggle");
 			this.elements.populationDecreaseHint = $("#in-population-decrease-hint");
 			this.elements.populationDetailsContainer = $("#in-population-details");
@@ -158,6 +163,7 @@
 			if (!this.playerLocationNodes.head) return;
 
 			this.updateImprovements();
+			this.updateBuildingsMenuHint();
 			if (this.buildingsPopupOpen) this.renderBuildingsPopupList();
 			this.updateBubble();
 			this.updateStats();
@@ -931,6 +937,14 @@
 			let tagName = e.target ? e.target.tagName : null;
 			if (tagName == "INPUT" || tagName == "TEXTAREA" || tagName == "SELECT") return;
 			this.onOpenBuildingsPopup();
+		},
+
+		// "B for menu" when the key works, plain "menu" on touch or with hotkeys off
+		updateBuildingsMenuHint: function () {
+			let hasKey = GameGlobals.gameState.settings.hotkeysEnabled && !UIConstants.isTouchScreen();
+			let text = hasKey ? "B for menu" : "menu";
+			let $hint = $("#in-improvements-menu-hint");
+			if ($hint.text() != text) $hint.text(text);
 		},
 
 		onOpenBuildingsPopup: function (screen) {

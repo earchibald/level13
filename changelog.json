@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m125",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The Camp tab's Buildings header carries a 'B for menu' badge; click or tap it to open the buildings menu"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m124",
             "requiredVersion": "0.6.1",
             "phase": "beta",

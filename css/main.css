@@ -3046,6 +3046,24 @@ body.dark #buildings-popup-header-hint:hover {
   border-color: #7b7b7b;
   color: #fdfdfd;
 }
+body.dark #in-improvements-menu-hint {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #555;
+  border-radius: 0.25em;
+  color: #bbb;
+  font-size: 0.85rem;
+  font-weight: normal;
+  line-height: 1.4em;
+  vertical-align: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.dark #in-improvements-menu-hint:hover {
+  border-color: #7b7b7b;
+  color: #fdfdfd;
+}
 body.dark #buildings-popup-resources {
   display: flex;
   flex-wrap: wrap;
@@ -6162,6 +6180,24 @@ body.sunlit #buildings-popup-header-hint {
   white-space: nowrap;
 }
 body.sunlit #buildings-popup-header-hint:hover {
+  border-color: #bfbfbf;
+  color: #202220;
+}
+body.sunlit #in-improvements-menu-hint {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #999;
+  border-radius: 0.25em;
+  color: #777;
+  font-size: 0.85rem;
+  font-weight: normal;
+  line-height: 1.4em;
+  vertical-align: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.sunlit #in-improvements-menu-hint:hover {
   border-color: #bfbfbf;
   color: #202220;
 }
