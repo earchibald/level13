@@ -1394,9 +1394,10 @@
 					if (isMenu) { e.preventDefault(); this.activateBuildingsPopupRow(); }
 					return;
 				case "Space":
+					// space belongs to the Show unavailable toggle alone; on the chooser
+					// it does nothing, so the same key never means two things
 					e.preventDefault();
-					if (isMenu) this.activateBuildingsPopupRow();
-					else this.toggleBuildingsPopupShowUnavailable();
+					if (!isMenu) this.toggleBuildingsPopupShowUnavailable();
 					return;
 			}
 

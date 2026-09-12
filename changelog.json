@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m121",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "CHANGE",
+                    "summary": "In the camp's B menu, space no longer opens a list from the chooser. It only toggles Show unavailable on the Build and Improve lists"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m120",
             "requiredVersion": "0.6.1",
             "phase": "beta",
