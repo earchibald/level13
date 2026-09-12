@@ -144,8 +144,31 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 		
 		minGridStep: 0.25,
 		
+		// zoom scales the drawn tree and the overlay cells; layout stays in base units
+		zoom: 1,
+		ZOOM_MIN: 0.5,
+		ZOOM_MAX: 2,
+		ZOOM_STEP: 0.25,
+		
 		constructor: function (engine) {
 			this.tribeNodes = engine.getNodeList(TribeUpgradesNode);
+			// bigger default on touch screens so the cells are usable tap targets
+			this.zoom = UIConstants.isTouchScreen() ? 1.25 : 1;
+		},
+		
+		getZoom: function () {
+			return this.zoom;
+		},
+		
+		setZoom: function (value) {
+			let clamped = Math.min(this.ZOOM_MAX, Math.max(this.ZOOM_MIN, value));
+			let changed = clamped != this.zoom;
+			this.zoom = clamped;
+			return changed;
+		},
+		
+		changeZoom: function (steps) {
+			return this.setZoom(this.zoom + steps * this.ZOOM_STEP);
 		},
 		
 		init: function (canvasId, overlayId, selectioncb) {
@@ -166,11 +189,17 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 				y = y + this.positionRoot(tree, tree.roots[i], y);
 			}
 			vis.tree = tree;
-			vis.dimensions = this.getTreeDimensions(vis, tree.maxX, tree.maxY);
-			vis.sunlit = $("body").hasClass("sunlit");
 			
 			// TODO extend to several required tech per tech; currently drawing assumes max 1
 			
+			this.redraw(vis);
+		},
+		
+		// redraws the current tree (no re-layout); used after a zoom change
+		redraw: function (vis) {
+			if (!vis.tree) return;
+			vis.dimensions = this.getTreeDimensions(vis, vis.tree.maxX, vis.tree.maxY);
+			vis.sunlit = $("body").hasClass("sunlit");
 			this.refreshCanvas(vis);
 			this.rebuildOverlay(vis);
 			CanvasConstants.updateScrollEnable(vis.canvasId);
@@ -186,9 +215,13 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 			
 			this.ctx.canvas.width = vis.dimensions.canvasWidth;
 			this.ctx.canvas.height = vis.dimensions.canvasHeight;
-			this.ctx.clearRect(0, 0, this.canvas.scrollWidth, this.canvas.scrollWidth);
+			this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 			this.ctx.fillStyle = ColorConstants.getColor(vis.sunlit, "bg_page");
 			this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+			
+			// everything below draws in base units; the transform applies the zoom
+			this.ctx.scale(this.zoom, this.zoom);
 
 			for (let i = 0; i < vis.tree.roots.length; i++) {
 				this.drawRoot(vis, vis.tree.roots[i], vis.sunlit);
@@ -200,6 +233,8 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 			$overlay.empty();
 			$overlay.css("width", vis.dimensions.canvasWidth + "px");
 			$overlay.css("height", vis.dimensions.canvasHeight + "px");
+			// the cells' font-size follows this in css
+			$overlay[0].style.setProperty("--tree-zoom", this.zoom);
 			
 			for (let i = 0; i < vis.tree.roots.length; i++) {
 				var root = vis.tree.roots[i];
@@ -217,11 +252,14 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 		},
 		
 		addOverlayNode: function (vis, $overlay, node) {
-			var xpx = this.getPixelPosX(node.x);
-			var ypx = this.getPixelPosY(node.y);
+			var xpx = this.getPixelPosX(node.x) * this.zoom;
+			var ypx = this.getPixelPosY(node.y) * this.zoom;
+			var wpx = this.cellW * this.zoom;
+			var hpx = this.cellH * this.zoom;
 			var data = "data-id='" + node.definition.id + "'";
 			var text = Text.t(UpgradeConstants.getDisplayNameTextKey(node.definition.id))
-			var $div = $("<div class='canvas-overlay-cell upgrades-overlay-cell' style='top: " + ypx + "px; left: " + xpx + "px' " + data +"><p>" + text +"</p></div>");
+			var style = "top: " + ypx + "px; left: " + xpx + "px; width: " + wpx + "px; height: " + hpx + "px";
+			var $div = $("<div class='canvas-overlay-cell upgrades-overlay-cell' style='" + style + "' " + data +"><p>" + text +"</p></div>");
 			var helper = this;
 			$div.click(function (e) {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
@@ -435,8 +473,8 @@ function (Ash, Text, CanvasUtils, GameGlobals, GlobalSignals, CanvasConstants, C
 		getTreeDimensions: function (vis, maxX, maxY) {
 			var dimensions = {};
 			var canvas = vis.$canvas[0];
-			dimensions.treeWidth = (maxX + 1) * this.cellW + maxX * this.cellPX + 2 * this.treePX;
-			dimensions.treeHeight = (maxY + 1) * this.cellH + maxY * this.cellPY + 2 * this.treePY;
+			dimensions.treeWidth = ((maxX + 1) * this.cellW + maxX * this.cellPX + 2 * this.treePX) * this.zoom;
+			dimensions.treeHeight = ((maxY + 1) * this.cellH + maxY * this.cellPY + 2 * this.treePY) * this.zoom;
 			dimensions.canvasWidth = Math.max(dimensions.treeWidth, $(canvas).parent().width());
 			dimensions.canvasHeight = Math.max(dimensions.treeHeight, 100);
 			return dimensions;

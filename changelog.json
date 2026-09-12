@@ -1,6 +1,91 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m121",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "CHANGE",
+                    "summary": "In the camp's B menu, space no longer opens a list from the chooser. It only toggles Show unavailable on the Build and Improve lists"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m120",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The Build and Improve lists in the camp's B menu show the camp's stock of every resource the listed buildings cost, above the list, and keep it current while the menu is open"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m119",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The camp's B menu is now a flow: B opens Build, Improve and Action, and a letter (B, I, A) or a number opens one of the numbered lists. A number on a list presses that row, so B A 2 does the second action and B B 3 builds the third building. Arrows, page up/down, home/end and enter navigate; esc backs out one level, shift+esc or Close leaves"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The menu stays open after a build, improvement or action, and its lists keep up with the camp while it is open. Build and Improve hide buildings at their limit behind a Show unavailable toggle (space); Action always lists every building action"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Every row in the buildings menu has a tooltip with its description, costs, level and what blocks it. Hover with a mouse, or tap the row's info mark on a touch screen"
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "The camp hotkeys S (sit down), T (treatment), R (rest) and shift+6 (improve campfire) are gone; those actions live in the B menu. R still naps outside"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m118",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-10",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The All Upgrades tree on the camp's upgrades tab has + and - zoom buttons. Zoom keeps the middle of the view in place, and the tree starts a little larger on touch screens"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Every upgrade in the tree has a tooltip with its status, description, effects and what it unlocks. Hover over it with a mouse, or tap it on a touch screen"
+                }
+            ]
+        },
+        {
+            "version": "0.6.3.m117",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-08",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "With a mouse, a button's tooltip now sits below and to the right of the pointer instead of directly under the button, so it no longer covers the buttons below it"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Clicking a control hides its tooltip until the pointer leaves it. Once you have clicked something you already know what it is, and the tooltip only covered what came next"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m116",
             "requiredVersion": "0.6.1",
             "phase": "beta",

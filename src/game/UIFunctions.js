@@ -331,6 +331,36 @@ define(['ash',
 					});
 				}
 
+				// HOVER TOOLTIPS WITH A MOUSE
+				// Two things about the css :hover cards. First, a card centred
+				// directly under its button lands on the row of buttons below it,
+				// so it hides the very things the player is about to read next.
+				// Button cards now sit down and to the right of the pointer, the
+				// way desktop tooltips do, so the pointer, the button and the
+				// buttons to its left stay clear. Second, a click means the
+				// player already knows what the button is, so the card that used
+				// to appear (or stay) after the click only got in the way. A
+				// click hides the card until the pointer leaves the control.
+				if (!isTouch) {
+					$(document).on("mouseenter", ".callout-container", function (e) {
+						if (!e.originalEvent) return;
+						uiFunctions.placeHoverCallout($(this), e);
+					});
+					$(document).on("mouseleave", ".callout-container", function (e) {
+						if (!e.originalEvent) return;
+						let $container = $(this);
+						$container.removeClass("callout-suppressed");
+						$container.children("div.btn-callout.callout-pointer")
+							.removeClass("callout-pointer").css({ "left": "", "top": "" });
+					});
+					$(document).on("mousedown", ".callout-container", function (e) {
+						// buttons inside a card (e.g. explorer and item cards) must
+						// keep their card while they are used
+						if ($(e.target).closest("div.info-callout, div.btn-callout").length > 0) return;
+						$(this).addClass("callout-suppressed");
+					});
+				}
+
 				if (!isTouch) return;
 
 				// tap toggles info callouts (hover is not available on touch)
@@ -488,6 +518,32 @@ define(['ash',
 				query.addEventListener("change", function () {
 					$("body").toggleClass("standalone", uiFunctions.isStandalone());
 				});
+			},
+
+			// place a hover card for a button below and to the right of the
+			// pointer, kept inside the viewport. The card is display: block from
+			// the moment the pointer enters (the css delay only holds it
+			// invisible), so it can be measured here.
+			placeHoverCallout: function ($container, e) {
+				let $callout = $container.children("div.btn-callout").first();
+				if ($callout.length == 0) return;
+				if ($container.hasClass("callout-suppressed")) return;
+				let offsetX = 14;
+				let offsetY = 18;
+				let margin = 8;
+				let containerRect = $container[0].getBoundingClientRect();
+				$callout.addClass("callout-pointer").css({ "left": "0px", "top": "0px" });
+				let rect = $callout[0].getBoundingClientRect();
+				if (rect.width == 0) return;
+				let viewportWidth = window.innerWidth;
+				let viewportHeight = window.innerHeight;
+				let x = e.clientX + offsetX;
+				// below the pointer, and never over the control itself
+				let y = Math.max(e.clientY + offsetY, containerRect.bottom + 4);
+				if (x + rect.width > viewportWidth - margin) x = Math.max(margin, viewportWidth - margin - rect.width);
+				// no room below the pointer: open above it instead
+				if (y + rect.height > viewportHeight - margin) y = Math.max(margin, e.clientY - offsetY - rect.height);
+				$callout.css({ "left": Math.round(x - containerRect.left) + "px", "top": Math.round(y - containerRect.top) + "px" });
 			},
 
 			openCallout: function ($container, $target) {
@@ -690,6 +746,44 @@ define(['ash',
 			// so the test misses it and a callout low in the pane gets clipped by
 			// the pane's own overflow. UIOutHeaderSystem already measures that band
 			// for the log pill, so read its value rather than measuring it twice.
+			// places a position:fixed tooltip next to a cursor/tap point, inside the
+			// visual viewport and clear of the pinned header and footer bands.
+			// prefers below-right of the point and flips when that would not fit.
+			positionTooltipAtCursor: function ($tooltip, cursor, gap, margin) {
+				cursor = cursor || { x: 0, y: 0 };
+				gap = gap == null ? 16 : gap;
+				margin = margin == null ? 8 : margin;
+
+				// the visual viewport is what the player can actually see: on a phone
+				// window.innerHeight includes the strip behind the browser toolbar
+				let viewportW = window.visualViewport ? window.visualViewport.width : $(window).width();
+				let viewportH = window.visualViewport ? window.visualViewport.height : $(window).height();
+
+				// the pinned header, tab bar and minimap are chrome, not free space
+				let topEdge = margin + this.getPinnedTopHeight();
+				let bottomEdge = viewportH - margin - this.getPinnedBottomHeight();
+
+				// a pane taller than the band between them scrolls rather than
+				// hanging off the screen
+				$tooltip.css("max-height", Math.max(80, Math.round(bottomEdge - topEdge)) + "px");
+
+				let width = $tooltip.outerWidth();
+				let height = $tooltip.outerHeight();
+
+				let left = cursor.x + gap;
+				if (left + width > viewportW - margin) left = cursor.x - gap - width;
+				if (left < margin) left = margin;
+				// if it still cannot fit, pin it to the left edge rather than let it run off screen
+				if (left + width > viewportW - margin) left = Math.max(margin, viewportW - margin - width);
+
+				let top = cursor.y + gap;
+				if (top + height > bottomEdge) top = cursor.y - gap - height;
+				if (top < topEdge) top = topEdge;
+				if (top + height > bottomEdge) top = Math.max(topEdge, bottomEdge - height);
+
+				$tooltip.css({ left: Math.round(left) + "px", top: Math.round(top) + "px" });
+			},
+
 			getPinnedBottomHeight: function () {
 				let shellBand = parseFloat(getComputedStyle(document.documentElement)
 					.getPropertyValue("--l13-out-bottom-height"));
@@ -804,24 +898,15 @@ define(['ash',
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
-				// R rests wherever the player is: the camp home on the in tab, a nap outside.
-				// One key, two tab-scoped actions; the second entry stays out of the hotkey list
-				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.in, false, false, "use_in_home");
-				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap", { isHiddenFromList: true });
+				// R naps outside. In camp, resting goes through the buildings menu below
+				// with every other building action, so the letter is free there
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap");
 
-				// the camp buildings a player uses every visit. All three letters are taken
-				// outside (Move S, Back to camp) or on the tribe tab (Go to camp), so they are
-				// scoped to tabs.in and the two sets never meet
-				this.registerHotkey("Sit down", "KeyS", defaultModifier, tabs.in, false, false, "use_in_campfire");
-				this.registerHotkey("Treatment", "KeyT", defaultModifier, tabs.in, false, false, "use_in_hospital");
-
-				// ^ is Shift and 6, and it is the shape printed on the improve button.
-				// The plain 6 stays the tab selector: triggerHotkey skips a hotkey with no
-				// modifier whenever one is held, so the two readings of the key never collide.
-				// displayKeyIncludesModifier stops the badge and the list saying "Shift + ^"
-				this.registerHotkey("Improve campfire", "Digit6", "shiftKey", tabs.in, false, false, "improve_in_campfire", { displayKey: "^", displayKeyIncludesModifier: true });
-
-				this.registerHotkey("Buildings", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
+				// B opens the camp's buildings menu: build, improve, and the use actions
+				// (rest, sit down, treatment...) as numbered lists. UIOutCampSystem also
+				// opens it on keydown so the keys typed right after land in the menu; this
+				// keyup binding is the fallback and the hotkey list entry
+				this.registerHotkey("Buildings menu", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
 
 				// G asks for a level number and presses that camp's Go button. KeyG is free
 				// here because the collector binding is scoped to tabs.out; T is an alias.
@@ -1018,6 +1103,8 @@ define(['ash',
 				let result = [];
 				for (let i = 0; i < costKeys.length; i++) {
 					let key = costKeys[i];
+					// a cost scaled down to nothing is not worth a line
+					if (!(costs[key] > 0)) continue;
 					let costFraction = GameGlobals.playerActionsHelper.checkCost(action, key);
 					let costClass = costFraction < 1 ? "action-cost action-cost-blocker" : "action-cost";
 					result.push("<span class='" + costClass + "'>" + UIConstants.getCostDisplayName(key).toLowerCase() + ": " + UIConstants.getDisplayValue(costs[key]) + "</span>");

@@ -221,7 +221,10 @@ function (Ash, Text, ExceptionHandler, GameGlobals, GlobalSignals, UIConstants) 
 
 		updatePause: function () {
 			let hasOpenPopup = this.hasOpenPopup();
-			GameGlobals.gameState.isPaused = hasOpenPopup;
+			// a popup the player acts from and stays in (the camp's buildings menu)
+			// must not stop the clock, or the durations it starts never run down
+			let hasPausingPopup = $(".popup:visible").not(".popup-nopause").length > 0;
+			GameGlobals.gameState.isPaused = hasPausingPopup;
 			
 			$("body").css("overflow", hasOpenPopup ? "hidden" : "initial");
 			$(".hidden-by-popups").attr("aria-hidden", hasOpenPopup);

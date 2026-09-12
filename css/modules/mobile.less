@@ -151,6 +151,15 @@ body.touch .callout-container.callout-visible button.btn-disabled-vision {
 	opacity: 0.65;
 }
 
+// with a mouse, a click means the player knows what the control is: the
+// card stays hidden until the pointer leaves the control (UIFunctions sets
+// and clears the class). Lives here because the themed modules nest every
+// rule under body.dark/.sunlit, where a body-scoped selector never matches.
+body:not(.touch) .callout-container.callout-suppressed > div.btn-callout,
+body:not(.touch) .callout-container.callout-suppressed > div.info-callout {
+	display: none !important;
+}
+
 // on touch, callouts open ONLY through the tap system; emulated sticky
 // :hover would otherwise pin them open with no way to dismiss
 body.touch .callout-container:not(.callout-visible) > div.btn-callout,
@@ -2883,11 +2892,11 @@ body.layout-small #camp-overview td.camp-overview-lvl14 {
 // ---------------------------------------------------------------------------
 // MAP: zoom controls (all pointer types; the only touch zoom path)
 
-#mainmap-container-container {
+#mainmap-container-container, #upgrades-vis-container-container {
 	position: relative;
 }
 
-#mainmap-zoom-controls {
+.canvas-zoom-controls {
 	position: absolute;
 	top: 10px;
 	right: 10px;
@@ -2897,7 +2906,7 @@ body.layout-small #camp-overview td.camp-overview-lvl14 {
 	gap: 6px;
 }
 
-#mainmap-zoom-controls button {
+.canvas-zoom-controls button {
 	margin: 0;
 	width: 40px;
 	min-width: 40px;
@@ -2908,7 +2917,7 @@ body.layout-small #camp-overview td.camp-overview-lvl14 {
 
 // the buttons sit over a pannable canvas; the 3px halos meet exactly in
 // the 6px gap without overlapping
-body.touch #mainmap-zoom-controls button::after {
+body.touch .canvas-zoom-controls button::after {
 	content: "";
 	position: absolute;
 	inset: -3px;
