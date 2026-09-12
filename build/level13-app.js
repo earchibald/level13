@@ -63510,6 +63510,7 @@ define([
 			}
 
 			this.buildingsPopupRows = rows;
+			this.renderBuildingsPopupResources(rows);
 
 			if (rows.length == 0) {
 				let empty = screen == "build" ? "Nothing to build here yet." : screen == "improve" ? "Nothing to improve here yet." : "Nothing to do here yet.";
@@ -63525,6 +63526,36 @@ define([
 				}
 			}
 			this.setBuildingsPopupCursor(cursor);
+		},
+
+		// the camp's stock of every resource the listed rows cost, in the order the
+		// costs first appear, so the player can see what a build would leave without
+		// opening a tooltip. Build and Improve only: actions cost time, not stock
+		renderBuildingsPopupResources: function (rows) {
+			let screen = this.buildingsPopupScreen;
+			let show = (screen == "build" || screen == "improve") && rows.length > 0 && !!this.playerLocationNodes.head;
+			GameGlobals.uiFunctions.toggle("#buildings-popup-resources", show);
+			if (!show) return;
+
+			let sector = this.playerLocationNodes.head.entity;
+			let keys = [];
+			for (let i = 0; i < rows.length; i++) {
+				let costs = GameGlobals.playerActionsHelper.getCosts(rows[i].entry.action);
+				for (let key in costs) {
+					if (!(costs[key] > 0)) continue;
+					if (keys.indexOf(key) < 0) keys.push(key);
+				}
+			}
+
+			let html = "";
+			for (let i = 0; i < keys.length; i++) {
+				let key = keys[i];
+				let owned = GameGlobals.playerActionsHelper.getCostAmountOwned(sector, key);
+				let label = key.indexOf("resource_") == 0 ? UIConstants.getResourceImg(key.split("_")[1]) : UIConstants.getCostDisplayName(key).toLowerCase() + " ";
+				let name = UIConstants.getCostDisplayName(key);
+				html += "<span class='buildings-popup-resource' title='" + name + "'>" + label + "<span class='buildings-popup-resource-amount'>" + UIConstants.getDisplayValue(Math.floor(owned)) + "</span></span>";
+			}
+			$("#buildings-popup-resources").html(html);
 		},
 
 		setBuildingsPopupCursor: function (index) {

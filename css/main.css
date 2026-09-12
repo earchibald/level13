@@ -2998,6 +2998,25 @@ body.dark #buildings-popup-back {
   flex: 0 0 auto;
   order: 2;
 }
+body.dark #buildings-popup-resources {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  margin: 6px 6px 0 6px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  text-align: right;
+}
+body.dark .buildings-popup-resource img {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.1em;
+  margin-right: 3px;
+}
+body.dark .buildings-popup-resource-amount {
+  color: #fdfdfd;
+}
 body.dark #buildings-popup-list {
   max-height: 55vh;
   overflow-y: auto;
@@ -6049,6 +6068,25 @@ body.sunlit #buildings-popup-header-screen {
 body.sunlit #buildings-popup-back {
   flex: 0 0 auto;
   order: 2;
+}
+body.sunlit #buildings-popup-resources {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+  margin: 6px 6px 0 6px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+  text-align: right;
+}
+body.sunlit .buildings-popup-resource img {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.1em;
+  margin-right: 3px;
+}
+body.sunlit .buildings-popup-resource-amount {
+  color: #202220;
 }
 body.sunlit #buildings-popup-list {
   max-height: 55vh;

@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m120",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The Build and Improve lists in the camp's B menu show the camp's stock of every resource the listed buildings cost, above the list, and keep it current while the menu is open"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m119",
             "requiredVersion": "0.6.1",
             "phase": "beta",
