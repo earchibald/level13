@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m126",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The selected map sector is marked with a double ring that leaves the sector art visible, and the ring pulses when a selection chip lands on it"
+                },
+                {
+                    "type": "NEW",
+                    "summary": "Shift-click a map selection chip to flash every sector of that type on the level"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m125",
             "requiredVersion": "0.6.1",
             "phase": "beta",

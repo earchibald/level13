@@ -51868,6 +51868,39 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			});
 		},
 		
+		// the selection ring pulses briefly; the class drops off when the animation ends,
+		// so the next chip press starts a fresh pulse
+		pulseSelectedSector: function () {
+			let $cell = $("#mainmap-overlay .map-overlay-cell.selected");
+			this.animateCells($cell, "map-cell-pulse");
+		},
+
+		// flash every given sector on the main map a few times without moving the selection
+		flashSectors: function (sectors) {
+			let cellsByPos = {};
+			$("#mainmap-overlay .map-overlay-cell").each(function () {
+				cellsByPos[$(this).attr("data-x") + "." + $(this).attr("data-y")] = this;
+			});
+			let cells = [];
+			for (let i = 0; i < sectors.length; i++) {
+				let pos = sectors[i].get(PositionComponent);
+				let cell = cellsByPos[pos.sectorX + "." + pos.sectorY];
+				if (cell) cells.push(cell);
+			}
+			this.animateCells($(cells), "map-cell-flash");
+		},
+
+		animateCells: function ($cells, animationClass) {
+			if ($cells.length == 0) return;
+			// restart the animation when the class is already on from a previous press
+			$cells.removeClass(animationClass);
+			void $cells[0].offsetWidth;
+			$cells.addClass(animationClass);
+			$cells.one("animationend", function () {
+				$(this).removeClass(animationClass);
+			});
+		},
+
 		getASCII: function (mapMode, mapPosition) {
 			let result = "";
 			
@@ -69123,11 +69156,12 @@ define([
 			});
 			$("#btn-mainmap-sector-details-next").click($.proxy(this.selectNextSector, this));
 			$("#btn-mainmap-sector-details-previous").click($.proxy(this.selectPreviousSector, this));
-			$("#btn-mainmap-sector-details-camp").click($.proxy(this.selectCampSector, this));
-			$("#btn-mainmap-sector-details-unknown").click($.proxy(this.selectUnknownSector, this));
-			$("#btn-mainmap-sector-details-unscouted").click($.proxy(this.selectUnscoutedLocaleSector, this));
-			$("#btn-mainmap-sector-details-ingredients").click($.proxy(this.selectIngredientSector, this));
-			$("#btn-mainmap-sector-details-investigate").click($.proxy(this.selectInvestigateSector, this));
+			// selection chips: a click selects the next sector of that type, shift-click flashes all of them
+			$("#btn-mainmap-sector-details-camp").click((e) => this.onSelectionChipClicked(e, this.isCampSector));
+			$("#btn-mainmap-sector-details-unknown").click((e) => this.onSelectionChipClicked(e, this.isUnknownSector));
+			$("#btn-mainmap-sector-details-unscouted").click((e) => this.onSelectionChipClicked(e, this.isUnscoutedLocaleSector));
+			$("#btn-mainmap-sector-details-ingredients").click((e) => this.onSelectionChipClicked(e, this.isIngredientSector));
+			$("#btn-mainmap-sector-details-investigate").click((e) => this.onSelectionChipClicked(e, this.isInvestigateSector));
 			
 			$("#btn-mainmap-sector-path").click($.proxy(this.showSectorPath, this));
 			$("#btn-mainmap-sector-details-close").click($.proxy(this.deselectSector, this));
@@ -69312,9 +69346,10 @@ define([
 			this.centerMap();
 		},
 
-		selectSector: function (level, x, y) {
+		selectSector: function (level, x, y, pulse) {
 			this.selectedSector = GameGlobals.levelHelper.getSectorByPosition(level, x, y);
 			GameGlobals.uiMapHelper.setSelectedSector(this.map, this.selectedSector);
+			if (pulse) GameGlobals.uiMapHelper.pulseSelectedSector();
 			this.updateSector();
 		},
 
@@ -69799,63 +69834,71 @@ define([
 			this.centerMap(pos, true);
 		},
 		
-		selectCampSector: function () {
+		// SELECTION CHIPS
+		// Each chip is a sector filter. A plain click walks to the next sector on the level that
+		// passes the filter and pulses the selection ring there. A shift-click does not move the
+		// selection at all: it flashes every sector that passes the filter, so the player sees the
+		// whole set at once instead of stepping through it.
+
+		isCampSector: function (sector) {
+			return sector.has(CampComponent);
+		},
+
+		isUnknownSector: function (sector) {
+			let sectorStatus = GameGlobals.sectorHelper.getSectorStatus(sector);
+			return sectorStatus == SectorConstants.MAP_SECTOR_STATUS_REVEALED_BY_MAP || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_VISIBLE || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_VISITED_UNSCOUTED;
+		},
+
+		isUnscoutedLocaleSector: function (sector) {
+			return GameGlobals.sectorHelper.getNumVisibleUnscoutedLocales(sector) > 0;
+		},
+
+		isIngredientSector: function (sector) {
+			return GameGlobals.sectorHelper.hasSectorVisibleIngredients(sector, true);
+		},
+
+		isInvestigateSector: function (sector) {
+			return GameGlobals.sectorHelper.canBeInvestigated(sector);
+		},
+
+		onSelectionChipClicked: function (e, filter) {
+			if (e && e.shiftKey) {
+				this.flashSectors(filter);
+			} else {
+				this.selectFilteredSector(filter);
+			}
+		},
+
+		selectFilteredSector: function (filter) {
+			let newSector = this.getNextSelectableSector(1, filter);
+			if (!newSector) return null;
+			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+			let pos = newSector.get(PositionComponent);
+			this.selectSector(pos.level, pos.sectorX, pos.sectorY, true);
+			this.centerMap(pos, true);
+		},
+
+		flashSectors: function (filter) {
+			let sectors = this.getSelectableSectors(filter);
+			if (sectors.length == 0) return;
+			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+			GameGlobals.uiMapHelper.flashSectors(sectors);
+		},
+
+		getSelectableSectors: function (filter) {
 			let level = this.getValidSelectedLevel();
-			let campNode = GameGlobals.campHelper.getCampNodeForLevel(level);
-			if (!campNode) return;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = campNode.position;
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
-		selectUnknownSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
+			let sectors = GameGlobals.levelHelper.getSectorsByLevel(level);
+			let result = [];
+			for (let i = 0; i < sectors.length; i++) {
+				let sector = sectors[i];
 				let sectorStatus = GameGlobals.sectorHelper.getSectorStatus(sector);
-				return sectorStatus == SectorConstants.MAP_SECTOR_STATUS_REVEALED_BY_MAP || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_VISIBLE || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_VISITED_UNSCOUTED;
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
+				if (sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_INVISIBLE) continue;
+				if (filter && !filter(sector)) continue;
+				result.push(sector);
+			}
+			return result;
 		},
-		
-		selectUnscoutedLocaleSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
-				let num = GameGlobals.sectorHelper.getNumVisibleUnscoutedLocales(sector);
-				return num > 0;
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
-		selectIngredientSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
-				return GameGlobals.sectorHelper.hasSectorVisibleIngredients(sector, true);
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
-		selectInvestigateSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
-				let sectorFeatures = sector.get(SectorFeaturesComponent);
-				return GameGlobals.sectorHelper.canBeInvestigated(sector);
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
+
 		getNextSelectableSector: function (offset, filter) {
 			let level = this.getValidSelectedLevel();
 			let sectors = GameGlobals.levelHelper.getSectorsByLevel(level);

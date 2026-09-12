@@ -49,8 +49,37 @@
 }
 
 .map-overlay-cell.selected {
-	background: @color-text-default;
-	outline: 5px solid @color-text-meta;
+	// keep the sector art visible under the marker, so the selection reads as a ring around the sector
+	// rather than a block covering it. The inner ring is background-coloured so the outer ring stays
+	// legible against every map colour. z-index lifts the rings above the neighbouring cells.
+	background: fade(@color-text-default, 20%);
+	box-shadow: 0 0 0 2px @color-bg-box-1, 0 0 0 4px @color-text-highlight;
+	z-index: 1;
+}
+
+// a selection chip landed the cursor on a sector: pulse the ring once so the eye finds it after the map recenters
+.map-overlay-cell.selected.map-cell-pulse {
+	animation: map-cell-pulse 0.5s ease-out 2;
+}
+
+@keyframes map-cell-pulse {
+	0%   { box-shadow: 0 0 0 2px @color-bg-box-1, 0 0 0 4px @color-text-highlight; }
+	50%  { box-shadow: 0 0 0 4px @color-bg-box-1, 0 0 0 8px @color-text-highlight; }
+	100% { box-shadow: 0 0 0 2px @color-bg-box-1, 0 0 0 4px @color-text-highlight; }
+}
+
+// shift-click on a selection chip: every sector of that type flashes a few times
+.map-overlay-cell.map-cell-flash {
+	background: fade(@color-text-highlight, 25%);
+	box-shadow: 0 0 0 1px @color-bg-box-1, 0 0 0 3px @color-text-highlight;
+	z-index: 1;
+	animation: map-cell-flash 0.4s step-end 3;
+}
+
+@keyframes map-cell-flash {
+	0%   { opacity: 1; }
+	50%  { opacity: 0; }
+	100% { opacity: 1; }
 }
 
 // minimap overlay cells are hover targets for tooltips only, not clickable
