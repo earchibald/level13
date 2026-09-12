@@ -48994,11 +48994,66 @@ function (Ash, GameGlobals, GameConstants) {
 		},
 
 		getMetaFileContent: function (slotID) {
-			return JSON.stringify({
+			return this.getMetaFileContentForProgress(slotID, this.getLocalProgress());
+		},
+
+		// the meta file carries how far along the pushed save is, so a device that finds
+		// the cloud moved can say whether the cloud save is ahead of or behind its own
+		// without downloading it first
+		getMetaFileContentForProgress: function (slotID, progress) {
+			let meta = {
 				device: this.getDeviceName(),
 				at: new Date().toISOString(),
 				slot: slotID
-			});
+			};
+			if (progress) {
+				meta.playTime = progress.playTime;
+				meta.level = progress.level;
+				meta.numVisitedSectors = progress.numVisitedSectors;
+			}
+			return JSON.stringify(meta);
+		},
+
+		// PROGRESS COMPARISON
+		// The sync assumes the cloud head always descends from what this device last
+		// pushed. A device that answered "keep this device's" while holding an older
+		// copy breaks that: it pushes the old copy over the newer cloud save, and the
+		// up-to-date device then loads the old copy back at its next idle check, told
+		// that nothing was lost. Play time only grows along one line of play, so an
+		// older copy always has less of it - compare that before overwriting or loading.
+
+		getLocalProgress: function () {
+			return this.getProgressFromGameState(GameGlobals.gameState);
+		},
+
+		getProgressFromGameState: function (gameState) {
+			if (!gameState) return null;
+			if (typeof gameState.playTime !== "number") return null;
+			return {
+				playTime: gameState.playTime,
+				level: gameState.level,
+				numVisitedSectors: gameState.numVisitedSectors
+			};
+		},
+
+		// "ahead" when the cloud save has more play time than this device's, "behind"
+		// when less, "same" when equal, "unknown" when either side has no play time
+		compareProgress: function (cloudProgress, localProgress) {
+			if (!cloudProgress || !localProgress) return "unknown";
+			let cloud = cloudProgress.playTime;
+			let local = localProgress.playTime;
+			if (typeof cloud !== "number" || typeof local !== "number") return "unknown";
+			if (isNaN(cloud) || isNaN(local)) return "unknown";
+			if (cloud > local) return "ahead";
+			if (cloud < local) return "behind";
+			return "same";
+		},
+
+		formatPlayTime: function (seconds) {
+			let total = Math.max(0, Math.floor(seconds || 0));
+			let hours = Math.floor(total / 3600);
+			let minutes = Math.floor((total % 3600) / 60);
+			return hours + "h " + minutes + "m";
 		},
 
 		parseMeta: function (json) {
@@ -51868,6 +51923,39 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			});
 		},
 		
+		// the selection ring pulses briefly; the class drops off when the animation ends,
+		// so the next chip press starts a fresh pulse
+		pulseSelectedSector: function () {
+			let $cell = $("#mainmap-overlay .map-overlay-cell.selected");
+			this.animateCells($cell, "map-cell-pulse");
+		},
+
+		// flash every given sector on the main map a few times without moving the selection
+		flashSectors: function (sectors) {
+			let cellsByPos = {};
+			$("#mainmap-overlay .map-overlay-cell").each(function () {
+				cellsByPos[$(this).attr("data-x") + "." + $(this).attr("data-y")] = this;
+			});
+			let cells = [];
+			for (let i = 0; i < sectors.length; i++) {
+				let pos = sectors[i].get(PositionComponent);
+				let cell = cellsByPos[pos.sectorX + "." + pos.sectorY];
+				if (cell) cells.push(cell);
+			}
+			this.animateCells($(cells), "map-cell-flash");
+		},
+
+		animateCells: function ($cells, animationClass) {
+			if ($cells.length == 0) return;
+			// restart the animation when the class is already on from a previous press
+			$cells.removeClass(animationClass);
+			void $cells[0].offsetWidth;
+			$cells.addClass(animationClass);
+			$cells.one("animationend", function () {
+				$(this).removeClass(animationClass);
+			});
+		},
+
 		getASCII: function (mapMode, mapPosition) {
 			let result = "";
 			
@@ -69123,11 +69211,12 @@ define([
 			});
 			$("#btn-mainmap-sector-details-next").click($.proxy(this.selectNextSector, this));
 			$("#btn-mainmap-sector-details-previous").click($.proxy(this.selectPreviousSector, this));
-			$("#btn-mainmap-sector-details-camp").click($.proxy(this.selectCampSector, this));
-			$("#btn-mainmap-sector-details-unknown").click($.proxy(this.selectUnknownSector, this));
-			$("#btn-mainmap-sector-details-unscouted").click($.proxy(this.selectUnscoutedLocaleSector, this));
-			$("#btn-mainmap-sector-details-ingredients").click($.proxy(this.selectIngredientSector, this));
-			$("#btn-mainmap-sector-details-investigate").click($.proxy(this.selectInvestigateSector, this));
+			// selection chips: a click selects the next sector of that type, shift-click flashes all of them
+			$("#btn-mainmap-sector-details-camp").click((e) => this.onSelectionChipClicked(e, this.isCampSector));
+			$("#btn-mainmap-sector-details-unknown").click((e) => this.onSelectionChipClicked(e, this.isUnknownSector));
+			$("#btn-mainmap-sector-details-unscouted").click((e) => this.onSelectionChipClicked(e, this.isUnscoutedLocaleSector));
+			$("#btn-mainmap-sector-details-ingredients").click((e) => this.onSelectionChipClicked(e, this.isIngredientSector));
+			$("#btn-mainmap-sector-details-investigate").click((e) => this.onSelectionChipClicked(e, this.isInvestigateSector));
 			
 			$("#btn-mainmap-sector-path").click($.proxy(this.showSectorPath, this));
 			$("#btn-mainmap-sector-details-close").click($.proxy(this.deselectSector, this));
@@ -69312,9 +69401,10 @@ define([
 			this.centerMap();
 		},
 
-		selectSector: function (level, x, y) {
+		selectSector: function (level, x, y, pulse) {
 			this.selectedSector = GameGlobals.levelHelper.getSectorByPosition(level, x, y);
 			GameGlobals.uiMapHelper.setSelectedSector(this.map, this.selectedSector);
+			if (pulse) GameGlobals.uiMapHelper.pulseSelectedSector();
 			this.updateSector();
 		},
 
@@ -69799,63 +69889,71 @@ define([
 			this.centerMap(pos, true);
 		},
 		
-		selectCampSector: function () {
+		// SELECTION CHIPS
+		// Each chip is a sector filter. A plain click walks to the next sector on the level that
+		// passes the filter and pulses the selection ring there. A shift-click does not move the
+		// selection at all: it flashes every sector that passes the filter, so the player sees the
+		// whole set at once instead of stepping through it.
+
+		isCampSector: function (sector) {
+			return sector.has(CampComponent);
+		},
+
+		isUnknownSector: function (sector) {
+			let sectorStatus = GameGlobals.sectorHelper.getSectorStatus(sector);
+			return sectorStatus == SectorConstants.MAP_SECTOR_STATUS_REVEALED_BY_MAP || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_VISIBLE || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_VISITED_UNSCOUTED;
+		},
+
+		isUnscoutedLocaleSector: function (sector) {
+			return GameGlobals.sectorHelper.getNumVisibleUnscoutedLocales(sector) > 0;
+		},
+
+		isIngredientSector: function (sector) {
+			return GameGlobals.sectorHelper.hasSectorVisibleIngredients(sector, true);
+		},
+
+		isInvestigateSector: function (sector) {
+			return GameGlobals.sectorHelper.canBeInvestigated(sector);
+		},
+
+		onSelectionChipClicked: function (e, filter) {
+			if (e && e.shiftKey) {
+				this.flashSectors(filter);
+			} else {
+				this.selectFilteredSector(filter);
+			}
+		},
+
+		selectFilteredSector: function (filter) {
+			let newSector = this.getNextSelectableSector(1, filter);
+			if (!newSector) return null;
+			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+			let pos = newSector.get(PositionComponent);
+			this.selectSector(pos.level, pos.sectorX, pos.sectorY, true);
+			this.centerMap(pos, true);
+		},
+
+		flashSectors: function (filter) {
+			let sectors = this.getSelectableSectors(filter);
+			if (sectors.length == 0) return;
+			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+			GameGlobals.uiMapHelper.flashSectors(sectors);
+		},
+
+		getSelectableSectors: function (filter) {
 			let level = this.getValidSelectedLevel();
-			let campNode = GameGlobals.campHelper.getCampNodeForLevel(level);
-			if (!campNode) return;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = campNode.position;
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
-		selectUnknownSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
+			let sectors = GameGlobals.levelHelper.getSectorsByLevel(level);
+			let result = [];
+			for (let i = 0; i < sectors.length; i++) {
+				let sector = sectors[i];
 				let sectorStatus = GameGlobals.sectorHelper.getSectorStatus(sector);
-				return sectorStatus == SectorConstants.MAP_SECTOR_STATUS_REVEALED_BY_MAP || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_VISIBLE || sectorStatus == SectorConstants.MAP_SECTOR_STATUS_VISITED_UNSCOUTED;
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
+				if (sectorStatus == SectorConstants.MAP_SECTOR_STATUS_UNVISITED_INVISIBLE) continue;
+				if (filter && !filter(sector)) continue;
+				result.push(sector);
+			}
+			return result;
 		},
-		
-		selectUnscoutedLocaleSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
-				let num = GameGlobals.sectorHelper.getNumVisibleUnscoutedLocales(sector);
-				return num > 0;
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
-		selectIngredientSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
-				return GameGlobals.sectorHelper.hasSectorVisibleIngredients(sector, true);
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
-		selectInvestigateSector: function () {
-			let newSector = this.getNextSelectableSector(1, (sector) => {
-				let sectorFeatures = sector.get(SectorFeaturesComponent);
-				return GameGlobals.sectorHelper.canBeInvestigated(sector);
-			});
-			if (!newSector) return null;
-			GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
-			let pos = newSector.get(PositionComponent);
-			this.selectSector(pos.level, pos.sectorX, pos.sectorY);
-			this.centerMap(pos, true);
-		},
-		
+
 		getNextSelectableSector: function (offset, filter) {
 			let level = this.getValidSelectedLevel();
 			let sectors = GameGlobals.levelHelper.getSectorsByLevel(level);
@@ -72505,6 +72603,8 @@ define([
 
 		// a push the cloud refused, waiting for a moment when the question can be asked
 		isConflictPromptPending: false,
+		pendingQuestion: null,
+		pendingCloudCardAfterLoad: null,
 		isConflictPromptInFlight: false,
 		conflictPromptRetryAt: null,
 		CONFLICT_PROMPT_RETRY_MS: 30000,
@@ -72536,8 +72636,25 @@ define([
 		},
 
 		update: function (time) {
+			this.updatePendingQuestion();
 			this.updateConflictPrompt();
 			this.updateIdleCloudCheck();
+		},
+
+		// A question raised from inside another popup's button handler is shown while
+		// that popup is still closing, and the tail of that close then hides it too.
+		// Hold it here and raise it from the update loop once the screen is clear.
+		askWhenClear: function (title, msg, okLabel, cancelLabel, callbackOK, callbackNo) {
+			this.pendingQuestion = { title: title, msg: msg, okLabel: okLabel, cancelLabel: cancelLabel, callbackOK: callbackOK, callbackNo: callbackNo };
+		},
+
+		updatePendingQuestion: function () {
+			if (!this.pendingQuestion) return;
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			let q = this.pendingQuestion;
+			this.pendingQuestion = null;
+			GameGlobals.uiFunctions.showQuestionPopup(q.title, q.msg, q.okLabel, q.cancelLabel, q.callbackOK, q.callbackNo, false);
 		},
 
         initElements: function () {
@@ -72774,6 +72891,39 @@ define([
 			return "<span class='p-meta'>saved from " + device + (isThisDevice ? " (this device)" : "") + ", " + whenText + "</span>";
 		},
 
+		// one line per side, so the player can see which save is further along before
+		// choosing which one to keep
+		getProgressComparisonText: function (cloudProgress) {
+			let helper = GameGlobals.gistSaveHelper;
+			let local = helper.getLocalProgress();
+			if (!cloudProgress || !local) return "";
+			let describe = function (p) {
+				let text = helper.formatPlayTime(p.playTime) + " played";
+				if (typeof p.level === "number") text += ", level " + p.level;
+				return text;
+			};
+			let result = "<span class='p-meta'>cloud save: " + describe(cloudProgress) + "<br/>this device: " + describe(local) + "</span>";
+			let comparison = helper.compareProgress(cloudProgress, local);
+			if (comparison == "ahead") result += "<br/><b>The cloud save is further along.</b>";
+			if (comparison == "behind") result += "<br/><b>This device's save is further along.</b>";
+			return result;
+		},
+
+		// the cloud save's own play time, read from the save itself. The meta file
+		// carries it too, but only for saves pushed since the field existed
+		fetchCloudProgress: function (slotID) {
+			let helper = GameGlobals.gistSaveHelper;
+			let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
+			if (!manageSaveSystem) return Promise.resolve(null);
+			return helper.fetchSlotContent(slotID).then(function (result) {
+				if (!result.ok) return null;
+				let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
+				let saveObject = GameGlobals.saveHelper.parseSaveJSON(saveJSON);
+				if (!saveObject) return null;
+				return helper.getProgressFromGameState(saveObject.gameState);
+			}).catch(function () { return null; });
+		},
+
 		// Anything the game does to this device's state on its own gets one of these.
 		// Silent is what made the cloud saves impossible to reason about: the game
 		// would adopt a revision, or load a whole save over the running game, and say
@@ -72782,10 +72932,28 @@ define([
 			GameGlobals.uiFunctions.showInfoPopup("Cloud saves", msg, "OK", null, null, false, true);
 		},
 
-		showCloudArrivalPrompt: function (state) {
+		// cloudProgress is the cloud save's play time and level. When the caller does not
+		// have it yet, it is read first, so the prompt can say which save is further along
+		// and the answer that would overwrite the other side can ask once more.
+		showCloudArrivalPrompt: function (state, cloudProgress) {
+			let sys = this;
 			let helper = GameGlobals.gistSaveHelper;
 			let slotID = GameConstants.SAVE_SLOT_DEFAULT;
 			let cloudRevision = state.revision;
+
+			if (typeof cloudProgress === "undefined") {
+				let metaProgress = helper.getProgressFromGameState(state.meta);
+				if (metaProgress) {
+					this.showCloudArrivalPrompt(state, metaProgress);
+				} else {
+					this.fetchCloudProgress(slotID).then(function (progress) {
+						sys.showCloudArrivalPrompt(state, progress);
+					});
+				}
+				return;
+			}
+
+			let comparison = helper.compareProgress(cloudProgress, helper.getLocalProgress());
 
 			let neverSynced = !helper.getLastSeenRevision();
 			let device = state.meta && state.meta.device;
@@ -72795,31 +72963,57 @@ define([
 					? "A save from " + device + " is in the cloud.<br/><br/>"
 					: "A save from another device is in the cloud.<br/><br/>");
 			msg += this.getCloudSaveDescription(state) + "<br/><br/>";
+			let comparisonText = this.getProgressComparisonText(cloudProgress);
+			if (comparisonText) msg += comparisonText + "<br/><br/>";
 			msg += "Load it, or keep the save on this device and carry on from here?";
 
+			let loadCloud = function () {
+				helper.loadSlot(slotID).then(function (result) {
+					if (!result.ok) {
+						GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "Could not load: " + result.error, "OK", null, null, false, true);
+						return;
+					}
+					// same path as import and the Load button - see the note in
+					// UIOutManageSaveSystem.cloudLoadSelectedSlot
+					let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
+					if (!manageSaveSystem) return;
+					let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
+					if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
+						GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "That cloud save could not be read.", "OK", null, null, false, true);
+						return;
+					}
+					helper.resolveConflict(cloudRevision);
+					manageSaveSystem.loadState(saveJSON);
+				});
+			};
+
+			// accept the cloud as seen without pulling, so this device may push again
+			let keepLocal = function () {
+				helper.resolveConflict(cloudRevision);
+			};
+
+			// Either answer can destroy progress on the other side, so the answer that
+			// would throw away the save that is further along asks once more. Declining
+			// leaves the conflict in place: this device neither loads nor pushes until
+			// the player decides, and nothing is lost in the meantime.
 			GameGlobals.uiFunctions.showQuestionPopup("Cloud saves", msg, "Load the cloud save", "Keep this device's",
 				function () {
-					helper.loadSlot(slotID).then(function (result) {
-						if (!result.ok) {
-							GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "Could not load: " + result.error, "OK", null, null, false, true);
-							return;
-						}
-						// same path as import and the Load button - see the note in
-						// UIOutManageSaveSystem.cloudLoadSelectedSlot
-						let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
-						if (!manageSaveSystem) return;
-						let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
-						if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
-							GameGlobals.uiFunctions.showInfoPopup("Cloud saves", "That cloud save could not be read.", "OK", null, null, false, true);
-							return;
-						}
-						helper.resolveConflict(cloudRevision);
-						manageSaveSystem.loadState(saveJSON);
-					});
+					if (comparison == "behind") {
+						sys.askWhenClear("Cloud saves",
+							"The cloud save is behind this device's save. Loading it replaces this device's progress with the older save.<br/><br/>Load the older save anyway?",
+							"Load the older save", "Cancel", loadCloud, null);
+						return;
+					}
+					loadCloud();
 				},
 				function () {
-					// accept the cloud as seen without pulling, so this device may push again
-					helper.resolveConflict(cloudRevision);
+					if (comparison == "ahead") {
+						sys.askWhenClear("Cloud saves",
+							"The cloud save is further along than this device's save. Keeping this device's save overwrites the cloud save at the next autosave, and every other device then loads this older save.<br/><br/>Overwrite the cloud save anyway?",
+							"Overwrite the cloud save", "Cancel", keepLocal, null);
+						return;
+					}
+					keepLocal();
 				},
 				false);
 		},
@@ -72933,8 +73127,19 @@ define([
 
         onGameShown: function () {
             this.loadMetaMessages();
+			this.showCloudCardAfterLoad();
 			this.checkCloudSaveOnArrival();
         },
+
+		// loadState hides the game while it rebuilds the world, and a popup raised while
+		// the game is hidden is dropped, not queued - so the card announcing a silent
+		// cloud load never appeared. Hold it and raise it once the game is back.
+		showCloudCardAfterLoad: function () {
+			if (!this.pendingCloudCardAfterLoad) return;
+			let msg = this.pendingCloudCardAfterLoad;
+			this.pendingCloudCardAfterLoad = null;
+			this.showCloudCard(msg);
+		},
 
 		// once per game start: if the cloud moved since this device last synced, another
 		// device has been played. Loads nothing on its own - the most it does by itself
@@ -73079,35 +73284,55 @@ define([
 			}
 
 			// otherwise this device's state is already in the cloud, so the newer save
-			// descends from it and loading loses nothing worth keeping
+			// should descend from it. "Should": a device that kept an older copy over the
+			// cloud breaks that, and the cloud then holds LESS play than this device.
+			// Loading that in silence is how a fully explored level came back as
+			// unexplored. So read the save without moving the marker, compare, and ask
+			// when the cloud is behind - until the player answers, this device neither
+			// loads nor pushes.
 			let manageSaveSystem = GameGlobals.uiFunctions.getManageSaveSystemForCloud();
 			if (!manageSaveSystem) return;
-			helper.loadSlot(GameConstants.SAVE_SLOT_DEFAULT).then(function (result) {
+			helper.fetchSlotContent(GameConstants.SAVE_SLOT_DEFAULT).then(function (result) {
 				if (!result.ok) return;
 				let saveJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(result.data);
-				if (!GameGlobals.saveHelper.parseSaveJSON(saveJSON)) {
-					// loadSlot has already moved the marker, because reading succeeded - it
-					// is the CONTENT that is unusable. Saying nothing would leave the device
-					// believing it is in sync with a save it cannot read, and the player with
-					// no idea why the cloud had gone quiet.
+				let saveObject = GameGlobals.saveHelper.parseSaveJSON(saveJSON);
+				if (!saveObject) {
+					// reading succeeded but the CONTENT is unusable. Say so, or the player
+					// has no idea why the cloud has gone quiet. The marker stays put, so
+					// the next check asks the same question rather than believing this
+					// device is in sync with a save it cannot read.
 					sys.showCloudCard("A newer save was found in the cloud, but it could not be read, so nothing was loaded."
 						+ "<br/><br/>" + sys.getCloudSaveDescription(state));
 					return;
 				}
-				// the REVISION, never the timestamp: this value becomes the marker every
-				// later check compares against, and a timestamp there can never match a SHA,
-				// so the next push would report a conflict that does not exist
-				helper.resolveConflict(cloudRevision);
-				manageSaveSystem.loadState(saveJSON);
-				// This replaces the whole running game with another device's save. It is
-				// safe - the state it overwrote is already in the cloud - but it is the
-				// largest thing the game does without being asked, and it did it in
-				// silence. Coming back to a session that has quietly become a different
-				// one, with no way to tell what happened, is how the cloud saves came to
-				// feel untrustworthy.
-				sys.showCloudCard("A newer save was found in the cloud and has been loaded."
-					+ "<br/><br/>" + sys.getCloudSaveDescription(state)
-					+ "<br/><br/><span class='p-meta'>This device's own progress was already in the cloud, so nothing was lost.</span>");
+				let cloudProgress = helper.getProgressFromGameState(saveObject.gameState);
+				if (helper.compareProgress(cloudProgress, helper.getLocalProgress()) == "behind") {
+					helper.hasConflict = true;
+					sys.showCloudArrivalPrompt(state, cloudProgress);
+					return;
+				}
+				// loadSlot moves the marker to this revision. The REVISION, never the
+				// timestamp: this value becomes the marker every later check compares
+				// against, and a timestamp there can never match a SHA, so the next push
+				// would report a conflict that does not exist
+				helper.loadSlot(GameConstants.SAVE_SLOT_DEFAULT).then(function (loaded) {
+					if (!loaded.ok) return;
+					let loadedJSON = manageSaveSystem.getSaveSystem().getSaveJSONfromCompressed(loaded.data);
+					if (!GameGlobals.saveHelper.parseSaveJSON(loadedJSON)) return;
+					helper.resolveConflict(cloudRevision);
+					// This replaces the whole running game with another device's save. It is
+					// safe - the state it overwrote is already in the cloud - but it is the
+					// largest thing the game does without being asked, and it did it in
+					// silence. Coming back to a session that has quietly become a different
+					// one, with no way to tell what happened, is how the cloud saves came to
+					// feel untrustworthy. The comparison is built BEFORE the load, while
+					// "this device" still means the save being replaced.
+					sys.pendingCloudCardAfterLoad = "A newer save was found in the cloud and has been loaded."
+						+ "<br/><br/>" + sys.getCloudSaveDescription(state)
+						+ "<br/><br/>" + sys.getProgressComparisonText(cloudProgress)
+						+ "<br/><br/><span class='p-meta'>This device's own progress was already in the cloud, so nothing was lost.</span>";
+					manageSaveSystem.loadState(loadedJSON);
+				});
 			});
 		},
 

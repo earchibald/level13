@@ -170,6 +170,39 @@ function (Ash, CanvasUtils, MapElements, MapUtils, MathUtils,
 			});
 		},
 		
+		// the selection ring pulses briefly; the class drops off when the animation ends,
+		// so the next chip press starts a fresh pulse
+		pulseSelectedSector: function () {
+			let $cell = $("#mainmap-overlay .map-overlay-cell.selected");
+			this.animateCells($cell, "map-cell-pulse");
+		},
+
+		// flash every given sector on the main map a few times without moving the selection
+		flashSectors: function (sectors) {
+			let cellsByPos = {};
+			$("#mainmap-overlay .map-overlay-cell").each(function () {
+				cellsByPos[$(this).attr("data-x") + "." + $(this).attr("data-y")] = this;
+			});
+			let cells = [];
+			for (let i = 0; i < sectors.length; i++) {
+				let pos = sectors[i].get(PositionComponent);
+				let cell = cellsByPos[pos.sectorX + "." + pos.sectorY];
+				if (cell) cells.push(cell);
+			}
+			this.animateCells($(cells), "map-cell-flash");
+		},
+
+		animateCells: function ($cells, animationClass) {
+			if ($cells.length == 0) return;
+			// restart the animation when the class is already on from a previous press
+			$cells.removeClass(animationClass);
+			void $cells[0].offsetWidth;
+			$cells.addClass(animationClass);
+			$cells.one("animationend", function () {
+				$(this).removeClass(animationClass);
+			});
+		},
+
 		getASCII: function (mapMode, mapPosition) {
 			let result = "";
 			

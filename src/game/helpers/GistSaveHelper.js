@@ -312,11 +312,66 @@ function (Ash, GameGlobals, GameConstants) {
 		},
 
 		getMetaFileContent: function (slotID) {
-			return JSON.stringify({
+			return this.getMetaFileContentForProgress(slotID, this.getLocalProgress());
+		},
+
+		// the meta file carries how far along the pushed save is, so a device that finds
+		// the cloud moved can say whether the cloud save is ahead of or behind its own
+		// without downloading it first
+		getMetaFileContentForProgress: function (slotID, progress) {
+			let meta = {
 				device: this.getDeviceName(),
 				at: new Date().toISOString(),
 				slot: slotID
-			});
+			};
+			if (progress) {
+				meta.playTime = progress.playTime;
+				meta.level = progress.level;
+				meta.numVisitedSectors = progress.numVisitedSectors;
+			}
+			return JSON.stringify(meta);
+		},
+
+		// PROGRESS COMPARISON
+		// The sync assumes the cloud head always descends from what this device last
+		// pushed. A device that answered "keep this device's" while holding an older
+		// copy breaks that: it pushes the old copy over the newer cloud save, and the
+		// up-to-date device then loads the old copy back at its next idle check, told
+		// that nothing was lost. Play time only grows along one line of play, so an
+		// older copy always has less of it - compare that before overwriting or loading.
+
+		getLocalProgress: function () {
+			return this.getProgressFromGameState(GameGlobals.gameState);
+		},
+
+		getProgressFromGameState: function (gameState) {
+			if (!gameState) return null;
+			if (typeof gameState.playTime !== "number") return null;
+			return {
+				playTime: gameState.playTime,
+				level: gameState.level,
+				numVisitedSectors: gameState.numVisitedSectors
+			};
+		},
+
+		// "ahead" when the cloud save has more play time than this device's, "behind"
+		// when less, "same" when equal, "unknown" when either side has no play time
+		compareProgress: function (cloudProgress, localProgress) {
+			if (!cloudProgress || !localProgress) return "unknown";
+			let cloud = cloudProgress.playTime;
+			let local = localProgress.playTime;
+			if (typeof cloud !== "number" || typeof local !== "number") return "unknown";
+			if (isNaN(cloud) || isNaN(local)) return "unknown";
+			if (cloud > local) return "ahead";
+			if (cloud < local) return "behind";
+			return "same";
+		},
+
+		formatPlayTime: function (seconds) {
+			let total = Math.max(0, Math.floor(seconds || 0));
+			let hours = Math.floor(total / 3600);
+			let minutes = Math.floor((total % 3600) / 60);
+			return hours + "h " + minutes + "m";
 		},
 
 		parseMeta: function (json) {
