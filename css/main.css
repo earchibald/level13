@@ -3031,6 +3031,21 @@ body.dark #buildings-popup-back {
   flex: 0 0 auto;
   order: 2;
 }
+body.dark #buildings-popup-header-hint {
+  flex: 0 0 auto;
+  order: 1;
+  padding: 1px 8px;
+  border: 1px solid #555;
+  color: #bbb;
+  font-size: 0.85rem;
+  font-weight: normal;
+  cursor: help;
+  white-space: nowrap;
+}
+body.dark #buildings-popup-header-hint:hover {
+  border-color: #7b7b7b;
+  color: #fdfdfd;
+}
 body.dark #buildings-popup-resources {
   display: flex;
   flex-wrap: wrap;
@@ -6134,6 +6149,21 @@ body.sunlit #buildings-popup-header-screen {
 body.sunlit #buildings-popup-back {
   flex: 0 0 auto;
   order: 2;
+}
+body.sunlit #buildings-popup-header-hint {
+  flex: 0 0 auto;
+  order: 1;
+  padding: 1px 8px;
+  border: 1px solid #999;
+  color: #777;
+  font-size: 0.85rem;
+  font-weight: normal;
+  cursor: help;
+  white-space: nowrap;
+}
+body.sunlit #buildings-popup-header-hint:hover {
+  border-color: #bfbfbf;
+  color: #202220;
 }
 body.sunlit #buildings-popup-resources {
   display: flex;

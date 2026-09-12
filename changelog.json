@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m123",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "The camp's B menu: Build rows show how many of each building the camp has, Improve rows show the level, its maximum, and (max) when nothing more can be done"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "Actions in the camp's B menu that are cooling down say how long is left, in the row and in the tooltip, instead of looking unaffordable"
+                },
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "A help badge next to the Buildings title reminds you that every row has a tooltip; hover or tap it for the key list"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m122",
             "requiredVersion": "0.6.1",
             "phase": "beta",

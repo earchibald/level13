@@ -982,6 +982,24 @@ div.grid-content {
 	order: 2;
 }
 
+// the standing reminder that every row explains itself
+#buildings-popup-header-hint {
+	flex: 0 0 auto;
+	order: 1;
+	padding: 1px 8px;
+	border: 1px solid @color-border-strong;
+	color: @color-text-secondary;
+	font-size: @font-size-small;
+	font-weight: normal;
+	cursor: help;
+	white-space: nowrap;
+}
+
+#buildings-popup-header-hint:hover {
+	border-color: lighten(@color-border-strong, 15%);
+	color: @color-text-default;
+}
+
 // the camp's stock of the resources the list costs
 #buildings-popup-resources {
 	display: flex;
