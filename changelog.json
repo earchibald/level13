@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m124",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "IMPROVEMENT",
+                    "summary": "R rests in camp again (the camp home's Rest action), alongside the Rest row in the B menu's Action list"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m123",
             "requiredVersion": "0.6.1",
             "phase": "beta",

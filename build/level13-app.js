@@ -32646,9 +32646,12 @@ define(['ash',
 				// asks for confirmation when available; shows the requirements when not
 				this.registerHotkey("Back to camp", "KeyB", defaultModifier, tabs.out, false, false, () => GameGlobals.uiFunctions.triggerBackToCamp());
 
-				// R naps outside. In camp, resting goes through the buildings menu below
-				// with every other building action, so the letter is free there
-				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap");
+				// R rests wherever the player is: the camp home on the in tab, a nap outside.
+				// One key, two tab-scoped actions; the second entry stays out of the hotkey list.
+				// Rest is also a row in the buildings menu below, but it is used often enough
+				// to keep its own key
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.in, false, false, "use_in_home");
+				this.registerHotkey("Rest", "KeyR", defaultModifier, tabs.out, false, false, "nap", { isHiddenFromList: true });
 
 				// B opens the camp's buildings menu: build, improve, and the use actions
 				// (rest, sit down, treatment...) as numbered lists. UIOutCampSystem also
