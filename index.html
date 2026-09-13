@@ -904,7 +904,7 @@
 
 	<div id="map-sector-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 	<div id="upgrade-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
-	<div id="buildings-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
+	<div id="chooser-tooltip" role="tooltip" aria-hidden="true" style="display: none;"></div>
 
 	<!-- transient notification card: save and cloud confirmations, top of screen, auto-fades.
 	     Shown/hidden with a class, never inline display, so nothing can fight the CSS. -->
@@ -1120,13 +1120,19 @@
 			</div>
 		</div>
 
-		<div id="craft-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display: none" aria-labelledby="craft-popup-header" aria-modal="true">
-			<h3 id="craft-popup-header" class="text-key" data-text-key="ui.inventory.craft_item_header"></h3>
-			<span class="settings-entry" id="craft-popup-obsolete-container">
-				<input type="checkbox" class="checkbox" id="craft-popup-show-obsolete" /><p class="checkbox-label" id="craft-popup-show-obsolete-label">Show obsolete</p>
+		<div id="craft-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame popup-nopause" style="display: none" aria-labelledby="craft-popup-header" aria-modal="true">
+			<div id="craft-popup-header-row">
+				<button id="craft-popup-back" class="btn-meta" style="display: none" title="Back (esc)">&lsaquo; Back</button>
+				<h3 id="craft-popup-header"><span class="text-key" data-text-key="ui.inventory.craft_item_header">Craft</span><span id="craft-popup-header-screen"></span></h3>
+				<span id="craft-popup-header-hint" class="chooser-popup-info" role="button" aria-label="How this menu works">&#9432; <span id="craft-popup-header-hint-text">hover for details</span></span>
+			</div>
+			<span class="settings-entry" id="craft-popup-toggle-container" style="display: none">
+				<input type="checkbox" class="checkbox" id="craft-popup-show-unavailable" /><p class="checkbox-label" id="craft-popup-show-unavailable-label">Show obsolete</p>
 			</span>
+			<div id="craft-popup-resources" style="display: none"></div>
 			<div id="craft-popup-list" class="scrollable-container"></div>
-			<p class="p-meta hide-in-small-layout">arrows: navigate and fold &middot; enter: craft &middot; esc: close</p>
+			<p id="craft-popup-hint-menu" class="p-meta hide-in-small-layout">number: open &middot; arrows + enter: open &middot; esc: close</p>
+			<p id="craft-popup-hint-list" class="p-meta hide-in-small-layout" style="display: none">number or enter: <span id="craft-popup-hint-verb">craft</span> &middot; arrows, pgup/pgdn, home/end: move &middot; space: show obsolete &middot; esc: back &middot; &#8679;esc: close</p>
 			<div class="buttonbox">
 				<button id="craft-popup-close" class="button-popup-default">Close</button>
 			</div>
@@ -1136,7 +1142,7 @@
 			<div id="buildings-popup-header-row">
 				<button id="buildings-popup-back" class="btn-meta" style="display: none" title="Back (esc)">&lsaquo; Back</button>
 				<h3 id="buildings-popup-header">Buildings<span id="buildings-popup-header-screen"></span></h3>
-				<span id="buildings-popup-header-hint" class="buildings-popup-info" role="button" aria-label="How this menu works">&#9432; <span id="buildings-popup-header-hint-text">hover for details</span></span>
+				<span id="buildings-popup-header-hint" class="chooser-popup-info" role="button" aria-label="How this menu works">&#9432; <span id="buildings-popup-header-hint-text">hover for details</span></span>
 			</div>
 			<span class="settings-entry" id="buildings-popup-toggle-container" style="display: none">
 				<input type="checkbox" class="checkbox" id="buildings-popup-show-unavailable" /><p class="checkbox-label" id="buildings-popup-show-unavailable-label">Show unavailable</p>

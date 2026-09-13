@@ -896,94 +896,44 @@ div.grid-content {
 
 // CRAFT POPUP (hotkey K)
 
-#craft-popup-list {
-	min-width: 280px;
-	max-height: 55vh;
-	overflow-y: auto;
-	text-align: left;
-	margin: 10px 0;
-}
-
-.craft-popup-row {
-	padding: 2px 6px;
-	cursor: pointer;
-	border: 1px solid transparent;
-}
-
-.craft-popup-row.selected {
-	border-color: @color-border-strong;
-	background: @color-bg-box-1;
-}
-
-.craft-popup-header {
-	font-weight: bold;
-	margin-top: 4px;
-}
-
-.craft-popup-header .header-count {
-	color: @color-text-meta;
-	font-weight: normal;
-}
-
-.craft-popup-item-costs {
-	margin-left: 8px;
-	color: @color-text-meta;
-	font-size: @font-size-small;
-}
-
-.craft-popup-item-unavailable .craft-popup-item-name {
-	color: @color-text-meta;
-}
-
-// the show obsolete toggle is part of the keyboard navigation (cursor -1)
-#craft-popup-obsolete-container {
-	padding: 2px 6px;
-	border: 1px solid transparent;
-}
-
-#craft-popup-obsolete-container.selected {
-	border-color: @color-border-strong;
-	background: @color-bg-box-1;
-}
-
-// BUILDINGS POPUP (hotkey B in camp)
+// CHOOSER POPUPS: BUILDINGS (hotkey B in camp) and CRAFT (hotkey K)
 //
-// a two-level menu: the chooser (Build / Improve / Action) and one numbered list
-// per choice. Every row is key badge, name, right-aligned costs or reason
+// a two-level menu: the chooser (Build / Improve / Action; item types) and one
+// numbered list per choice. Every row is key badge, name, right-aligned costs or reason
 
 // a fixed width on the regular layout, so the popup does not jump when a list
 // grows or the toggle adds wider rows. & is body.dark / body.sunlit; the phone
 // goes full-bleed through .fill-on-mobiles
-&:not(.layout-small) #buildings-popup {
+&:not(.layout-small) #buildings-popup, &:not(.layout-small) #craft-popup {
 	width: 480px;
 	min-width: 0;
 	max-width: 90%;
 	box-sizing: border-box;
 }
 
-#buildings-popup-header-row {
+#buildings-popup-header-row, #craft-popup-header-row {
 	display: flex;
 	align-items: baseline;
 	gap: 8px;
 }
 
-#buildings-popup-header-row h3 {
+#buildings-popup-header-row h3, #craft-popup-header-row h3 {
 	margin: 0;
 	flex: 1 1 auto;
 }
 
-#buildings-popup-header-screen {
+#buildings-popup-header-screen, #craft-popup-header-screen {
 	color: @color-text-meta;
 	font-weight: normal;
 }
 
-#buildings-popup-back {
+#buildings-popup-back, #craft-popup-back {
 	flex: 0 0 auto;
 	order: 2;
 }
 
 // the standing reminder that every row explains itself
-#buildings-popup-header-hint {
+#buildings-popup-header-hint, #craft-popup-header-hint {
 	flex: 0 0 auto;
 	order: 1;
 	padding: 1px 8px;
@@ -995,7 +945,7 @@ div.grid-content {
 	white-space: nowrap;
 }
 
-#buildings-popup-header-hint:hover {
+#buildings-popup-header-hint:hover, #craft-popup-header-hint:hover {
 	border-color: lighten(@color-border-strong, 15%);
 	color: @color-text-default;
 }
@@ -1042,7 +992,7 @@ body.touch #mainmap-sector-details-chips-hint {
 }
 
 // the camp's stock of the resources the list costs
-#buildings-popup-resources {
+#buildings-popup-resources, #craft-popup-resources {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: flex-end;
@@ -1053,25 +1003,25 @@ body.touch #mainmap-sector-details-chips-hint {
 	text-align: right;
 }
 
-.buildings-popup-resource img {
+.chooser-popup-resource img {
 	width: 1em;
 	height: 1em;
 	vertical-align: -0.1em;
 	margin-right: 3px;
 }
 
-.buildings-popup-resource-amount {
+.chooser-popup-resource-amount {
 	color: @color-text-default;
 }
 
-#buildings-popup-list {
+#buildings-popup-list, #craft-popup-list {
 	max-height: 55vh;
 	overflow-y: auto;
 	text-align: left;
 	margin: 8px 0;
 }
 
-.buildings-popup-row {
+.chooser-popup-row {
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -1081,26 +1031,26 @@ body.touch #mainmap-sector-details-chips-hint {
 	border-radius: 2px;
 }
 
-.buildings-popup-row:hover {
+.chooser-popup-row:hover {
 	background: fade(@color-text-default, 6%);
 }
 
-.buildings-popup-row.selected {
+.chooser-popup-row.selected {
 	border-color: @color-border-strong;
 	background: @color-bg-box-1;
 }
 
-.buildings-popup-menu-row {
+.chooser-popup-menu-row {
 	padding: 6px 6px;
 	margin-bottom: 2px;
 }
 
-.buildings-popup-menu-row .buildings-popup-item-name {
+.chooser-popup-menu-row .chooser-popup-item-name {
 	font-weight: bold;
 }
 
 // the key badge is the same shape as a button's hotkey badge
-.buildings-popup-key {
+.chooser-popup-key {
 	flex: 0 0 auto;
 	display: inline-block;
 	min-width: 1.4em;
@@ -1116,13 +1066,13 @@ body.touch #mainmap-sector-details-chips-hint {
 	opacity: 0.85;
 }
 
-.buildings-popup-row.selected .buildings-popup-key {
+.chooser-popup-row.selected .chooser-popup-key {
 	color: @color-text-default;
 	border-color: @color-border-strong;
 	opacity: 1;
 }
 
-.buildings-popup-item-name {
+.chooser-popup-item-name {
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
@@ -1130,13 +1080,13 @@ body.touch #mainmap-sector-details-chips-hint {
 	white-space: nowrap;
 }
 
-.buildings-popup-item-sub {
+.chooser-popup-item-sub {
 	margin-left: 6px;
 	color: @color-text-meta;
 	font-size: @font-size-small;
 }
 
-.buildings-popup-item-costs {
+.chooser-popup-item-costs {
 	flex: 0 1 auto;
 	text-align: right;
 	color: @color-text-meta;
@@ -1144,15 +1094,15 @@ body.touch #mainmap-sector-details-chips-hint {
 	white-space: nowrap;
 }
 
-.buildings-popup-item-reason {
+.chooser-popup-item-reason {
 	font-style: italic;
 }
 
-.buildings-popup-item-unavailable .buildings-popup-item-name {
+.chooser-popup-item-unavailable .chooser-popup-item-name {
 	color: @color-text-meta;
 }
 
-.buildings-popup-item-hidden .buildings-popup-item-name {
+.chooser-popup-item-hidden .chooser-popup-item-name {
 	color: @color-text-meta;
 	font-style: italic;
 }
@@ -1160,7 +1110,7 @@ body.touch #mainmap-sector-details-chips-hint {
 // touch has no hover: the glyph opens the row's tooltip, the rest of the row acts.
 // UIOutCampSystem only renders the glyph on touch screens (a body.touch rule here
 // would compile under the theme wrapper as body.dark body.touch and never match)
-.buildings-popup-info {
+.chooser-popup-info {
 	display: inline-block;
 	flex: 0 0 auto;
 	padding: 0 4px;
@@ -1168,26 +1118,26 @@ body.touch #mainmap-sector-details-chips-hint {
 	font-size: @font-size-default;
 }
 
-.buildings-popup-empty {
+.chooser-popup-empty {
 	padding: 6px;
 }
 
 // the show unavailable toggle is part of the keyboard navigation (cursor -1)
-#buildings-popup-toggle-container {
+#buildings-popup-toggle-container, #craft-popup-toggle-container {
 	display: block;
 	padding: 2px 6px;
 	border: 1px solid transparent;
 }
 
-#buildings-popup-toggle-container.selected {
+#buildings-popup-toggle-container.selected, #craft-popup-toggle-container.selected {
 	border-color: @color-border-strong;
 	background: @color-bg-box-1;
 }
 
 // brief highlight when pressing a row that cannot act right now
-.buildings-popup-row.buildings-popup-flash .buildings-popup-item-name,
-.buildings-popup-row.buildings-popup-flash .buildings-popup-item-reason,
-.buildings-popup-row.buildings-popup-flash span.action-cost-blocker {
+.chooser-popup-row.chooser-popup-flash .chooser-popup-item-name,
+.chooser-popup-row.chooser-popup-flash .chooser-popup-item-reason,
+.chooser-popup-row.chooser-popup-flash span.action-cost-blocker {
 	color: @color-global-warning;
 	font-weight: bold;
 }
@@ -1205,13 +1155,6 @@ body.touch #mainmap-sector-details-chips-hint {
 	min-height: 1.2em;
 	letter-spacing: 0.15em;
 	margin: 10px 0;
-}
-
-// brief highlight when trying to craft without sufficient materials
-.craft-popup-row.craft-popup-flash .craft-popup-item-name,
-.craft-popup-row.craft-popup-flash span.action-cost-blocker {
-	color: @color-global-warning;
-	font-weight: bold;
 }
 
 // CLOUD SAVES (settings section and setup dialog)
