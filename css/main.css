@@ -3060,6 +3060,21 @@ body.dark #in-improvements-menu-hint {
   white-space: nowrap;
   cursor: pointer;
 }
+body.dark #mainmap-sector-details-chips-hint {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #555;
+  border-radius: 0.25em;
+  color: #bbb;
+  font-size: 0.85rem;
+  line-height: 1.4em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+body.dark body.touch #mainmap-sector-details-chips-hint {
+  display: none;
+}
 body.dark #in-improvements-menu-hint:hover {
   border-color: #7b7b7b;
   color: #fdfdfd;
@@ -6228,6 +6243,21 @@ body.sunlit #in-improvements-menu-hint {
   vertical-align: 2px;
   white-space: nowrap;
   cursor: pointer;
+}
+body.sunlit #mainmap-sector-details-chips-hint {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid #999;
+  border-radius: 0.25em;
+  color: #777;
+  font-size: 0.85rem;
+  line-height: 1.4em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+body.sunlit body.touch #mainmap-sector-details-chips-hint {
+  display: none;
 }
 body.sunlit #in-improvements-menu-hint:hover {
   border-color: #bfbfbf;

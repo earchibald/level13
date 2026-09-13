@@ -1,6 +1,19 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m128",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The map's selection chips end with a 'shift-click to show all' badge"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m127",
             "requiredVersion": "0.6.1",
             "phase": "beta",

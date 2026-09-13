@@ -1017,6 +1017,25 @@ div.grid-content {
 	cursor: pointer;
 }
 
+// the map's selection chips end with a badge naming the shift-click; there is no
+// shift key on touch, so the badge stays off there
+#mainmap-sector-details-chips-hint {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 0 6px;
+	border: 1px solid @color-border-strong;
+	border-radius: 0.25em;
+	color: @color-text-secondary;
+	font-size: @font-size-small;
+	line-height: 1.4em;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+body.touch #mainmap-sector-details-chips-hint {
+	display: none;
+}
+
 #in-improvements-menu-hint:hover {
 	border-color: lighten(@color-border-strong, 15%);
 	color: @color-text-default;
