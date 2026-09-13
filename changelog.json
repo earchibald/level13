@@ -1,6 +1,23 @@
 {
     "versions": [
         {
+            "version": "0.6.3.m129",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "The K craft menu is a two-level chooser like the Buildings menu: a number picks an item type, a number crafts a recipe, and the list stays open with the crafting time shown"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "A recipe crafted from the K menu no longer stays greyed out until the menu is reopened"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m128",
             "requiredVersion": "0.6.1",
             "phase": "beta",
