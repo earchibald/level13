@@ -19,6 +19,7 @@
 	'game/constants/DialogueConstants',
 	'game/constants/TextConstants',
 	'game/constants/TribeConstants',
+	'game/helpers/ui/UIChooserPopup',
 	'game/nodes/level/PlayerLevelNode',
 	'game/nodes/PlayerPositionNode',
 	'game/nodes/PlayerLocationNode',
@@ -38,7 +39,7 @@
 ], function (
 	Ash, Text, MathUtils, UIState, UIList, UIAnimations, GameGlobals, GlobalSignals,
 	CharacterVO,
-	CharacterConstants, GameConstants, ImprovementConstants, PlayerActionConstants, UIConstants, UpgradeConstants, OccurrenceConstants, CampConstants, DialogueConstants, TextConstants, TribeConstants,
+	CharacterConstants, GameConstants, ImprovementConstants, PlayerActionConstants, UIConstants, UpgradeConstants, OccurrenceConstants, CampConstants, DialogueConstants, TextConstants, TribeConstants, UIChooserPopup,
 	PlayerLevelNode, PlayerPositionNode, PlayerLocationNode, TribeUpgradesNode,
 	PerksComponent, PlayerActionComponent,
 	CampComponent, ResourcesComponent, ResourceAccumulationComponent, OutgoingCaravansComponent, ReputationComponent, SectorImprovementsComponent, CampEventTimersComponent, RefugeesComponent, VisitorComponent,
@@ -141,9 +142,7 @@
 			this.playerLevelNodes = null;
 			this.tribeUpgradesNodes = null;
 
-			$(document).off("keydown.buildingsopen");
-			$(document).off("keydown.buildingspopup");
-			if (this._onBuildingsKeyUpCapture) document.removeEventListener("keyup", this._onBuildingsKeyUpCapture, true);
+			if (this.buildingsPopup) this.buildingsPopup.destroy();
 			GlobalSignals.removeAll(this);
 		},
 
@@ -164,7 +163,7 @@
 
 			this.updateImprovements();
 			this.updateBuildingsMenuHint();
-			if (this.buildingsPopupOpen) this.renderBuildingsPopupList();
+			if (this.buildingsPopup.isOpen) this.buildingsPopup.renderList();
 			this.updateBubble();
 			this.updateStats();
 			this.updatePopulationDisplaySlow();
@@ -836,228 +835,65 @@
 		// visit. That is why #buildings-popup carries popup-nopause: the ordinary
 		// popup pause would freeze the very timers the player is watching. Esc backs
 		// out one level, Shift+Esc and the Close button leave at once.
-
-		BUILDINGS_POPUP_SCREENS: [ "build", "improve", "action" ],
-		BUILDINGS_TOOLTIP_DELAY: 450,
-		BUILDINGS_TOOLTIP_CURSOR_GAP: 14,
-		BUILDINGS_TOOLTIP_EDGE_MARGIN: 8,
+		//
+		// The screens, cursor, keys, tooltips and step-aside logic live in
+		// UIChooserPopup; this system supplies the rows, their sub-text, the tooltip
+		// content and the press.
 
 		initBuildingsPopup: function () {
 			let sys = this;
-			this.buildingsPopupOpen = false;
-			this.buildingsPopupScreen = "menu";
-			this.buildingsPopupCursor = 0;
-			this.buildingsPopupCursorByScreen = {};
-			this.buildingsPopupRows = [];
-			this.buildingsPopupShowUnavailable = { build: false, improve: false, action: false };
-			this.buildingsPopupReopen = null;
-			this.buildingsTooltipTimeout = null;
-			this.buildingsTooltipCursor = null;
-
-			$("#buildings-popup-close").click(function () {
-				sys.closeBuildingsPopup();
+			let tabs = GameGlobals.uiFunctions.elementIDs.tabs;
+			this.buildingsPopup = new UIChooserPopup({
+				popupID: "buildings-popup",
+				screens: [ "build", "improve", "action" ],
+				titles: { build: "Build", improve: "Improve", action: "Action" },
+				verbs: { build: "build", improve: "improve", action: "do" },
+				menuLetters: { KeyB: 0, KeyI: 1, KeyA: 2 },
+				openKey: { code: "KeyB", tab: tabs.in },
+				toggleLabel: "Show unavailable",
+				canOpen: () => !!sys.playerLocationNodes.head && !!sys.playerPosNodes.head && sys.playerPosNodes.head.position.inCamp,
+				beforeOpen: () => GameGlobals.uiFunctions.showTabById(tabs.in),
+				getSector: () => sys.playerLocationNodes.head ? sys.playerLocationNodes.head.entity : null,
+				getEntries: screen => sys.getBuildingsPopupEntries(screen),
+				renderRowSub: (entry, screen) => sys.renderBuildingsRowSub(entry, screen),
+				renderRowDetail: () => null,
+				showResources: screen => screen == "build" || screen == "improve",
+				emptyText: screen => screen == "build" ? "Nothing to build here yet." : screen == "improve" ? "Nothing to improve here yet." : "Nothing to do here yet.",
+				getTooltipContent: (index, screen, entry) => sys.getBuildingsTooltipContent(index, screen, entry),
+				press: entry => sys.pressBuildingsEntry(entry),
 			});
-			$("#buildings-popup-back").click(function () {
-				sys.onBuildingsPopupBack();
-			});
-			$("#buildings-popup-show-unavailable").change(function () {
-				let screen = sys.buildingsPopupScreen;
-				if (sys.BUILDINGS_POPUP_SCREENS.indexOf(screen) < 0) return;
-				sys.buildingsPopupShowUnavailable[screen] = $(this).is(":checked");
-				sys.renderBuildingsPopupList();
-			});
-
-			$("#buildings-popup-header-hint-text").text(UIConstants.isTouchScreen() ? "tap for help" : "hover for details");
-
-			let $list = $("#buildings-popup-list");
-			$list.on("click", ".buildings-popup-row", function (e) {
-				if ($(e.target).closest(".buildings-popup-info").length > 0) return;
-				let index = parseInt($(this).attr("data-index"));
-				if (isNaN(index)) return;
-				sys.setBuildingsPopupCursor(index);
-				sys.activateBuildingsPopupRow();
-			});
-
-			// tooltips: hover with a delay on a mouse, the row's info glyph on touch.
-			// the checkbox line takes part as row -1, like the craft popup's toggle
-			let tooltipTargets = ".buildings-popup-row, #buildings-popup-toggle-container, #buildings-popup-header-hint";
-			let rowIndexOf = function (el) {
-				let $el = $(el);
-				if ($el.is("#buildings-popup-toggle-container")) return -1;
-				if ($el.is("#buildings-popup-header-hint")) return -2;
-				let index = parseInt($el.attr("data-index"));
-				return isNaN(index) ? null : index;
-			};
-			$("#buildings-popup").on("mouseenter", tooltipTargets, function (e) {
-				if (UIConstants.isTouchScreen()) return;
-				let index = rowIndexOf(this);
-				if (index === null) return;
-				sys.cancelBuildingsTooltip();
-				sys.buildingsTooltipCursor = { x: e.clientX, y: e.clientY };
-				sys.buildingsTooltipTimeout = setTimeout(function () {
-					sys.buildingsTooltipTimeout = null;
-					sys.showBuildingsTooltip(index);
-				}, sys.BUILDINGS_TOOLTIP_DELAY);
-			});
-			$("#buildings-popup").on("mousemove", tooltipTargets, function (e) {
-				sys.buildingsTooltipCursor = { x: e.clientX, y: e.clientY };
-			});
-			$("#buildings-popup").on("mouseleave", tooltipTargets, function () {
-				if (UIConstants.isTouchScreen()) return;
-				sys.hideBuildingsTooltip();
-			});
-			$("#buildings-popup").on("click", ".buildings-popup-info", function (e) {
-				e.stopPropagation();
-				let index = rowIndexOf($(this).closest(tooltipTargets));
-				if (index === null) return;
-				sys.cancelBuildingsTooltip();
-				sys.buildingsTooltipCursor = { x: e.clientX, y: e.clientY };
-				if ($("#buildings-tooltip").is(":visible") && sys.buildingsTooltipIndex === index) {
-					sys.hideBuildingsTooltip();
-				} else {
-					sys.showBuildingsTooltip(index);
-				}
-			});
-			$list.on("scroll", function () { sys.hideBuildingsTooltip(); });
-
-			// the letter's keydown opens the popup so the keys typed right after it land
-			// in the menu; the registered hotkey stays as the keyup fallback
-			$(document).on("keydown.buildingsopen", $.proxy(this.onDocumentKeyDownBuildings, this));
-		},
-
-		onDocumentKeyDownBuildings: function (e) {
-			let oe = e.originalEvent || e;
-			if (oe.repeat) return;
-			if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
-			if (oe.code != "KeyB") return;
-			if (oe.isTextInput) return;
-			if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
-			if (GameGlobals.gameState.uiStatus.currentTab != GameGlobals.uiFunctions.elementIDs.tabs.in) return;
-			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
-			let tagName = e.target ? e.target.tagName : null;
-			if (tagName == "INPUT" || tagName == "TEXTAREA" || tagName == "SELECT") return;
-			this.onOpenBuildingsPopup();
-		},
-
-		// "B for menu" when the key works, plain "menu" on touch or with hotkeys off
-		updateBuildingsMenuHint: function () {
-			let hasKey = GameGlobals.gameState.settings.hotkeysEnabled && !UIConstants.isTouchScreen();
-			let text = hasKey ? "B for menu" : "menu";
-			let $hint = $("#in-improvements-menu-hint");
-			if ($hint.text() != text) $hint.text(text);
+			this.buildingsPopup.init();
 		},
 
 		onOpenBuildingsPopup: function (screen) {
-			// the letter's keydown opens the popup and its keyup fires the registered
-			// hotkey fallback before the popup reads as open, so guard with a flag
-			if (this.buildingsPopupOpen) return;
-			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
-			if (!this.playerLocationNodes.head) return;
-			if (!this.playerPosNodes.head || !this.playerPosNodes.head.position.inCamp) return;
-			if (!GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.in)) return;
-
-			let sys = this;
-			this.buildingsPopupOpen = true;
-			this.buildingsPopupSwallowEscapeUp = false;
-
-			GameGlobals.uiFunctions.showSpecialPopup("buildings-popup", {
-				isMeta: false,
-				isDismissable: true,
-				setupCallback: () => sys.showBuildingsPopupScreen(screen || "menu"),
-			});
-
-			// bound at open, not when the popup becomes visible: keys typed while the
-			// popup is still fading in must land in the menu, not be dropped
-			$(document).on("keydown.buildingspopup", $.proxy(this.onBuildingsPopupKeyDown, this));
-
-			// Esc is consumed on keydown (back one level), but the universal "Dismiss
-			// popup" hotkey fires on keyup and would close the popup anyway. A capture
-			// listener stops that one keyup before jQuery's document handler sees it
-			if (!this._onBuildingsKeyUpCapture) {
-				this._onBuildingsKeyUpCapture = function (e) {
-					if (e.code != "Escape") return;
-					if (!sys.buildingsPopupSwallowEscapeUp) return;
-					sys.buildingsPopupSwallowEscapeUp = false;
-					e.stopPropagation();
-				};
-			}
-			document.addEventListener("keyup", this._onBuildingsKeyUpCapture, true);
-		},
-
-		closeBuildingsPopup: function () {
-			if (!this.buildingsPopupOpen) return;
-			this.hideBuildingsTooltip();
-			GameGlobals.uiFunctions.popupManager.closePopup("buildings-popup");
+			this.buildingsPopup.open(typeof screen == "string" ? screen : null);
 		},
 
 		onPopupClosed: function (popupID) {
-			if (popupID == "buildings-popup") {
-				this.buildingsPopupOpen = false;
-				$(document).off("keydown.buildingspopup");
-				if (this._onBuildingsKeyUpCapture) document.removeEventListener("keyup", this._onBuildingsKeyUpCapture, true);
-				this.hideBuildingsTooltip();
-				return;
-			}
-			// return to the menu after the popup a row's button raised has closed
-			if (this.buildingsPopupReopen) {
-				let reopen = this.buildingsPopupReopen;
-				this.buildingsPopupReopen = null;
-				this.buildingsPopupCursorByScreen[reopen.screen] = reopen.cursor;
-				this.onOpenBuildingsPopup(reopen.screen);
-			}
+			this.buildingsPopup.onPopupClosed(popupID);
 		},
 
-		// popups do not stack: when a row's button raises one (a confirmation, a result),
-		// the menu steps aside and comes back on the same screen once it has closed
 		onPopupOpened: function (popupID) {
-			if (!this.buildingsPopupOpen) return;
-			if (popupID == "buildings-popup") return;
-			this.buildingsPopupReopen = { screen: this.buildingsPopupScreen, cursor: this.buildingsPopupCursor };
-			this.closeBuildingsPopup();
+			this.buildingsPopup.onPopupOpened(popupID);
 		},
 
-		isBuildingsPopupVisible: function () {
-			if (!$("#buildings-popup").is(":visible")) return false;
-			if ($("#buildings-popup").attr("data-visible") != "true") return false;
-			if (GameGlobals.uiFunctions.popupManager.isClosing("buildings-popup")) return false;
+		// a row presses the improvements table's own button
+		pressBuildingsEntry: function (entry) {
+			let $btn = entry.$btn;
+			let canPress = entry.available && $btn && $btn.length > 0 && $btn.is(":visible") && !$btn.hasClass("btn-disabled");
+			if (!canPress) return false;
+			$btn.click();
 			return true;
 		},
 
-		// SCREENS
-
-		showBuildingsPopupScreen: function (screen) {
-			if (this.buildingsPopupScreen && this.BUILDINGS_POPUP_SCREENS.indexOf(this.buildingsPopupScreen) >= 0) {
-				this.buildingsPopupCursorByScreen[this.buildingsPopupScreen] = this.buildingsPopupCursor;
+		renderBuildingsRowSub: function (entry, screen) {
+			if (screen == "action") return entry.buildingName;
+			if (screen == "build" && entry.count > 0) return entry.count + " built" + (entry.level > 1 ? ", lvl " + entry.level : "");
+			if (screen == "improve") {
+				let atMax = entry.maxLevel <= 1 || entry.level >= entry.maxLevel;
+				return atMax ? "lvl " + entry.level + " (max)" : "lvl " + entry.level + "/" + entry.maxLevel + " &rarr; " + (entry.level + 1) + (entry.isNextLevelMajor ? " &#9650;" : "");
 			}
-			this.hideBuildingsTooltip();
-			this.buildingsPopupScreen = screen;
-			let isMenu = screen == "menu";
-
-			let titles = { menu: "", build: "Build", improve: "Improve", action: "Action" };
-			$("#buildings-popup-header-screen").text(isMenu ? "" : " › " + titles[screen]);
-			GameGlobals.uiFunctions.toggle("#buildings-popup-back", !isMenu);
-			GameGlobals.uiFunctions.toggle("#buildings-popup-hint-menu", isMenu);
-			GameGlobals.uiFunctions.toggle("#buildings-popup-hint-list", !isMenu);
-			$("#buildings-popup-hint-verb").text(screen == "build" ? "build" : screen == "improve" ? "improve" : "do");
-
-			if (!isMenu) {
-				$("#buildings-popup-show-unavailable").prop("checked", this.buildingsPopupShowUnavailable[screen] == true);
-			}
-
-			let restoredCursor = isMenu ? 0 : this.buildingsPopupCursorByScreen[screen];
-			this.renderBuildingsPopupList(typeof restoredCursor == "number" ? restoredCursor : 0);
-		},
-
-		onBuildingsPopupBack: function () {
-			if (!this.buildingsPopupOpen) return;
-			if (this.buildingsPopupScreen == "menu") {
-				this.closeBuildingsPopup();
-				return;
-			}
-			let previous = this.buildingsPopupScreen;
-			this.showBuildingsPopupScreen("menu");
-			this.setBuildingsPopupCursor(Math.max(0, this.BUILDINGS_POPUP_SCREENS.indexOf(previous)));
+			return "";
 		},
 
 		// ENTRIES
@@ -1079,8 +915,6 @@
 			];
 		},
 
-		// the requirement check without costs; "blocked" means blocked by something
-		// other than what the player can afford, which is what "Show unavailable" hides
 		getBuildingsEntryStatus: function (action, name) {
 			let reqs = GameGlobals.playerActionsHelper.checkRequirements(action, false);
 			let reqsMet = reqs.value >= 1;
@@ -1243,318 +1077,19 @@
 			return [];
 		},
 
-		// RENDERING
-
-		renderBuildingsPopupList: function (cursor) {
-			if (!this.buildingsPopupOpen) return;
-			let screen = this.buildingsPopupScreen;
-			let isMenu = screen == "menu";
-			let $list = $("#buildings-popup-list");
-			let isTouch = UIConstants.isTouchScreen();
-
-			let entries = this.getBuildingsPopupEntries(screen);
-			let numHidden = entries.filter(e => e.hidden).length;
-			let showUnavailable = !isMenu && this.buildingsPopupShowUnavailable[screen] == true;
-			let hasToggle = !isMenu && numHidden > 0;
-			GameGlobals.uiFunctions.toggle("#buildings-popup-toggle-container", hasToggle);
-			$("#buildings-popup-show-unavailable-label").text("Show unavailable (" + numHidden + ")");
-
-			let previousKey = null;
-			if (typeof cursor != "number") {
-				let previousRow = this.buildingsPopupRows ? this.buildingsPopupRows[this.buildingsPopupCursor] : null;
-				previousKey = previousRow ? previousRow.key : null;
-				cursor = this.buildingsPopupCursor;
-			}
-
-			let rows = [];
-			let html = "";
-			let infoGlyph = isTouch ? "<span class='buildings-popup-info' role='button' aria-label='Details'>&#9432;</span>" : "";
-			for (let i = 0; i < entries.length; i++) {
-				let entry = entries[i];
-				if (entry.hidden && !showUnavailable) continue;
-				let index = rows.length;
-				rows.push({ key: entry.key, entry: entry });
-				let number = index + 1;
-				let keyLabel = isMenu ? entry.letter : (number <= 9 ? number : number == 10 ? "0" : "");
-				let classes = "buildings-popup-row";
-				if (isMenu) classes += " buildings-popup-menu-row";
-				if (!entry.available) classes += " buildings-popup-item-unavailable";
-				if (entry.hidden) classes += " buildings-popup-item-hidden";
-				html += "<div class='" + classes + "' data-index='" + index + "' data-key='" + entry.key + "'>";
-				html += "<span class='buildings-popup-key'>" + (keyLabel || "&nbsp;") + "</span>";
-				html += "<span class='buildings-popup-item-name'>" + entry.name;
-				if (!isMenu && screen == "action") html += "<span class='buildings-popup-item-sub'>" + entry.buildingName + "</span>";
-				if (!isMenu && screen == "build" && entry.count > 0) html += "<span class='buildings-popup-item-sub'>" + entry.count + " built" + (entry.level > 1 ? ", lvl " + entry.level : "") + "</span>";
-				if (!isMenu && screen == "improve") {
-					let atMax = entry.maxLevel <= 1 || entry.level >= entry.maxLevel;
-					let levelText = atMax ? "lvl " + entry.level + " (max)" : "lvl " + entry.level + "/" + entry.maxLevel + " &rarr; " + (entry.level + 1) + (entry.isNextLevelMajor ? " &#9650;" : "");
-					html += "<span class='buildings-popup-item-sub'>" + levelText + "</span>";
-				}
-				html += "</span>";
-				if (isMenu) {
-					html += "<span class='buildings-popup-item-costs header-count'>" + entry.count + "</span>";
-				} else {
-					let detail = "";
-					if (entry.reason && !entry.available && (entry.hidden || entry.isBusy || entry.isCooldown)) {
-						detail = "<span class='buildings-popup-item-reason'>" + entry.reason + "</span>";
-					} else {
-						detail = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action).join(" ");
-					}
-					html += "<span class='buildings-popup-item-costs'>" + detail + "</span>";
-				}
-				html += infoGlyph;
-				html += "</div>";
-			}
-
-			this.buildingsPopupRows = rows;
-			this.renderBuildingsPopupResources(rows);
-
-			if (rows.length == 0) {
-				let empty = screen == "build" ? "Nothing to build here yet." : screen == "improve" ? "Nothing to improve here yet." : "Nothing to do here yet.";
-				html = "<p class='p-meta buildings-popup-empty'>" + empty + "</p>";
-			}
-			$list.html(html);
-			// the list's height changed; keep the popup centred
-			GameGlobals.uiFunctions.popupManager.repositionPopup($("#buildings-popup"));
-
-			if (previousKey) {
-				for (let i = 0; i < rows.length; i++) {
-					if (rows[i].key == previousKey) { cursor = i; break; }
-				}
-			}
-			this.setBuildingsPopupCursor(cursor);
-		},
-
-		// the camp's stock of every resource the listed rows cost, in the order the
-		// costs first appear, so the player can see what a build would leave without
-		// opening a tooltip. Build and Improve only: actions cost time, not stock
-		renderBuildingsPopupResources: function (rows) {
-			let screen = this.buildingsPopupScreen;
-			let show = (screen == "build" || screen == "improve") && rows.length > 0 && !!this.playerLocationNodes.head;
-			GameGlobals.uiFunctions.toggle("#buildings-popup-resources", show);
-			if (!show) return;
-
-			let sector = this.playerLocationNodes.head.entity;
-			let keys = [];
-			for (let i = 0; i < rows.length; i++) {
-				let costs = GameGlobals.playerActionsHelper.getCosts(rows[i].entry.action);
-				for (let key in costs) {
-					if (!(costs[key] > 0)) continue;
-					if (keys.indexOf(key) < 0) keys.push(key);
-				}
-			}
-
-			let html = "";
-			for (let i = 0; i < keys.length; i++) {
-				let key = keys[i];
-				let owned = GameGlobals.playerActionsHelper.getCostAmountOwned(sector, key);
-				let label = key.indexOf("resource_") == 0 ? UIConstants.getResourceImg(key.split("_")[1]) : UIConstants.getCostDisplayName(key).toLowerCase() + " ";
-				let name = UIConstants.getCostDisplayName(key);
-				html += "<span class='buildings-popup-resource' title='" + name + "'>" + label + "<span class='buildings-popup-resource-amount'>" + UIConstants.getDisplayValue(Math.floor(owned)) + "</span></span>";
-			}
-			$("#buildings-popup-resources").html(html);
-		},
-
-		setBuildingsPopupCursor: function (index) {
-			let hasToggle = $("#buildings-popup-toggle-container").is(":visible");
-			let numRows = this.buildingsPopupRows ? this.buildingsPopupRows.length : 0;
-			let min = hasToggle ? -1 : 0;
-			if (index < min) index = min;
-			if (index >= numRows) index = numRows - 1;
-			if (index < min) index = min;
-
-			this.buildingsPopupCursor = index;
-			$("#buildings-popup-list .buildings-popup-row").removeClass("selected");
-			$("#buildings-popup-toggle-container").toggleClass("selected", index == -1);
-			if (index >= 0) {
-				let $row = $("#buildings-popup-list .buildings-popup-row[data-index='" + index + "']");
-				$row.addClass("selected");
-				if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
-			}
-		},
-
-		getBuildingsPopupPageSize: function () {
-			let $list = $("#buildings-popup-list");
-			let $row = $list.find(".buildings-popup-row").first();
-			if ($row.length == 0) return 3;
-			let rowHeight = $row.outerHeight(true) || 1;
-			return Math.max(3, Math.floor($list.innerHeight() / rowHeight));
-		},
-
-		// KEYS
-
-		onBuildingsPopupKeyDown: function (e) {
-			if (!this.buildingsPopupOpen) return;
-			let oe = e.originalEvent || e;
-			let code = oe.code || "";
-			let hasModifier = e.ctrlKey || e.altKey || e.metaKey;
-			if (hasModifier) return;
-			let isMenu = this.buildingsPopupScreen == "menu";
-			let numRows = this.buildingsPopupRows ? this.buildingsPopupRows.length : 0;
-			let lastIndex = numRows - 1;
-
-			// any key hides the tooltip: the row under it may change
-			this.hideBuildingsTooltip();
-
-			if (code == "Escape") {
-				e.preventDefault();
-				if (e.shiftKey || isMenu) {
-					this.closeBuildingsPopup();
-				} else {
-					this.onBuildingsPopupBack();
-				}
-				this.buildingsPopupSwallowEscapeUp = true;
-				return;
-			}
-
-			if (e.shiftKey) return;
-
-			switch (code) {
-				case "ArrowDown": e.preventDefault(); this.setBuildingsPopupCursor(this.buildingsPopupCursor + 1); return;
-				case "ArrowUp": e.preventDefault(); this.setBuildingsPopupCursor(this.buildingsPopupCursor - 1); return;
-				case "Home": e.preventDefault(); this.setBuildingsPopupCursor(0); return;
-				case "End": e.preventDefault(); this.setBuildingsPopupCursor(lastIndex); return;
-				case "PageDown": e.preventDefault(); this.setBuildingsPopupCursor(Math.min(lastIndex, this.buildingsPopupCursor + this.getBuildingsPopupPageSize())); return;
-				case "PageUp": e.preventDefault(); this.setBuildingsPopupCursor(Math.max(0, this.buildingsPopupCursor - this.getBuildingsPopupPageSize())); return;
-				case "Enter": case "NumpadEnter": e.preventDefault(); this.activateBuildingsPopupRow(); return;
-				case "Backspace": case "ArrowLeft":
-					if (!isMenu) { e.preventDefault(); this.onBuildingsPopupBack(); }
-					return;
-				case "ArrowRight":
-					if (isMenu) { e.preventDefault(); this.activateBuildingsPopupRow(); }
-					return;
-				case "Space":
-					// space belongs to the Show unavailable toggle alone; on the chooser
-					// it does nothing, so the same key never means two things
-					e.preventDefault();
-					if (!isMenu) this.toggleBuildingsPopupShowUnavailable();
-					return;
-			}
-
-			if (isMenu) {
-				let letters = { KeyB: 0, KeyI: 1, KeyA: 2, Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 };
-				if (letters[code] !== undefined) {
-					e.preventDefault();
-					this.setBuildingsPopupCursor(letters[code]);
-					this.activateBuildingsPopupRow();
-				}
-				return;
-			}
-
-			// digits pick a row: 1-9, then 0 for the tenth
-			let digit = -1;
-			if (code.indexOf("Digit") == 0 && code.length == 6) digit = parseInt(code.charAt(5));
-			if (code.indexOf("Numpad") == 0 && code.length == 7) digit = parseInt(code.charAt(6));
-			if (!isNaN(digit) && digit >= 0) {
-				e.preventDefault();
-				let index = digit == 0 ? 9 : digit - 1;
-				if (index > lastIndex) return;
-				this.setBuildingsPopupCursor(index);
-				this.activateBuildingsPopupRow();
-			}
-		},
-
-		toggleBuildingsPopupShowUnavailable: function () {
-			if (!$("#buildings-popup-toggle-container").is(":visible")) return;
-			$("#buildings-popup-show-unavailable").click();
-		},
-
-		activateBuildingsPopupRow: function (retries) {
-			if (!this.buildingsPopupOpen) return;
-			// the popup is not really open until showSpecialPopup's fadeIn sets data-visible;
-			// a press inside that window is kept and retried rather than dropped, so a fast
-			// "B A 2" lands its last key too
-			if (!this.isBuildingsPopupVisible()) {
-				retries = retries || 0;
-				if (retries < 20) setTimeout(() => this.activateBuildingsPopupRow(retries + 1), 25);
-				return;
-			}
-
-			if (this.buildingsPopupCursor == -1) {
-				this.toggleBuildingsPopupShowUnavailable();
-				return;
-			}
-
-			let row = this.buildingsPopupRows ? this.buildingsPopupRows[this.buildingsPopupCursor] : null;
-			if (!row) return;
-
-			if (this.buildingsPopupScreen == "menu") {
-				this.showBuildingsPopupScreen(row.entry.screen);
-				return;
-			}
-
-			let entry = row.entry;
-			let $btn = entry.$btn;
-			let canPress = entry.available && $btn && $btn.length > 0 && $btn.is(":visible") && !$btn.hasClass("btn-disabled");
-			if (!canPress) {
-				this.flashBuildingsPopupUnavailable(this.buildingsPopupCursor);
-				return;
-			}
-
-			this.hideBuildingsTooltip();
-			$btn.click();
-			// the press changed what the list shows: counts, levels, costs, busy state
-			this.renderBuildingsPopupList();
-		},
-
-		// highlight the name and the lacking costs of an unavailable row for a moment
-		flashBuildingsPopupUnavailable: function (rowIndex) {
-			let $row = $("#buildings-popup-list .buildings-popup-row[data-index='" + rowIndex + "']");
-			if ($row.length == 0) return;
-			$row.addClass("buildings-popup-flash");
-			setTimeout(function () { $row.removeClass("buildings-popup-flash"); }, 1000);
+		updateBuildingsMenuHint: function () {
+			let hasKey = GameGlobals.gameState.settings.hotkeysEnabled && !UIConstants.isTouchScreen();
+			let text = hasKey ? "B for menu" : "menu";
+			let $hint = $("#in-improvements-menu-hint");
+			if ($hint.text() != text) $hint.text(text);
 		},
 
 		// TOOLTIPS
-		// one body-level fixed pane (#buildings-tooltip) like the upgrade tree's
 
-		cancelBuildingsTooltip: function () {
-			if (this.buildingsTooltipTimeout) {
-				clearTimeout(this.buildingsTooltipTimeout);
-				this.buildingsTooltipTimeout = null;
-			}
-		},
-
-		hideBuildingsTooltip: function () {
-			this.cancelBuildingsTooltip();
-			this.buildingsTooltipIndex = null;
-			let $tooltip = $("#buildings-tooltip");
-			if ($tooltip.length == 0) return;
-			$tooltip.hide().attr("aria-hidden", "true").empty();
-		},
-
-		showBuildingsTooltip: function (index) {
-			let $tooltip = $("#buildings-tooltip");
-			if ($tooltip.length == 0) return;
-			let $content = this.getBuildingsTooltipContent(index);
-			if (!$content) return;
-
-			this.buildingsTooltipIndex = index;
-			$tooltip.empty().append($content);
-			$tooltip.css({ left: "0px", top: "0px" }).show().attr("aria-hidden", "false");
-			GameGlobals.uiFunctions.positionTooltipAtCursor($tooltip, this.buildingsTooltipCursor, this.BUILDINGS_TOOLTIP_CURSOR_GAP, this.BUILDINGS_TOOLTIP_EDGE_MARGIN);
-		},
-
-		getBuildingsTooltipContent: function (index) {
-			let screen = this.buildingsPopupScreen;
-			let $content = $("<div></div>");
-			let addHeader = function (name, badge) {
-				let $header = $("<div class='buildings-tooltip-header'></div>");
-				$header.append($("<span></span>").text(name));
-				if (badge) {
-					$header.append(" ");
-					$header.append($("<span class='status-badge'></span>").text(badge));
-				}
-				$content.append($header);
-			};
-			let addLine = function (text, cls) {
-				if (!text) return;
-				$content.append($("<p></p>").addClass(cls || "").text(text));
-			};
-			let addHTML = function (html, cls) {
-				if (!html) return;
-				$content.append($("<p></p>").addClass(cls || "").html(html));
-			};
+		getBuildingsTooltipContent: function (index, screen, entry) {
+			let t = this.buildingsPopup.makeTooltipContent();
+			let $content = t.$content;
+			let addHeader = t.addHeader, addLine = t.addLine, addHTML = t.addHTML;
 
 			if (index == -2) {
 				let isTouch = UIConstants.isTouchScreen();
@@ -1572,9 +1107,7 @@
 				return $content;
 			}
 
-			let row = this.buildingsPopupRows ? this.buildingsPopupRows[index] : null;
-			if (!row) return null;
-			let entry = row.entry;
+			if (!entry) return null;
 
 			if (screen == "menu") {
 				addHeader(entry.name, entry.count + (entry.count == 1 ? " entry" : " entries"));
@@ -1586,18 +1119,18 @@
 			let badge = entry.available ? "available" : entry.isBusy ? "busy" : entry.isCooldown ? "cooldown" : entry.reason ? entry.reason : "unaffordable";
 			if (screen == "build") {
 				addHeader(entry.name, badge);
-				addLine(ImprovementConstants.getImprovementDescription(entry.improvementID, entry.level), "buildings-tooltip-desc");
+				addLine(ImprovementConstants.getImprovementDescription(entry.improvementID, entry.level), "chooser-tooltip-desc");
 				if (entry.count > 0) addLine("Built: " + entry.count + (entry.level > 1 ? " (level " + entry.level + ")" : ""), "meta");
 			} else if (screen == "improve") {
 				addHeader(entry.name, badge);
-				addLine("Level " + entry.level + " → " + (entry.level + 1) + (entry.isNextLevelMajor ? " (major upgrade)" : "") + (entry.maxLevel > 1 ? ", max " + entry.maxLevel : ""), "meta");
+				addLine("Level " + entry.level + " \u2192 " + (entry.level + 1) + (entry.isNextLevelMajor ? " (major upgrade)" : "") + (entry.maxLevel > 1 ? ", max " + entry.maxLevel : ""), "meta");
 				let effect = GameGlobals.playerActionsHelper.getEffectDescription(entry.action);
-				addLine(effect, "buildings-tooltip-desc");
+				addLine(effect, "chooser-tooltip-desc");
 			} else {
 				addHeader(entry.name, badge);
 				addLine(entry.buildingName, "meta");
 				let description = GameGlobals.playerActionsHelper.getDescription(entry.action);
-				addLine(description, "buildings-tooltip-desc");
+				addLine(description, "chooser-tooltip-desc");
 				let duration = PlayerActionConstants.getDuration(entry.action);
 				let cooldown = PlayerActionConstants.getCooldown(entry.action);
 				let timing = [];
@@ -1609,7 +1142,7 @@
 			let costSpans = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action);
 			if (costSpans.length > 0) addHTML("Costs: " + costSpans.join(", "));
 			if (!entry.available && entry.reason) addHTML("<span class='action-cost-blocker'>" + entry.reason + "</span>");
-			let keyLabel = index + 1 <= 9 ? String(index + 1) : index + 1 == 10 ? "0" : null;
+			let keyLabel = this.buildingsPopup.getRowKeyLabel(index);
 			if (keyLabel) addHTML("<span class='meta'>" + keyLabel + " or enter: " + (screen == "build" ? "build" : screen == "improve" ? "improve" : "do it") + "</span>");
 			return $content;
 		},

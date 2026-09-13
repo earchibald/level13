@@ -10,7 +10,8 @@ define([
 	'game/constants/PlayerActionConstants',
 	'game/nodes/player/ItemsNode',
 	'game/components/common/PositionComponent',
-], function (Ash, Text, UIState, UIList, GameGlobals, GlobalSignals, UIConstants, ItemConstants, PlayerActionConstants, ItemsNode, PositionComponent) {
+	'game/helpers/ui/UIChooserPopup',
+], function (Ash, Text, UIState, UIList, GameGlobals, GlobalSignals, UIConstants, ItemConstants, PlayerActionConstants, ItemsNode, PositionComponent, UIChooserPopup) {
 
 	var UIOutBagSystem = Ash.System.extend({
 
@@ -42,10 +43,12 @@ define([
 			GlobalSignals.add(this, GlobalSignals.clearBubblesSignal, this.clearBubble);
 			GlobalSignals.add(this, GlobalSignals.openCraftPopupSignal, this.onOpenCraftPopup);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
+			GlobalSignals.add(this, GlobalSignals.popupOpenedSignal, this.onPopupOpened);
 		},
 		
 		removeFromEngine: function (engine) {
 			this.itemNodes = null;
+			if (this.craftPopup) this.craftPopup.destroy();
 			GlobalSignals.removeAll(this);
 		},
 		
@@ -64,228 +67,212 @@ define([
 		},
 				
 		// CRAFT POPUP (hotkey K)
+		//
+		// A two-level menu like the camp's Buildings menu: K opens a chooser of item
+		// types, a digit opens that type's numbered recipe list, a digit crafts. "K 1 2"
+		// crafts the second recipe of the first type. The menu stays open after a craft
+		// and re-renders on every slow update, so the two-second craft shows as a busy
+		// badge and then the row turns available again; that is also why #craft-popup
+		// carries popup-nopause. The screens, cursor, keys and tooltips live in
+		// UIChooserPopup; this system supplies the rows, the tooltip content and the
+		// press.
 
 		initCraftPopup: function () {
 			let sys = this;
-			$("#craft-popup-close").click(function () {
-				GameGlobals.uiFunctions.popupManager.closePopup("craft-popup");
+			let byType = this.getCraftableItemDefinitionsByType();
+			let types = Object.keys(byType).filter(type => byType[type].length > 0);
+			let titles = {};
+			let verbs = {};
+			for (let i = 0; i < types.length; i++) {
+				let typeName = ItemConstants.getItemTypeDisplayName(ItemConstants.itemTypes[types[i]], true) || types[i];
+				titles[types[i]] = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+				verbs[types[i]] = "craft";
+			}
+			this.craftPopupTypes = types;
+			this.craftPopupTitles = titles;
+			this.craftPopup = new UIChooserPopup({
+				popupID: "craft-popup",
+				screens: types,
+				titles: titles,
+				verbs: verbs,
+				menuLetters: {},
+				openKey: { code: "KeyK", tab: null },
+				toggleLabel: "Show obsolete",
+				canOpen: () => !!sys.itemNodes && !!sys.itemNodes.head,
+				beforeOpen: () => GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.bag),
+				getSector: () => GameGlobals.playerHelper.playerLocationNodes.head ? GameGlobals.playerHelper.playerLocationNodes.head.entity : null,
+				getEntries: screen => screen == "menu" ? sys.getCraftMenuEntries() : sys.getCraftListEntries(screen),
+				renderRowSub: (entry, screen) => sys.getCraftRowSub(entry),
+				renderRowDetail: () => null,
+				showResources: screen => true,
+				emptyText: screen => "No known recipes.",
+				getTooltipContent: (index, screen, entry) => sys.getCraftTooltipContent(index, screen, entry),
+				press: entry => sys.pressCraftEntry(entry),
 			});
-			$("#craft-popup-show-obsolete").change(function () {
-				sys.rebuildCraftPopupList();
-			});
-			$("#craft-popup-list").on("click", ".craft-popup-row", function () {
-				let index = parseInt($(this).attr("data-index"));
-				if (isNaN(index)) return;
-				sys.setCraftPopupCursor(index);
-				sys.activateCraftPopupRow();
-			});
+			this.craftPopup.init();
 		},
 
 		onOpenCraftPopup: function () {
-			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
-			if (!GameGlobals.uiFunctions.showTabById(GameGlobals.uiFunctions.elementIDs.tabs.bag)) return;
+			this.craftPopup.open();
+		},
 
-			let sys = this;
-			if (typeof this.craftPopupCursor != "number") this.craftPopupCursor = 0;
-			this.craftPopupCollapsedTypes = this.craftPopupCollapsedTypes || {};
-
-			GameGlobals.uiFunctions.showSpecialPopup("craft-popup", {
-				isMeta: false,
-				isDismissable: true,
-				setupCallback: () => sys.rebuildCraftPopupList(),
-			});
-
-			$(document).on("keydown.craftpopup", $.proxy(this.onCraftPopupKeyDown, this));
+		onPopupOpened: function (popupID) {
+			this.craftPopup.onPopupOpened(popupID);
 		},
 
 		onPopupClosed: function (popupID) {
-			if (popupID == "craft-popup") {
-				$(document).off("keydown.craftpopup");
-			}
-			// return to the craft popup after its confirmation dialog closes (confirm or cancel)
-			if (popupID == "common-popup" && this.craftPopupReopen) {
-				this.craftPopupReopen = false;
-				this.onOpenCraftPopup();
-			}
+			this.craftPopup.onPopupClosed(popupID);
 		},
 
-		rebuildCraftPopupList: function () {
-			let $list = $("#craft-popup-list");
-			let showObsolete = $("#craft-popup-show-obsolete").is(":checked");
-
-			let rows = [];
-			let html = "";
-			let countObsolete = 0;
-
-			let itemDefinitions = this.getCraftableItemDefinitionsByType();
-			for (let type in itemDefinitions) {
-				let itemList = itemDefinitions[type].slice().sort(UIConstants.sortItemsByRelevance);
-				let visibleItems = [];
-				for (let i = 0; i < itemList.length; i++) {
-					let itemDefinition = itemList[i];
-					if (!this.isItemUnlocked(itemDefinition)) continue;
-					let isObsolete = this.isObsolete(itemDefinition);
-					if (isObsolete) countObsolete++;
-					if (isObsolete && !showObsolete) continue;
-					visibleItems.push(itemDefinition);
-				}
-				if (visibleItems.length == 0) continue;
-
-				let isCollapsed = this.craftPopupCollapsedTypes[type] == true;
-				let typeName = ItemConstants.getItemTypeDisplayName(ItemConstants.itemTypes[type], true);
-				rows.push({ rowType: "header", itemType: type });
-				html += "<div class='craft-popup-row craft-popup-header' data-index='" + (rows.length - 1) + "'>";
-				html += (isCollapsed ? "&#9656;" : "&#9662;") + " " + typeName + "<span class='header-count'> (" + visibleItems.length + ")</span>";
-				html += "</div>";
-
-				if (isCollapsed) continue;
-
-				for (let j = 0; j < visibleItems.length; j++) {
-					let itemDefinition = visibleItems[j];
-					let actionName = "craft_" + itemDefinition.id;
-					let isAvailable = GameGlobals.playerActionsHelper.checkAvailability(actionName);
-					let costsHTML = GameGlobals.uiFunctions.getActionCostsSpanList(actionName).join(" ");
-					rows.push({ rowType: "item", itemType: type, itemDefinition: itemDefinition });
-					html += "<div class='craft-popup-row craft-popup-item" + (isAvailable ? "" : " craft-popup-item-unavailable") + "' data-index='" + (rows.length - 1) + "'>";
-					html += "<span class='craft-popup-item-name'>" + ItemConstants.getItemDisplayName(itemDefinition) + "</span>";
-					html += "<span class='craft-popup-item-costs'>" + costsHTML + "</span>";
-					html += "</div>";
-				}
-			}
-
-			this.craftPopupRows = rows;
-
-			if (rows.length == 0) html = "<p class='p-meta'>No known recipes.</p>";
-			$list.html(html);
-
-			GameGlobals.uiFunctions.toggle("#craft-popup-obsolete-container", countObsolete > 0);
-
-			this.setCraftPopupCursor(typeof this.craftPopupCursor == "number" ? this.craftPopupCursor : 0);
-		},
-
-		// cursor -1 means the show obsolete toggle above the list
-		setCraftPopupCursor: function (index) {
-			let hasToggle = $("#craft-popup-obsolete-container").is(":visible");
-			let numRows = this.craftPopupRows ? this.craftPopupRows.length : 0;
-			if (numRows == 0 && !hasToggle) return;
-
-			let min = hasToggle ? -1 : 0;
-			if (index < min) index = min;
-			if (index >= numRows) index = numRows - 1;
-			if (index < min) index = min;
-
-			this.craftPopupCursor = index;
-			$("#craft-popup-list .craft-popup-row").removeClass("selected");
-			$("#craft-popup-obsolete-container").toggleClass("selected", index == -1);
-			if (index >= 0) {
-				let $row = $("#craft-popup-list .craft-popup-row[data-index='" + index + "']");
-				$row.addClass("selected");
-				if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
-			}
-		},
-
-		isCraftPopupInteractive: function () {
-			if (!$("#craft-popup").is(":visible")) return false;
-			if ($("#craft-popup").attr("data-visible") != "true") return false;
-			if (GameGlobals.uiFunctions.popupManager.isClosing("craft-popup")) return false;
+		// startAction passes its param straight to craftItem; without it the item id
+		// is undefined and the craft throws on a null item definition
+		pressCraftEntry: function (entry) {
+			if (!GameGlobals.playerActionsHelper.checkAvailability(entry.action)) return false;
+			GameGlobals.playerActionFunctions.startAction(entry.action, entry.itemDefinition.id);
 			return true;
 		},
 
-		onCraftPopupKeyDown: function (e) {
-			// the popup is not really open until showSpecialPopup's fadeIn sets data-visible,
-			// and slideToggleIf silently no-ops before that - so acting inside that window
-			// leaves the list on screen with its overlay gone and a popup stuck in the queue
-			if (!this.isCraftPopupInteractive()) return;
-			let code = e.originalEvent ? e.originalEvent.code : e.code;
-			switch (code) {
-				case "ArrowDown": e.preventDefault(); this.setCraftPopupCursor(this.craftPopupCursor + 1); break;
-				case "ArrowUp": e.preventDefault(); this.setCraftPopupCursor(this.craftPopupCursor - 1); break;
-				case "ArrowLeft": e.preventDefault(); this.setCraftPopupSectionCollapsed(true); break;
-				case "ArrowRight": e.preventDefault(); this.setCraftPopupSectionCollapsed(false); break;
-				case "Enter": case "NumpadEnter": e.preventDefault(); this.activateCraftPopupRow(); break;
-				case "Space":
-					if (this.craftPopupCursor == -1) {
-						e.preventDefault();
-						$("#craft-popup-show-obsolete").click();
-					}
-					break;
+		// ENTRIES
+		//
+		// the menu lists the item types with at least one unlocked recipe, in item type
+		// order; numbers shift as types unlock, as the Buildings lists shift
+
+		getCraftMenuEntries: function () {
+			let result = [];
+			for (let i = 0; i < this.craftPopupTypes.length; i++) {
+				let type = this.craftPopupTypes[i];
+				let entries = this.getCraftListEntries(type);
+				if (entries.length == 0) continue;
+				let count = entries.filter(e => !e.hidden).length;
+				let name = this.craftPopupTitles[type];
+				result.push({
+					key: "type-" + type,
+					screen: type,
+					letter: null,
+					name: name,
+					count: count,
+					description: "Recipes for " + name.toLowerCase() + (entries.length > count ? ", " + (entries.length - count) + " obsolete" : ""),
+					// a type whose every recipe is obsolete stays openable but reads dimmed
+					available: count > 0,
+					hidden: false,
+				});
 			}
+			return result;
 		},
 
-		setCraftPopupSectionCollapsed: function (collapsed) {
-			let row = this.craftPopupRows ? this.craftPopupRows[this.craftPopupCursor] : null;
-			if (!row) return;
-			let type = row.itemType;
-			if ((this.craftPopupCollapsedTypes[type] == true) == collapsed) return;
-			this.craftPopupCollapsedTypes[type] = collapsed;
-			this.rebuildCraftPopupList();
-			// keep the cursor on the section that was folded or unfolded
-			for (let i = 0; i < this.craftPopupRows.length; i++) {
-				if (this.craftPopupRows[i].rowType == "header" && this.craftPopupRows[i].itemType == type) {
-					this.setCraftPopupCursor(i);
-					break;
-				}
+		getCraftListEntries: function (type) {
+			let result = [];
+			if (!this.itemNodes || !this.itemNodes.head) return result;
+			let itemsComponent = this.itemNodes.head.items;
+			let inCamp = this.itemNodes.head.entity.get(PositionComponent).inCamp;
+			let byType = this.getCraftableItemDefinitionsByType();
+			let itemList = (byType[type] || []).slice().sort(UIConstants.sortItemsByRelevance);
+			let equipped = itemsComponent.getEquipped(ItemConstants.itemTypes[type]) || [];
+
+			for (let i = 0; i < itemList.length; i++) {
+				let itemDefinition = itemList[i];
+				if (!this.isItemUnlocked(itemDefinition)) continue;
+				let action = "craft_" + itemDefinition.id;
+				let status = this.getCraftEntryStatus(action);
+				let isObsolete = this.isObsolete(itemDefinition);
+				let reason = status.reason;
+				if (status.isBusy) reason = status.busyText;
+				else if (isObsolete && !status.available) reason = reason || "obsolete";
+				result.push({
+					key: "craft-" + itemDefinition.id,
+					name: ItemConstants.getItemDisplayName(itemDefinition),
+					action: action,
+					itemDefinition: itemDefinition,
+					owned: itemsComponent.getCountById(itemDefinition.id, inCamp),
+					isEquipped: equipped.some(item => item.id == itemDefinition.id),
+					isObsolete: isObsolete,
+					available: status.available,
+					hidden: isObsolete,
+					reason: reason,
+					isBusy: status.isBusy,
+					isCooldown: false,
+				});
 			}
+			return result;
 		},
 
-		activateCraftPopupRow: function () {
-			if (!this.isCraftPopupInteractive()) return;
-			if (this.craftPopupCursor == -1) {
-				$("#craft-popup-show-obsolete").click();
-				return;
+		// the requirement check without costs; a craft in progress reads as busy with
+		// its time left rather than as unaffordable
+		getCraftEntryStatus: function (action) {
+			let reqs = GameGlobals.playerActionsHelper.checkRequirements(action, false);
+			let reqsMet = reqs.value >= 1;
+			let available = reqsMet && GameGlobals.playerActionsHelper.checkAvailability(action);
+			let reason = !reqsMet && reqs.reason ? Text.t(reqs.reason) : null;
+			let baseReason = !reqsMet && reqs.reason ? reqs.reason.baseReason : null;
+			let isBusy = baseReason == PlayerActionConstants.DISABLED_REASON_BUSY || baseReason == PlayerActionConstants.DISABLED_REASON_IN_PROGRESS;
+			let busyText = null;
+			if (isBusy) {
+				// crafting is a busy action, so the busy time left is the craft's own
+				let isThisCraft = GameGlobals.playerActionsHelper.isInProgress(action);
+				let timeLeft = GameGlobals.playerHelper.getBusyTimeLeft();
+				let timeText = timeLeft > 0 ? " " + UIConstants.getTimeToNum(timeLeft) : "";
+				busyText = (isThisCraft ? "Crafting\u2026" : "Busy") + timeText;
 			}
-			let row = this.craftPopupRows ? this.craftPopupRows[this.craftPopupCursor] : null;
-			if (!row) return;
-			if (row.rowType == "header") {
-				this.setCraftPopupSectionCollapsed(this.craftPopupCollapsedTypes[row.itemType] != true);
-				return;
-			}
-			let actionName = "craft_" + row.itemDefinition.id;
-			if (!GameGlobals.playerActionsHelper.checkAvailability(actionName)) {
-				this.flashCraftPopupUnavailable(this.craftPopupCursor);
-				return;
-			}
-			this.openCraftConfirmation(row.itemDefinition);
+			return { available: available, reqsMet: reqsMet, reason: reason, isBusy: isBusy, busyText: busyText };
 		},
 
-		// highlight the name and the lacking costs of an uncraftable recipe for a moment
-		flashCraftPopupUnavailable: function (rowIndex) {
-			let $row = $("#craft-popup-list .craft-popup-row[data-index='" + rowIndex + "']");
-			if ($row.length == 0) return;
-			$row.addClass("craft-popup-flash");
-			setTimeout(function () { $row.removeClass("craft-popup-flash"); }, 1000);
+		getCraftRowSub: function (entry) {
+			if (entry.isEquipped) return "equipped";
+			if (entry.owned > 0) return "owned " + entry.owned;
+			return "";
 		},
 
-		openCraftConfirmation: function (itemDefinition) {
-			let actionName = "craft_" + itemDefinition.id;
-			if (!GameGlobals.playerActionsHelper.checkAvailability(actionName)) return;
+		// TOOLTIPS
 
-			let itemName = ItemConstants.getItemDisplayName(itemDefinition);
-			let costsHTML = GameGlobals.uiFunctions.getActionCostsSpanList(actionName).join("<br/>");
-			let msg = "Craft " + itemName + "?";
-			if (costsHTML.length > 0) msg += "<br/><br/>" + costsHTML;
+		getCraftTooltipContent: function (index, screen, entry) {
+			let t = this.craftPopup.makeTooltipContent();
+			let $content = t.$content;
+			let addHeader = t.addHeader, addLine = t.addLine, addHTML = t.addHTML;
 
-			// popups don't stack: close the list, queue the confirmation, reopen the list after
-			this.craftPopupReopen = true;
-			GameGlobals.uiFunctions.popupManager.closePopup("craft-popup");
+			if (index == -2) {
+				let isTouch = UIConstants.isTouchScreen();
+				addHeader("Craft menu");
+				addLine(isTouch ? "Tap a row's \u24d8 for what an item does, what it costs and why it is blocked." : "Hover any row for what an item does, what it costs and why it is blocked.");
+				addHTML("<span class='meta'>number: open a type's recipes &middot; number or enter: craft<br/>arrows, pgup/pgdn, home/end: move &middot; space: show obsolete<br/>esc: back &middot; &#8679;esc: close</span>");
+				return $content;
+			}
 
-			// the popup manager closes this popup itself - handleOkButton after the ok
-			// callback, and the cancel handler before the cancel callback. Closing it here
-			// too schedules a second, unbalanced hideOverlay, and the overlay is the craft
-			// popup's parent, so the reopen below would be hidden the moment it happened.
-			// The cancel callback is null for the same reason: closing is already handled.
-			GameGlobals.uiFunctions.popupManager.showPopup("Craft", msg, "Craft", "Cancel", null,
-				function () {
-					// startAction passes its param straight to craftItem; without it the
-					// item id is undefined and the craft throws on a null item definition
-					GameGlobals.playerActionFunctions.startAction(actionName, itemDefinition.id);
-				},
-				null,
-				{ isMeta: false, isDismissable: true }
-			);
+			if (index == -1) {
+				addHeader("Show obsolete");
+				addLine("Also list recipes for equipment you already own unbroken, or have something better than.");
+				addHTML("<span class='meta'>space: toggle</span>");
+				return $content;
+			}
+
+			if (!entry) return null;
+
+			if (screen == "menu") {
+				addHeader(entry.name, entry.count + (entry.count == 1 ? " recipe" : " recipes"));
+				addLine(entry.description);
+				let keyLabel = this.craftPopup.getRowKeyLabel(index);
+				if (keyLabel) addHTML("<span class='meta'>" + keyLabel + " or enter: open</span>");
+				return $content;
+			}
+
+			let item = entry.itemDefinition;
+			let badge = entry.available ? "available" : entry.isBusy ? "busy" : entry.isObsolete ? "obsolete" : entry.reason ? entry.reason : "unaffordable";
+			addHeader(entry.name, badge);
+			addLine(ItemConstants.getItemDescription(item), "chooser-tooltip-desc");
+			let bonus = UIConstants.getItemBonusDescription(item, false);
+			if (bonus) addLine(bonus, "meta");
+			if (entry.isEquipped) addLine("Equipped", "meta");
+			else if (entry.owned > 0) addLine("Owned: " + entry.owned, "meta");
+			let duration = PlayerActionConstants.getDuration(entry.action);
+			if (duration > 0) addLine("takes " + UIConstants.getTimeToNum(duration), "meta");
+
+			let costSpans = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action);
+			if (costSpans.length > 0) addHTML("Costs: " + costSpans.join(", "));
+			if (!entry.available && entry.reason) addHTML("<span class='action-cost-blocker'>" + entry.reason + "</span>");
+			let keyLabel = this.craftPopup.getRowKeyLabel(index);
+			if (keyLabel) addHTML("<span class='meta'>" + keyLabel + " or enter: craft</span>");
+			return $content;
 		},
-				
+
 		initItemSlots: function () {
 			var sys = this;
 			$.each($("#container-equipment-slots .item-slot"), function () {
@@ -403,6 +390,7 @@ define([
 
 		slowUpdate: function () {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (this.craftPopup.isOpen) this.craftPopup.renderList();
 			let isActive = GameGlobals.gameState.uiStatus.currentTab === GameGlobals.uiFunctions.elementIDs.tabs.bag;
 			this.updateCrafting();
 			this.updateSeenItems(isActive);
@@ -899,6 +887,7 @@ define([
 
 		onInventoryChanged: function () {
 			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (this.craftPopup.isOpen) this.craftPopup.renderList();
 			if (GameGlobals.gameState.uiStatus.currentTab !== GameGlobals.uiFunctions.elementIDs.tabs.bag) return;
 			this.updateAutoEquip();
 			this.updateItems();
