@@ -208,7 +208,7 @@ define([
 		},
 
 		hasManualSave: function (saveSlotID) {
-			return saveSlotID && saveSlotID != GameConstants.SAVE_SLOT_LOADED && saveSlotID != GameConstants.SAVE_SLOT_BACKUP;
+			return saveSlotID && saveSlotID != GameConstants.SAVE_SLOT_LOADED && saveSlotID != GameConstants.SAVE_SLOT_BACKUP && saveSlotID != GameConstants.SAVE_SLOT_PREUPDATE;
 		},
 
 		isCustomSaveSlot: function (saveSlotID) {

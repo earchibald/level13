@@ -39,6 +39,7 @@ define([
 	'game/systems/SpecialUpdateSystem',
 	'game/systems/VisionSystem',
 	'game/systems/StaminaSystem',
+	'game/systems/AutoScavengeSystem',
 	'game/systems/PlayerPositionSystem',
 	'game/systems/PlayerActionSystem',
 	'game/systems/PlayerMovementSystem',
@@ -111,6 +112,7 @@ define([
 	SpecialUpdateSystem,
 	VisionSystem,
 	StaminaSystem,
+	AutoScavengeSystem,
 	PlayerPositionSystem,
 	PlayerActionSystem,
 	PlayerMovementSystem,
@@ -302,6 +304,7 @@ define([
 			this.engine.addSystem(new GlobalResourcesResetSystem(), SystemPriorities.update);
 			this.engine.addSystem(new VisionSystem(), SystemPriorities.update);
 			this.engine.addSystem(new StaminaSystem(), SystemPriorities.update);
+			this.engine.addSystem(new AutoScavengeSystem(), SystemPriorities.update);
 			this.engine.addSystem(new BagSystem(), SystemPriorities.update);
 			this.engine.addSystem(new CharacterSystem(), SystemPriorities.update);
 			this.engine.addSystem(new CollectorSystem(), SystemPriorities.update);

@@ -44,6 +44,7 @@ define(['ash', 'worldcreator/WorldCreatorHelper'], function (Ash, WorldCreatorHe
 				leaveCampRes: {},
 				leaveCampItems: {},
 				lastSelection: {},
+				isAutoScavenging: false,
 			};
 			
 			this.settings = {
@@ -169,6 +170,7 @@ define(['ash', 'worldcreator/WorldCreatorHelper'], function (Ash, WorldCreatorHe
 			this.uiStatus.isBusyCounter = 0;
 			this.uiStatus.sequenceTitleKey = null;
 			this.uiStatus.isTransitioning = false;
+			this.uiStatus.isAutoScavenging = false;
 			if (!this.uiStatus.lastSelection) this.uiStatus.lastSelection = {};
 			if (!this.uiStatus.seenTabs) this.uiStatus.seenTabs = [];
 

@@ -2109,6 +2109,8 @@
             "explorer_ability_type_cost_lockpick_name": "lock-picking",
             "explorer_ability_type_cost_movement_description": "movement cost -{value}",
             "explorer_ability_type_cost_movement_name": "trekking",
+            "explorer_ability_type_auto_scavenge_description": "keeps scavenging on their own until you stop, run out of stamina or the sector is picked clean",
+            "explorer_ability_type_auto_scavenge_name": "auto-scavenging",
             "explorer_ability_type_cost_scavenge_description": "scavenge cost -{value}",
             "explorer_ability_type_cost_scavenge_name": "scouring",
             "explorer_ability_type_cost_scout_description": "scout cost -{value}",

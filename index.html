@@ -29,9 +29,9 @@
 	<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
 	<link rel="manifest" href="manifest.webmanifest" />
 	<link rel="image_src" href="favicon.png" />
-	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.6.3.m129" />
-	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.6.3.m129" />
-	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.6.3.m129" />
+	<link rel="stylesheet" type="text/css" href="css/normalize.css?v=0.7.0.m1" />
+	<link rel="stylesheet" type="text/css" href="css/gridism.css?v=0.7.0.m1" />
+	<link rel="stylesheet" type="text/css" href="css/main.css?v=0.7.0.m1" />
 	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
 	<link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 	<link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
@@ -438,6 +438,10 @@
 							<div id="out-sector-bar">
 								<div id="out-sector-bar-actions" class="actionbox">
 									<button class="action action-location tabbutton" data-tab="switch-out" id="out-action-sca" action="scavenge">Scavenge</button>
+									<!-- Auto-scavenge: shown while a scavenger with the auto-scavenging
+									     ability is in the party. It is a toggle, not an action button, so
+									     it carries no action attribute; the badge is written by hand. -->
+									<button class="action-location btn-toggle" id="out-action-auto-scavenge" title="Keep scavenging whenever the cooldown ends (shift-N)">Auto<span class="hotkey-hint">&#8679;N</span></button>
 									<button class="action action-location" id="out-action-scout" action="scout">Scout</button>
 									<button class="action action-location" id="out-action-use-spring" action="use_spring">Refill water</button>
 									<!-- Founding a camp changes the whole game and it was the last row of a
@@ -1109,6 +1113,22 @@
 				<button id="open-import">Import</button>
 				<button id="open-save-list">Back to list</button>
 				<button id="close-manage-save-popup" class="button-popup-default">Close</button>
+			</div>
+		</div>
+
+		<!-- Pre-update backup: shown once when a save from an older major.minor is
+		     loaded by a newer build. The text is the save exactly as it was before
+		     this load; the same text sits in the "Before update" slot in Manage saves. -->
+		<div id="save-backup-popup" role="dialog" class="popup fill-on-mobiles hidden-by-default popup-ingame" style="display:none" aria-labelledby="save-backup-popup-header" aria-modal="true">
+			<h3 id="save-backup-popup-header">Game updated</h3>
+			<p>Your save was made with an older version of the game. Keep a copy of it before you carry on, so you can roll back if the update misbehaves. It is also stored in the "Before update" slot in Manage saves.</p>
+			<p id="save-backup-versions" class="p-meta"></p>
+			<textarea id="textarea-save-backup" rows="5" readonly></textarea>
+			<p id="save-backup-status" class="p-meta"></p>
+			<div class="buttonbox">
+				<button id="btn-save-backup-copy">Copy</button>
+				<button id="btn-save-backup-download">Download</button>
+				<button id="close-save-backup-popup" class="button-popup-default">Continue</button>
 			</div>
 		</div>
 

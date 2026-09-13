@@ -107,6 +107,19 @@ function (Ash, GameGlobals, GlobalSignals, GameConstants) {
 			return { major: parts2[0], minor: parts2[1], patch: parts2[2] };
 		},
 		
+		// true when version a has a lower major or minor than version b (patch and the
+		// fork's mN build are ignored). Digits are compared as numbers, not strings.
+		isOlderMajorMinor: function (a, b) {
+			if (!a || !b) return false;
+			let da = this.getVersionDigits(a);
+			let db = this.getVersionDigits(b);
+			let majorA = parseInt(da.major), majorB = parseInt(db.major);
+			let minorA = parseInt(da.minor), minorB = parseInt(db.minor);
+			if (isNaN(majorA) || isNaN(majorB) || isNaN(minorA) || isNaN(minorB)) return false;
+			if (majorA != majorB) return majorA < majorB;
+			return minorA < minorB;
+		},
+
 		isOldVersion: function (version) {
 			if (!version) return true;
 			

@@ -1,6 +1,27 @@
 {
     "versions": [
         {
+            "version": "0.7.0.m1",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "NEW",
+                    "summary": "New explorer ability, auto-scavenging: while a scavenger with it is in the party an Auto button (shift-N) sits next to Scavenge and keeps scavenging every time the cooldown ends, until you stop it, run out of stamina or the sector is picked clean"
+                },
+                {
+                    "type": "NEW",
+                    "summary": "The first time a newer game version loads your save, a popup offers a copy and a download of the save as it was, and keeps it in a 'Before update' slot in Manage saves"
+                },
+                {
+                    "type": "UI",
+                    "summary": "0.7 marks the fork's first content addition; builds count on in the .mN series"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m129",
             "requiredVersion": "0.6.1",
             "phase": "beta",

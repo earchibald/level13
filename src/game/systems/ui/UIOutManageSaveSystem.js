@@ -22,6 +22,8 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 		addToEngine: function (engine) {
 			this.engine = engine;
 			GlobalSignals.add(this, GlobalSignals.popupOpenedSignal, this.onPopupOpened);
+			GlobalSignals.add(this, GlobalSignals.gameShownSignal, this.tryShowBackupPopup);
+			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.tryShowBackupPopup);
 		},
 
 		removeFromEngine: function (engine) {
@@ -67,6 +69,18 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 			$("#btn-back-from-export").click(function () {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 				system.closeExport();
+			});
+			$("#btn-save-backup-copy").click(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				system.copyBackup();
+			});
+			$("#btn-save-backup-download").click(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				system.downloadBackup();
+			});
+			$("#close-save-backup-popup").click(function () {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				GameGlobals.uiFunctions.popupManager.closePopup("save-backup-popup");
 			});
 			$("#close-manage-save-popup").click(function (e) {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
@@ -282,7 +296,7 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 		},
 
 		getSaveSlotListData: function () {
-			let slotIDs = [ GameConstants.SAVE_SLOT_DEFAULT, GameConstants.SAVE_SLOT_BACKUP, GameConstants.SAVE_SLOT_LOADED, GameConstants.SAVE_SLOT_USER_1, GameConstants.SAVE_SLOT_USER_2, GameConstants.SAVE_SLOT_USER_3 ];
+			let slotIDs = [ GameConstants.SAVE_SLOT_DEFAULT, GameConstants.SAVE_SLOT_BACKUP, GameConstants.SAVE_SLOT_LOADED, GameConstants.SAVE_SLOT_PREUPDATE, GameConstants.SAVE_SLOT_USER_1, GameConstants.SAVE_SLOT_USER_2, GameConstants.SAVE_SLOT_USER_3 ];
 
 			let result = [];
 			for (let i = 0; i < slotIDs.length; i++) {
@@ -341,6 +355,7 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 				case GameConstants.SAVE_SLOT_DEFAULT: return "Default";
 				case GameConstants.SAVE_SLOT_BACKUP: return "Automatic #1 (Backup)";
 				case GameConstants.SAVE_SLOT_LOADED: return "Automatic #2 (Loaded)";
+				case GameConstants.SAVE_SLOT_PREUPDATE: return "Automatic #3 (Before update)";
 				case GameConstants.SAVE_SLOT_USER_1: return "Custom #1";
 				case GameConstants.SAVE_SLOT_USER_2: return "Custom #2";
 				case GameConstants.SAVE_SLOT_USER_3: return "Custom #3";
@@ -353,6 +368,7 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 			switch (slotID) {
 				case GameConstants.SAVE_SLOT_BACKUP: return "Automatically saved when building a camp.";
 				case GameConstants.SAVE_SLOT_LOADED: return "Automatically saved when loading the page.";
+				case GameConstants.SAVE_SLOT_PREUPDATE: return "Saved automatically before a game update first loaded your save. Load or export it to roll back.";
 				case GameConstants.SAVE_SLOT_USER_1: return "Custom #1";
 				case GameConstants.SAVE_SLOT_USER_2: return "Custom #2";
 				case GameConstants.SAVE_SLOT_USER_3: return "Custom #3";
@@ -532,6 +548,68 @@ function (Ash, UIList, FileUtils, GameGlobals, GlobalSignals, GameConstants, UIC
 			if (popupID === "manage-save-popup") {
 				this.refresh();
 			}
+		},
+
+		// PRE-UPDATE BACKUP
+		// GameManager.keepPreUpdateBackup leaves the untouched save text in
+		// GameGlobals.preUpdateBackup when a save from an older major.minor is loaded.
+		// Offer a copy and a download once per build major.minor. Popups do not
+		// stack, so this waits for the game to be shown and for any open popup to
+		// close before it takes its turn.
+
+		getBackupShownStorageKey: function () {
+			return this.getSaveSystem().getStorageNamespace() + "preupdate-backup-shown";
+		},
+
+		getMajorMinor: function (version) {
+			let digits = GameGlobals.changeLogHelper.getVersionDigits(version || "");
+			return digits.major + "." + digits.minor;
+		},
+
+		tryShowBackupPopup: function () {
+			let backup = GameGlobals.preUpdateBackup;
+			if (!backup) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+
+			let shownKey = this.getBackupShownStorageKey();
+			let currentMajorMinor = this.getMajorMinor(backup.currentVersion);
+			try {
+				if (localStorage.getItem(shownKey) === currentMajorMinor) {
+					GameGlobals.preUpdateBackup = null;
+					return;
+				}
+				localStorage.setItem(shownKey, currentMajorMinor);
+			} catch (ex) {
+				log.w("could not read pre-update backup flag: " + ex);
+			}
+
+			GameGlobals.preUpdateBackup = null;
+			this.backupData = backup.data;
+			this.backupVersion = backup.saveVersion;
+
+			$("#save-backup-versions").html("Save version: " + backup.saveVersion + "<br/>Current version: " + backup.currentVersion);
+			$("#textarea-save-backup").val(backup.data);
+			GameGlobals.uiFunctions.showSpecialPopup("save-backup-popup", { isMeta: true, isDismissable: true });
+		},
+
+		copyBackup: function () {
+			let text = this.backupData || $("#textarea-save-backup").val();
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).then(
+					() => $("#save-backup-status").text("Copied to clipboard."),
+					() => $("#save-backup-status").text("Copy failed. Select the text above and copy it by hand."));
+			} else {
+				$("#textarea-save-backup").select();
+				$("#save-backup-status").text("Select the text above and copy it by hand.");
+			}
+		},
+
+		downloadBackup: function () {
+			let text = this.backupData || $("#textarea-save-backup").val();
+			let version = (this.backupVersion || "unknown").split(" ")[0];
+			FileUtils.saveTextToFile("level13-save-before-" + version, text);
+			$("#save-backup-status").text("Download started.");
 		},
 
 	});

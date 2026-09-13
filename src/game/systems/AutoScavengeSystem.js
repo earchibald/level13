@@ -1,0 +1,138 @@
+// Auto-scavenge: the scavenger ability that keeps scavenging for the player.
+//
+// The Auto button (shift-N) turns the mode on. While it is on this system
+// starts a scavenge every time the scavenge cooldown for the current sector
+// ends. It waits while a popup is open, the player is busy or an action is
+// still running; it turns itself off when the ability leaves the party, the
+// player enters a camp, or scavenging is no longer possible once the cooldown
+// is over (no stamina, sector picked clean, no vision, fainted).
+//
+// The on/off flag lives in gameState.uiStatus.isAutoScavenging so that
+// PlayerActionFunctions.scavenge can skip the result popup. GameState resets
+// it on load, so the mode never survives a reload.
+define([
+	'ash',
+	'game/GameGlobals',
+	'game/GlobalSignals',
+	'game/constants/ExplorerConstants',
+	'game/constants/LogConstants',
+	'game/constants/PlayerActionConstants',
+	'game/nodes/player/PlayerStatsNode',
+	'game/nodes/PlayerPositionNode',
+	'game/components/player/ExplorersComponent',
+], function (Ash, GameGlobals, GlobalSignals, ExplorerConstants, LogConstants, PlayerActionConstants, PlayerStatsNode, PlayerPositionNode, ExplorersComponent) {
+
+	let AutoScavengeSystem = Ash.System.extend({
+
+		ACTION: "scavenge",
+
+		playerStatsNodes: null,
+		playerPosNodes: null,
+
+		constructor: function () { },
+
+		addToEngine: function (engine) {
+			this.engine = engine;
+			this.playerStatsNodes = engine.getNodeList(PlayerStatsNode);
+			this.playerPosNodes = engine.getNodeList(PlayerPositionNode);
+			GlobalSignals.add(this, GlobalSignals.toggleAutoScavengeSignal, this.toggle);
+			GlobalSignals.add(this, GlobalSignals.explorersChangedSignal, this.checkAvailable);
+			GlobalSignals.add(this, GlobalSignals.playerEnteredCampSignal, this.checkAvailable);
+			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
+		},
+
+		removeFromEngine: function (engine) {
+			GlobalSignals.removeAll(this);
+			this.playerStatsNodes = null;
+			this.playerPosNodes = null;
+			this.engine = null;
+		},
+
+		update: function (time) {
+			if (!this.isActive()) return;
+			if (GameGlobals.gameState.isPaused) return;
+			if (!this.playerStatsNodes.head || !this.playerPosNodes.head) return;
+
+			if (!this.isAvailable()) {
+				this.stop("Auto-scavenge stopped.");
+				return;
+			}
+
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			if (GameGlobals.playerHelper.isBusy()) return;
+			if (GameGlobals.playerActionFunctions.currentAction) return;
+			if (GameGlobals.playerActionsHelper.getCooldownForCurrentLocation(this.ACTION) > 0) return;
+
+			if (GameGlobals.playerActionsHelper.checkAvailability(this.ACTION, false)) {
+				GameGlobals.playerActionFunctions.startAction(this.ACTION);
+				return;
+			}
+
+			this.stop(this.getStopReason());
+		},
+
+		isActive: function () {
+			return GameGlobals.gameState.uiStatus.isAutoScavenging === true;
+		},
+
+		// an explorer with the ability is in the party and the player is outside
+		isAvailable: function () {
+			if (!this.playerStatsNodes || !this.playerStatsNodes.head) return false;
+			if (!this.playerPosNodes || !this.playerPosNodes.head) return false;
+			if (this.playerPosNodes.head.position.inCamp) return false;
+			let explorersComponent = this.playerStatsNodes.head.entity.get(ExplorersComponent);
+			if (!explorersComponent) return false;
+			let party = explorersComponent.getParty();
+			for (let i = 0; i < party.length; i++) {
+				if (party[i].abilityType == ExplorerConstants.abilityType.AUTO_SCAVENGE) return true;
+			}
+			return false;
+		},
+
+		toggle: function () {
+			if (this.isActive()) {
+				this.stop(null);
+			} else if (this.isAvailable()) {
+				this.setActive(true);
+			}
+		},
+
+		setActive: function (isActive) {
+			isActive = isActive === true;
+			if (this.isActive() === isActive) return;
+			GameGlobals.gameState.uiStatus.isAutoScavenging = isActive;
+			GlobalSignals.autoScavengeChangedSignal.dispatch(isActive);
+		},
+
+		stop: function (message) {
+			if (!this.isActive()) return;
+			this.setActive(false);
+			if (message) GameGlobals.playerHelper.addLogMessage(LogConstants.getUniqueID(), message);
+		},
+
+		checkAvailable: function () {
+			if (this.isActive() && !this.isAvailable()) this.stop("Auto-scavenge stopped.");
+		},
+
+		// called after the cooldown is over and checkAvailability said no
+		getStopReason: function () {
+			let helper = GameGlobals.playerActionsHelper;
+			let reqs = helper.checkRequirements(this.ACTION, false);
+			if (reqs.value < 1) {
+				let reason = reqs.reason || {};
+				let text = typeof reason === "string" ? reason : (reason.textKey || "");
+				if (text.indexOf("scavenged clean") >= 0) return "Auto-scavenge stopped: nothing left to scavenge here.";
+				return "Auto-scavenge stopped.";
+			}
+			if (helper.checkCosts(this.ACTION, false) < 1) return "Auto-scavenge stopped: not enough stamina.";
+			return "Auto-scavenge stopped.";
+		},
+
+		onGameReset: function () {
+			GameGlobals.gameState.uiStatus.isAutoScavenging = false;
+		},
+
+	});
+
+	return AutoScavengeSystem;
+});

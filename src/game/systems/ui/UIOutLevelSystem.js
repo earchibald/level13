@@ -36,7 +36,8 @@ define([
 	'game/components/sector/improvements/SectorImprovementsComponent',
 	'game/components/sector/improvements/WorkshopComponent',
 	'game/components/sector/SectorStatusComponent',
-	'game/components/sector/EnemiesComponent'
+	'game/components/sector/EnemiesComponent',
+	'game/systems/AutoScavengeSystem'
 ], function (
 	Ash,
 	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, ImprovementConstants, PlayerStatConstants, TextConstants,
@@ -44,8 +45,8 @@ define([
 	TribeConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
 	PassagesComponent, SectorControlComponent, SectorFeaturesComponent, SectorLocalesComponent,
 	MovementOptionsComponent, PositionComponent, CampComponent, SectorImprovementsComponent,
-	WorkshopComponent, SectorStatusComponent, EnemiesComponent
-) {
+	WorkshopComponent, SectorStatusComponent, EnemiesComponent,
+	AutoScavengeSystem) {
 	// The bucket and the trap. Everything either one offers now lives on its chip
 	// in the sector bar: build it, empty it, and raise its capacity.
 	var COLLECTOR_DEFS = [
@@ -164,6 +165,10 @@ define([
 		},
 
 		initListeners: function () {
+			$("#out-action-auto-scavenge").click(ExceptionHandler.wrapClick(() => {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				GlobalSignals.toggleAutoScavengeSignal.dispatch();
+			}));
 			var sys = this;
 			GlobalSignals.playerPositionChangedSignal.add(function () {
 				if (GameGlobals.gameState.uiStatus.isHidden) return;
@@ -206,6 +211,8 @@ define([
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
 			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
 			GlobalSignals.add(this, GlobalSignals.buttonStateChangedSignal, this.onButtonStateChanged);
+			GlobalSignals.add(this, GlobalSignals.autoScavengeChangedSignal, this.updateAutoScavengeButton);
+			GlobalSignals.add(this, GlobalSignals.explorersChangedSignal, this.updateAutoScavengeButton);
 			GlobalSignals.add(this, GlobalSignals.localeScoutedSignal, this.scheduleMapUpdate);
 			GlobalSignals.add(this, GlobalSignals.inventoryChangedSignal, this.scheduleMapUpdate);
 			GlobalSignals.add(this, GlobalSignals.equipmentChangedSignal, this.scheduleMapUpdate);
@@ -229,6 +236,20 @@ define([
 			}
 		},
 		
+		// The Auto button is a toggle: lit while auto-scavenge is on. It shows
+		// only next to a visible Scavenge button and only while an explorer with
+		// the ability is in the party. The system owns the state; this reads it.
+		updateAutoScavengeButton: function (showScavenge) {
+			if (typeof showScavenge !== "boolean") showScavenge = GameGlobals.uiFunctions.isElementToggled("#out-action-sca");
+			let system = this.engine ? this.engine.getSystem(AutoScavengeSystem) : null;
+			let isAvailable = system ? system.isAvailable() : false;
+			let isActive = GameGlobals.gameState.uiStatus.isAutoScavenging === true;
+			let $btn = $("#out-action-auto-scavenge");
+			GameGlobals.uiFunctions.toggle($btn, showScavenge && isAvailable);
+			$btn.toggleClass("selected", isActive);
+			$btn.attr("aria-pressed", isActive ? "true" : "false");
+		},
+
 		slowUpdate: function () {
 			if (!this.playerLocationNodes.head) return;
 			this.updateOutImprovementsStatus();
@@ -381,6 +402,7 @@ define([
 				&& GameGlobals.playerActionsHelper.isVisible("build_out_beacon");
 
 			GameGlobals.uiFunctions.toggle("#out-action-sca", showScavenge);
+			this.updateAutoScavengeButton(showScavenge);
 			GameGlobals.uiFunctions.toggle("#out-action-scout", showScout);
 			GameGlobals.uiFunctions.toggle("#out-action-use-spring", showSpring);
 			GameGlobals.uiFunctions.toggle("#out-action-build-camp", showCamp);

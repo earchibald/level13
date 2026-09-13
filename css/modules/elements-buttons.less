@@ -270,6 +270,20 @@ button.btn-disabled .hotkey-hint {
     display: none !important;
 }
 
+// toggle buttons (Auto next to Scavenge): lit while the mode is on
+button.btn-toggle {
+	border-width: 2px;
+	margin: 0px;
+	white-space: nowrap;
+}
+
+button.btn-toggle.selected {
+	color: @color-text-highlight;
+	border-color: @color-border-button-highlight;
+	background-color: @color-bg-clickable-button;
+	box-shadow: inset 0 0 0 1px @color-border-button-highlight;
+}
+
 // location action buttons keep their badge when disabled: the badge advertises the
 // key itself (B shows requirements; ENTER is simply gated until the action is possible)
 #out-action-move-camp.btn-disabled .hotkey-hint,

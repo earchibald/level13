@@ -53,6 +53,7 @@ define(['ash',
 			SCAVENGE_BLUEPRINTS: "scavenge_blueprints", // find more blueprints
 			SCAVENGE_CAPACITY: "scavenge_capacity", // always animal
 			COST_COLLECTORS: "cost_collectors", // decrease cost of building collectors
+			AUTO_SCAVENGE: "auto_scavenge", // keeps scavenging on their own (Auto button / shift-N)
 		},
 		
 		// in order of rarity
@@ -436,6 +437,10 @@ define(['ash',
 					// make sure player doesn't accumulate tons of hope before they can spend it
 					result = WorldConstants.CAMP_ORDINAL_GROUND;
 					break;
+				case ExplorerConstants.abilityType.AUTO_SCAVENGE:
+					// the first camp is where the player learns to scavenge by hand
+					result = 2;
+					break;
 			}
 
 			// make sure abilities of unique explorers don't appear before that explorer (should be cool and unique when met)
@@ -599,6 +604,7 @@ define(['ash',
 				case this.abilityType.SCAVENGE_BLUEPRINTS: return this.explorerType.SCAVENGER;
 				case this.abilityType.SCAVENGE_CAPACITY: return this.explorerType.SCAVENGER;
 				case this.abilityType.COST_COLLECTORS: return this.explorerType.SCAVENGER;
+				case this.abilityType.AUTO_SCAVENGE: return this.explorerType.SCAVENGER;
 
 				default:
 					log.w("no explorerType defined for abilityType: " + abilityType);

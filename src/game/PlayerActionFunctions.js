@@ -613,7 +613,9 @@ define(['ash',
 				addToLog: isFirst,
 			};
 
-			let showResultPopup = !GameConstants.uiModeMinimialExplorationPopups;
+			// auto-scavenge would stall on a popup after every find, so it takes the
+			// flyout path; handleRewards still forces a popup when the bag is full
+			let showResultPopup = !GameConstants.uiModeMinimialExplorationPopups && !GameGlobals.gameState.uiStatus.isAutoScavenging;
 			
 			this.handleOutActionResults("scavenge", messages, showResultPopup, false, successCallback);
 		},
