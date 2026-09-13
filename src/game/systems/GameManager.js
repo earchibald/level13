@@ -465,12 +465,35 @@ define([
 				saveSystem.saveDataToSlot(GameConstants.SAVE_SLOT_LOADED, compressed);
 				let json = saveSystem.getSaveJSONfromCompressed(compressed);
 				let object = GameGlobals.saveHelper.parseSaveJSON(json);
+				this.keepPreUpdateBackup(object, compressed, saveSystem);
 				return object;
 			} catch (exception) {
 				// TODO show no save found to user?
 				log.i("Error loading save: " + exception);
 			}
 			return null;
+		},
+
+		// A save written by an older major.minor is about to be loaded by a newer
+		// build. Keep the untouched text in its own slot and hand it to the UI, which
+		// offers a copy and a download once (UIOutManageSaveSystem). The save format
+		// itself is not rewritten here; this is the player's rollback point.
+		keepPreUpdateBackup: function (save, compressed, saveSystem) {
+			GameGlobals.preUpdateBackup = null;
+			if (!save || !compressed) return;
+			let saveVersion = save.version;
+			let currentVersion = GameGlobals.changeLogHelper.getCurrentVersionNumber();
+			if (!GameGlobals.changeLogHelper.isOlderMajorMinor(saveVersion, currentVersion)) return;
+			saveSystem.saveDataToSlot(GameConstants.SAVE_SLOT_PREUPDATE, compressed);
+			GameGlobals.preUpdateBackup = { saveVersion: saveVersion, currentVersion: currentVersion, data: compressed };
+			// the offer must survive a reload: once the game autosaves, the default slot
+			// is at the new version and this branch is never reached again
+			try {
+				localStorage.setItem(saveSystem.getStorageNamespace() + "preupdate-backup-pending", JSON.stringify({ saveVersion: saveVersion, currentVersion: currentVersion }));
+			} catch (ex) {
+				log.w("could not store pre-update backup marker: " + ex);
+			}
+			log.i("Kept pre-update backup of save version " + saveVersion + " before loading in " + currentVersion);
 		},
 
 		getMetaStateObject: function () {

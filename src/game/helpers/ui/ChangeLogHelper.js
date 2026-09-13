@@ -107,6 +107,19 @@ function (Ash, GameGlobals, GlobalSignals, GameConstants) {
 			return { major: parts2[0], minor: parts2[1], patch: parts2[2] };
 		},
 		
+		// true when version a has a lower major or minor than version b (patch and the
+		// fork's mN build are ignored). Digits are compared as numbers, not strings.
+		isOlderMajorMinor: function (a, b) {
+			if (!a || !b) return false;
+			let da = this.getVersionDigits(a);
+			let db = this.getVersionDigits(b);
+			let majorA = parseInt(da.major), majorB = parseInt(db.major);
+			let minorA = parseInt(da.minor), minorB = parseInt(db.minor);
+			if (isNaN(majorA) || isNaN(majorB) || isNaN(minorA) || isNaN(minorB)) return false;
+			if (majorA != majorB) return majorA < majorB;
+			return minorA < minorB;
+		},
+
 		isOldVersion: function (version) {
 			if (!version) return true;
 			
@@ -119,7 +132,17 @@ function (Ash, GameGlobals, GlobalSignals, GameConstants) {
 			log.i("isOldVersion? " + version + ", current: " + currentVersionNumber + ", required: " + requiredVersion);
 			if (!requiredVersionDigits) return false;
 			if (!compareVersionDigits) return false;
-			return compareVersionDigits.major < requiredVersionDigits.major || compareVersionDigits.minor < requiredVersionDigits.minor || compareVersionDigits.patch < requiredVersionDigits.patch;
+			// Compare as one version, most significant digit first. The old check
+			// compared each digit on its own, so 0.7.0 counted as older than the
+			// required 0.6.1 (patch 0 < 1) and every 0.7.0 save got the "incompatible
+			// version" prompt on each load.
+			let required = [ parseInt(requiredVersionDigits.major), parseInt(requiredVersionDigits.minor), parseInt(requiredVersionDigits.patch) ];
+			let compare = [ parseInt(compareVersionDigits.major), parseInt(compareVersionDigits.minor), parseInt(compareVersionDigits.patch) ];
+			for (let i = 0; i < 3; i++) {
+				if (isNaN(required[i]) || isNaN(compare[i])) return false;
+				if (compare[i] != required[i]) return compare[i] < required[i];
+			}
+			return false;
 		},
 	
 	});

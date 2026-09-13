@@ -864,6 +864,9 @@ define(['ash',
 				this.registerHotkey("Move E", "ArrowRight", defaultModifier, tabs.out, false, false, "move_sector_east", { isHiddenFromList: true, activeCondition: () => true });
 
 				this.registerHotkey("Scavenge", "KeyN", defaultModifier, tabs.out, false, false, "scavenge");
+				// the Auto button next to Scavenge; the system ignores the toggle when no
+				// explorer with the ability is in the party
+				this.registerHotkey("Auto-scavenge", "KeyN", "shiftKey", tabs.out, false, false, () => GlobalSignals.toggleAutoScavengeSignal.dispatch());
 				this.registerHotkey("Scout", "KeyM", defaultModifier, tabs.out, false, false, "scout");
 				this.registerHotkey("Collect water", "KeyG", defaultModifier, tabs.out, false, false, "use_out_collector_water");
 				this.registerHotkey("Collect food", "KeyF", defaultModifier, tabs.out, false, false, "use_out_collector_food");

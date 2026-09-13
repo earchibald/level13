@@ -1,6 +1,87 @@
 {
     "versions": [
         {
+            "version": "0.7.0.m5",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-13",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Auto-scavenge stops when a fight starts or a scavenge ends in an injury"
+                },
+                {
+                    "type": "UI",
+                    "summary": "Auto-scavenge treats the bag as full when less than one unit of capacity remains"
+                }
+            ]
+        },
+        {
+            "version": "0.7.0.m4",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-13",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Auto-scavenge also stops when the bag is full, instead of turning every find into a leave-something-behind popup"
+                }
+            ]
+        },
+        {
+            "version": "0.7.0.m3",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-13",
+            "changes": [
+                {
+                    "type": "UI",
+                    "summary": "Auto-scavenge also stops once the sector is scavenged past the reveal threshold and its resources row reads (None): there is nothing left to find, so no more stamina goes into it"
+                }
+            ]
+        },
+        {
+            "version": "0.7.0.m2",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-13",
+            "changes": [
+                {
+                    "type": "BUGFIX",
+                    "summary": "A 0.7.0 save no longer raises the 'incompatible version' restart prompt on every load: the version check compared each digit on its own, so 0.7.0 counted as older than 0.6.1"
+                },
+                {
+                    "type": "BUGFIX",
+                    "summary": "The 'Game updated' backup offer could appear under the loading screen where nothing in it could be tapped; it now waits for the game to be shown, closes itself when a restart begins, sits above the loading layer, and comes back after a reload until Continue is pressed"
+                }
+            ]
+        },
+        {
+            "version": "0.7.0.m1",
+            "requiredVersion": "0.6.1",
+            "phase": "beta",
+            "final": true,
+            "released": "2026-09-12",
+            "changes": [
+                {
+                    "type": "NEW",
+                    "summary": "New explorer ability, auto-scavenging: while a scavenger with it is in the party an Auto button (shift-N) sits next to Scavenge and keeps scavenging every time the cooldown ends, until you stop it, run out of stamina or the sector is picked clean"
+                },
+                {
+                    "type": "NEW",
+                    "summary": "The first time a newer game version loads your save, a popup offers a copy and a download of the save as it was, and keeps it in a 'Before update' slot in Manage saves"
+                },
+                {
+                    "type": "UI",
+                    "summary": "0.7 marks the fork's first content addition; builds count on in the .mN series"
+                }
+            ]
+        },
+        {
             "version": "0.6.3.m129",
             "requiredVersion": "0.6.1",
             "phase": "beta",
