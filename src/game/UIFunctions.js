@@ -913,6 +913,10 @@ define(['ash',
 				// opens it on keydown so the keys typed right after land in the menu; this
 				// keyup binding is the fallback and the hotkey list entry
 				this.registerHotkey("Buildings menu", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
+				// the outside counterpart: Build, Action and Search lists for the sector the
+				// player stands in. O because B is "Back to camp" out here, and O sits away
+				// from the movement keys (see UIOutLevelSystem.initSectorPopup)
+				this.registerHotkey("Sector menu", "KeyO", defaultModifier, tabs.out, false, false, () => GlobalSignals.openSectorPopupSignal.dispatch());
 
 				// G asks for a level number and presses that camp's Go button. KeyG is free
 				// here because the collector binding is scoped to tabs.out; T is an alias.

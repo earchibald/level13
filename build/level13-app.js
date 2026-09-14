@@ -7277,6 +7277,7 @@ define(['ash',], function (Ash) {
 		openCraftPopupSignal: new Ash.Signals.Signal(),
 		openBuildingsPopupSignal: new Ash.Signals.Signal(),
 		openGoPopupSignal: new Ash.Signals.Signal(),
+		openSectorPopupSignal: new Ash.Signals.Signal(),
 		elementToggledSignal: new Ash.Signals.Signal(),
 		elementCreatedSignal: new Ash.Signals.Signal(),
 		buttonStateChangedSignal: new Ash.Signals.Signal(),
@@ -25570,6 +25571,612 @@ define([
 });
 
 ;(function (define) {
+// A two-level chooser popup: a menu screen of groups, and one numbered list per
+// group. Digits, letters, arrows and enter drive it; a mouse or a finger works
+// too. The Buildings menu (B) and the Craft menu (K) are both instances of this.
+//
+// The helper owns the popup's state and DOM wiring. The owner passes a config
+// with the things that differ: which screens exist, the rows of each screen,
+// the sub-text under a row's name, the tooltip content, and what a press does.
+// The owner forwards popupOpenedSignal, popupClosedSignal and slowUpdateSignal
+// so signal setup stays in one place per system.
+//
+// Element ids inside the popup are popupID + "-" + part (header-row, back,
+// header, header-screen, header-hint, header-hint-text, toggle-container,
+// show-unavailable, show-unavailable-label, resources, list, hint-menu,
+// hint-list, hint-verb, close). Row classes are chooser-popup-*; one body-level
+// #chooser-tooltip pane is shared, since only one popup is ever open.
+define([
+	'ash',
+	'text/Text',
+	'game/GameGlobals',
+	'game/constants/UIConstants',
+], function (Ash, Text, GameGlobals, UIConstants) {
+
+	let UIChooserPopup = Ash.Class.extend({
+
+		MENU: "menu",
+		TOOLTIP_DELAY: 450,
+		TOOLTIP_CURSOR_GAP: 14,
+		TOOLTIP_EDGE_MARGIN: 8,
+
+		constructor: function (config) {
+			this.config = config;
+			this.popupID = config.popupID;
+			this.screens = config.screens || [];
+			this.isOpen = false;
+			this.screen = this.MENU;
+			this.cursor = 0;
+			this.cursorByScreen = {};
+			this.rows = [];
+			this.showHiddenByScreen = {};
+			this.reopen = null;
+			this.swallowEscapeUp = false;
+			this.tooltipTimeout = null;
+			this.tooltipCursor = null;
+			this.tooltipIndex = null;
+		},
+
+		id: function (part) {
+			return "#" + this.popupID + "-" + part;
+		},
+
+		$: function (part) {
+			return $(this.id(part));
+		},
+
+		// DOM WIRING (once, at owner construction)
+
+		init: function () {
+			let popup = this;
+			let popupSelector = "#" + this.popupID;
+
+			this.$("close").click(function () { popup.close(); });
+			this.$("back").click(function () { popup.back(); });
+			this.$("show-unavailable").change(function () {
+				if (popup.screen == popup.MENU) return;
+				popup.showHiddenByScreen[popup.screen] = $(this).is(":checked");
+				popup.renderList();
+			});
+
+			this.$("header-hint-text").text(UIConstants.isTouchScreen() ? "tap for help" : "hover for details");
+
+			let $list = this.$("list");
+			$list.on("click", ".chooser-popup-row", function (e) {
+				if ($(e.target).closest(".chooser-popup-info").length > 0) return;
+				let index = parseInt($(this).attr("data-index"));
+				if (isNaN(index)) return;
+				popup.setCursor(index);
+				popup.activateRow();
+			});
+
+			// tooltips: hover with a delay on a mouse, the row's info glyph on touch.
+			// the checkbox line takes part as row -1, the header's help glyph as -2
+			let tooltipTargets = ".chooser-popup-row, " + this.id("toggle-container") + ", " + this.id("header-hint");
+			let rowIndexOf = function (el) {
+				let $el = $(el);
+				if ($el.is(popup.id("toggle-container"))) return -1;
+				if ($el.is(popup.id("header-hint"))) return -2;
+				let index = parseInt($el.attr("data-index"));
+				return isNaN(index) ? null : index;
+			};
+			$(popupSelector).on("mouseenter", tooltipTargets, function (e) {
+				if (UIConstants.isTouchScreen()) return;
+				let index = rowIndexOf(this);
+				if (index === null) return;
+				popup.cancelTooltip();
+				popup.tooltipCursor = { x: e.clientX, y: e.clientY };
+				popup.tooltipTimeout = setTimeout(function () {
+					popup.tooltipTimeout = null;
+					popup.showTooltip(index);
+				}, popup.TOOLTIP_DELAY);
+			});
+			$(popupSelector).on("mousemove", tooltipTargets, function (e) {
+				popup.tooltipCursor = { x: e.clientX, y: e.clientY };
+			});
+			$(popupSelector).on("mouseleave", tooltipTargets, function () {
+				if (UIConstants.isTouchScreen()) return;
+				popup.hideTooltip();
+			});
+			$(popupSelector).on("click", ".chooser-popup-info", function (e) {
+				e.stopPropagation();
+				let index = rowIndexOf($(this).closest(tooltipTargets));
+				if (index === null) return;
+				popup.cancelTooltip();
+				popup.tooltipCursor = { x: e.clientX, y: e.clientY };
+				if ($("#chooser-tooltip").is(":visible") && popup.tooltipIndex === index) {
+					popup.hideTooltip();
+				} else {
+					popup.showTooltip(index);
+				}
+			});
+			$list.on("scroll", function () { popup.hideTooltip(); });
+
+			// the letter's keydown opens the popup so the keys typed right after it land
+			// in the menu; the owner's registered hotkey stays as the keyup fallback
+			if (this.config.openKey) {
+				$(document).on("keydown." + this.popupID + "open", $.proxy(this.onDocumentKeyDownOpen, this));
+			}
+		},
+
+		destroy: function () {
+			$(document).off("keydown." + this.popupID + "open");
+			$(document).off("keydown." + this.popupID);
+			if (this._onKeyUpCapture) document.removeEventListener("keyup", this._onKeyUpCapture, true);
+		},
+
+		onDocumentKeyDownOpen: function (e) {
+			let oe = e.originalEvent || e;
+			if (oe.repeat) return;
+			if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+			if (oe.code != this.config.openKey.code) return;
+			if (oe.isTextInput) return;
+			if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
+			if (this.config.openKey.tab && GameGlobals.gameState.uiStatus.currentTab != this.config.openKey.tab) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			let tagName = e.target ? e.target.tagName : null;
+			if (tagName == "INPUT" || tagName == "TEXTAREA" || tagName == "SELECT") return;
+			this.open();
+		},
+
+		// OPEN / CLOSE
+
+		open: function (screen) {
+			// the letter's keydown opens the popup and its keyup fires the registered
+			// hotkey fallback before the popup reads as open, so guard with a flag
+			if (this.isOpen) return;
+			if (GameGlobals.gameState.uiStatus.isHidden) return;
+			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
+			if (this.config.canOpen && !this.config.canOpen()) return;
+			if (this.config.beforeOpen && this.config.beforeOpen() === false) return;
+
+			let popup = this;
+			this.isOpen = true;
+			this.swallowEscapeUp = false;
+
+			GameGlobals.uiFunctions.showSpecialPopup(this.popupID, {
+				isMeta: false,
+				isDismissable: true,
+				setupCallback: () => popup.showScreen(screen || popup.MENU),
+			});
+
+			// bound at open, not when the popup becomes visible: keys typed while the
+			// popup is still fading in must land in the menu, not be dropped
+			$(document).on("keydown." + this.popupID, $.proxy(this.onKeyDown, this));
+
+			// Esc is consumed on keydown (back one level), but the universal "Dismiss
+			// popup" hotkey fires on keyup and would close the popup anyway. A capture
+			// listener stops that one keyup before jQuery's document handler sees it
+			if (!this._onKeyUpCapture) {
+				this._onKeyUpCapture = function (e) {
+					if (e.code != "Escape") return;
+					if (!popup.swallowEscapeUp) return;
+					popup.swallowEscapeUp = false;
+					e.stopPropagation();
+				};
+			}
+			document.addEventListener("keyup", this._onKeyUpCapture, true);
+		},
+
+		close: function () {
+			if (!this.isOpen) return;
+			this.hideTooltip();
+			GameGlobals.uiFunctions.popupManager.closePopup(this.popupID);
+		},
+
+		onPopupClosed: function (popupID) {
+			if (popupID == this.popupID) {
+				this.isOpen = false;
+				$(document).off("keydown." + this.popupID);
+				if (this._onKeyUpCapture) document.removeEventListener("keyup", this._onKeyUpCapture, true);
+				this.hideTooltip();
+				if (this.config.onClosed) this.config.onClosed();
+				return;
+			}
+			// return to the menu after the popup a row's press raised has closed
+			if (this.reopen) {
+				let reopen = this.reopen;
+				this.reopen = null;
+				this.cursorByScreen[reopen.screen] = reopen.cursor;
+				this.open(reopen.screen);
+			}
+		},
+
+		// popups do not stack: when a row's press raises one (a confirmation, a result),
+		// the menu steps aside and comes back on the same screen once it has closed
+		onPopupOpened: function (popupID) {
+			if (!this.isOpen) return;
+			if (popupID == this.popupID) return;
+			this.reopen = { screen: this.screen, cursor: this.cursor };
+			this.close();
+		},
+
+		isVisible: function () {
+			let $popup = $("#" + this.popupID);
+			if (!$popup.is(":visible")) return false;
+			if ($popup.attr("data-visible") != "true") return false;
+			if (GameGlobals.uiFunctions.popupManager.isClosing(this.popupID)) return false;
+			return true;
+		},
+
+		// SCREENS
+
+		showScreen: function (screen) {
+			if (this.screen && this.screens.indexOf(this.screen) >= 0) {
+				this.cursorByScreen[this.screen] = this.cursor;
+			}
+			this.hideTooltip();
+			this.screen = screen;
+			let isMenu = screen == this.MENU;
+
+			let title = isMenu ? "" : (this.config.titles && this.config.titles[screen]) || screen;
+			this.$("header-screen").text(isMenu ? "" : " › " + title);
+			GameGlobals.uiFunctions.toggle(this.id("back"), !isMenu);
+			GameGlobals.uiFunctions.toggle(this.id("hint-menu"), isMenu);
+			GameGlobals.uiFunctions.toggle(this.id("hint-list"), !isMenu);
+			let verb = (this.config.verbs && this.config.verbs[screen]) || "do";
+			this.$("hint-verb").text(verb);
+
+			if (!isMenu) {
+				this.$("show-unavailable").prop("checked", this.showHiddenByScreen[screen] == true);
+			}
+
+			let restoredCursor = isMenu ? 0 : this.cursorByScreen[screen];
+			this.renderList(typeof restoredCursor == "number" ? restoredCursor : 0);
+		},
+
+		back: function () {
+			if (!this.isOpen) return;
+			if (this.screen == this.MENU) {
+				this.close();
+				return;
+			}
+			let previous = this.screen;
+			this.showScreen(this.MENU);
+			// the menu lists screens in order but may skip empty ones: find by screen id
+			let index = 0;
+			for (let i = 0; i < this.rows.length; i++) {
+				if (this.rows[i].entry.screen == previous) { index = i; break; }
+			}
+			this.setCursor(index);
+		},
+
+		// RENDERING
+		//
+		// every entry has: key (stable id for keeping the cursor across renders), name,
+		// action, available (pressing it now does something), hidden (only shown with
+		// the toggle), reason (why not), isBusy, isCooldown. Menu entries add screen,
+		// letter, count, description
+
+		renderList: function (cursor) {
+			if (!this.isOpen) return;
+			let screen = this.screen;
+			let isMenu = screen == this.MENU;
+			let $list = this.$("list");
+			let isTouch = UIConstants.isTouchScreen();
+
+			let entries = this.config.getEntries(screen) || [];
+			let numHidden = entries.filter(e => e.hidden).length;
+			let showHidden = !isMenu && this.showHiddenByScreen[screen] == true;
+			let hasToggle = !isMenu && numHidden > 0;
+			GameGlobals.uiFunctions.toggle(this.id("toggle-container"), hasToggle);
+			this.$("show-unavailable-label").text((this.config.toggleLabel || "Show unavailable") + " (" + numHidden + ")");
+
+			let previousKey = null;
+			if (typeof cursor != "number") {
+				let previousRow = this.rows ? this.rows[this.cursor] : null;
+				previousKey = previousRow ? previousRow.key : null;
+				cursor = this.cursor;
+			}
+
+			let rows = [];
+			let html = "";
+			let infoGlyph = isTouch ? "<span class='chooser-popup-info' role='button' aria-label='Details'>&#9432;</span>" : "";
+			for (let i = 0; i < entries.length; i++) {
+				let entry = entries[i];
+				if (entry.hidden && !showHidden) continue;
+				let index = rows.length;
+				rows.push({ key: entry.key, entry: entry });
+				let number = index + 1;
+				let numberLabel = number <= 9 ? number : number == 10 ? "0" : "";
+				let keyLabel = isMenu && entry.letter ? entry.letter : numberLabel;
+				let classes = "chooser-popup-row";
+				if (isMenu) classes += " chooser-popup-menu-row";
+				if (!entry.available) classes += " chooser-popup-item-unavailable";
+				if (entry.hidden) classes += " chooser-popup-item-hidden";
+				html += "<div class='" + classes + "' data-index='" + index + "' data-key='" + entry.key + "'>";
+				html += "<span class='chooser-popup-key'>" + (keyLabel || "&nbsp;") + "</span>";
+				html += "<span class='chooser-popup-item-name'>" + entry.name;
+				let sub = isMenu ? "" : (this.config.renderRowSub ? this.config.renderRowSub(entry, screen) : "");
+				if (sub) html += "<span class='chooser-popup-item-sub'>" + sub + "</span>";
+				html += "</span>";
+				if (isMenu) {
+					html += "<span class='chooser-popup-item-costs header-count'>" + entry.count + "</span>";
+				} else {
+					let detail = this.config.renderRowDetail ? this.config.renderRowDetail(entry, screen) : null;
+					if (detail === null || detail === undefined) {
+						if (entry.reason && !entry.available && (entry.hidden || entry.isBusy || entry.isCooldown)) {
+							detail = "<span class='chooser-popup-item-reason'>" + entry.reason + "</span>";
+						} else {
+							detail = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action).join(" ");
+						}
+					}
+					html += "<span class='chooser-popup-item-costs'>" + detail + "</span>";
+				}
+				html += infoGlyph;
+				html += "</div>";
+			}
+
+			this.rows = rows;
+			this.renderResources(rows);
+
+			if (rows.length == 0) {
+				let empty = this.config.emptyText ? this.config.emptyText(screen) : "Nothing here yet.";
+				html = "<p class='p-meta chooser-popup-empty'>" + empty + "</p>";
+			}
+			$list.html(html);
+			// the list's height changed; keep the popup centred
+			GameGlobals.uiFunctions.popupManager.repositionPopup($("#" + this.popupID));
+
+			if (previousKey) {
+				for (let i = 0; i < rows.length; i++) {
+					if (rows[i].key == previousKey) { cursor = i; break; }
+				}
+			}
+			this.setCursor(cursor);
+		},
+
+		// the stock of every cost the listed rows use, in the order the costs first
+		// appear, so the player can see what a press would leave without a tooltip
+		renderResources: function (rows) {
+			let screen = this.screen;
+			let show = screen != this.MENU && rows.length > 0 && this.config.showResources && this.config.showResources(screen);
+			let sector = this.config.getSector ? this.config.getSector() : null;
+			show = show && !!sector;
+			GameGlobals.uiFunctions.toggle(this.id("resources"), show);
+			if (!show) return;
+
+			let keys = [];
+			for (let i = 0; i < rows.length; i++) {
+				let costs = GameGlobals.playerActionsHelper.getCosts(rows[i].entry.action);
+				for (let key in costs) {
+					if (!(costs[key] > 0)) continue;
+					if (keys.indexOf(key) < 0) keys.push(key);
+				}
+			}
+
+			let html = "";
+			for (let i = 0; i < keys.length; i++) {
+				let key = keys[i];
+				let owned = GameGlobals.playerActionsHelper.getCostAmountOwned(sector, key);
+				let label = key.indexOf("resource_") == 0 ? UIConstants.getResourceImg(key.split("_")[1]) : UIConstants.getCostDisplayName(key).toLowerCase() + " ";
+				let name = UIConstants.getCostDisplayName(key);
+				html += "<span class='chooser-popup-resource' title='" + name + "'>" + label + "<span class='chooser-popup-resource-amount'>" + UIConstants.getDisplayValue(Math.floor(owned)) + "</span></span>";
+			}
+			this.$("resources").html(html);
+		},
+
+		setCursor: function (index) {
+			let hasToggle = this.$("toggle-container").is(":visible");
+			let numRows = this.rows ? this.rows.length : 0;
+			let min = hasToggle ? -1 : 0;
+			if (index < min) index = min;
+			if (index >= numRows) index = numRows - 1;
+			if (index < min) index = min;
+
+			this.cursor = index;
+			this.$("list").find(".chooser-popup-row").removeClass("selected");
+			this.$("toggle-container").toggleClass("selected", index == -1);
+			if (index >= 0) {
+				let $row = this.$("list").find(".chooser-popup-row[data-index='" + index + "']");
+				$row.addClass("selected");
+				if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
+			}
+		},
+
+		getPageSize: function () {
+			let $list = this.$("list");
+			let $row = $list.find(".chooser-popup-row").first();
+			if ($row.length == 0) return 3;
+			let rowHeight = $row.outerHeight(true) || 1;
+			return Math.max(3, Math.floor($list.innerHeight() / rowHeight));
+		},
+
+		// KEYS
+
+		onKeyDown: function (e) {
+			if (!this.isOpen) return;
+			let oe = e.originalEvent || e;
+			let code = oe.code || "";
+			let hasModifier = e.ctrlKey || e.altKey || e.metaKey;
+			if (hasModifier) return;
+			let isMenu = this.screen == this.MENU;
+			let numRows = this.rows ? this.rows.length : 0;
+			let lastIndex = numRows - 1;
+
+			// any key hides the tooltip: the row under it may change
+			this.hideTooltip();
+
+			if (code == "Escape") {
+				e.preventDefault();
+				if (e.shiftKey || isMenu) {
+					this.close();
+				} else {
+					this.back();
+				}
+				this.swallowEscapeUp = true;
+				return;
+			}
+
+			if (e.shiftKey) return;
+
+			switch (code) {
+				case "ArrowDown": e.preventDefault(); this.setCursor(this.cursor + 1); return;
+				case "ArrowUp": e.preventDefault(); this.setCursor(this.cursor - 1); return;
+				case "Home": e.preventDefault(); this.setCursor(0); return;
+				case "End": e.preventDefault(); this.setCursor(lastIndex); return;
+				case "PageDown": e.preventDefault(); this.setCursor(Math.min(lastIndex, this.cursor + this.getPageSize())); return;
+				case "PageUp": e.preventDefault(); this.setCursor(Math.max(0, this.cursor - this.getPageSize())); return;
+				case "Enter": case "NumpadEnter": e.preventDefault(); this.activateRow(); return;
+				case "Backspace": case "ArrowLeft":
+					if (!isMenu) { e.preventDefault(); this.back(); }
+					return;
+				case "ArrowRight":
+					if (isMenu) { e.preventDefault(); this.activateRow(); }
+					return;
+				case "Space":
+					// space belongs to the toggle alone; on the menu it does nothing, so
+					// the same key never means two things
+					e.preventDefault();
+					if (!isMenu) this.toggleShowHidden();
+					return;
+			}
+
+			if (isMenu && this.config.menuLetters && this.config.menuLetters[code] !== undefined) {
+				e.preventDefault();
+				let index = this.config.menuLetters[code];
+				if (index > lastIndex) return;
+				this.setCursor(index);
+				this.activateRow();
+				return;
+			}
+
+			// digits pick a row: 1-9, then 0 for the tenth
+			let digit = -1;
+			if (code.indexOf("Digit") == 0 && code.length == 6) digit = parseInt(code.charAt(5));
+			if (code.indexOf("Numpad") == 0 && code.length == 7) digit = parseInt(code.charAt(6));
+			if (!isNaN(digit) && digit >= 0) {
+				e.preventDefault();
+				let index = digit == 0 ? 9 : digit - 1;
+				if (index > lastIndex) return;
+				this.setCursor(index);
+				this.activateRow();
+			}
+		},
+
+		toggleShowHidden: function () {
+			if (!this.$("toggle-container").is(":visible")) return;
+			this.$("show-unavailable").click();
+		},
+
+		activateRow: function (retries) {
+			if (!this.isOpen) return;
+			// the popup is not really open until showSpecialPopup's fadeIn sets data-visible;
+			// a press inside that window is kept and retried rather than dropped, so a fast
+			// "B A 2" lands its last key too
+			if (!this.isVisible()) {
+				retries = retries || 0;
+				if (retries < 20) setTimeout(() => this.activateRow(retries + 1), 25);
+				return;
+			}
+
+			if (this.cursor == -1) {
+				this.toggleShowHidden();
+				return;
+			}
+
+			let row = this.rows ? this.rows[this.cursor] : null;
+			if (!row) return;
+
+			if (this.screen == this.MENU) {
+				this.showScreen(row.entry.screen);
+				return;
+			}
+
+			let entry = row.entry;
+			let pressed = entry.available && this.config.press(entry, this.screen);
+			if (!pressed) {
+				this.flashUnavailable(this.cursor);
+				return;
+			}
+
+			this.hideTooltip();
+			// the press changed what the list shows: counts, levels, costs, busy state
+			if (this.isOpen) this.renderList();
+		},
+
+		// highlight the name and the lacking costs of an unavailable row for a moment
+		flashUnavailable: function (rowIndex) {
+			let $row = this.$("list").find(".chooser-popup-row[data-index='" + rowIndex + "']");
+			if ($row.length == 0) return;
+			$row.addClass("chooser-popup-flash");
+			setTimeout(function () { $row.removeClass("chooser-popup-flash"); }, 1000);
+		},
+
+		// TOOLTIPS
+		// one body-level fixed pane (#chooser-tooltip) like the upgrade tree's
+
+		cancelTooltip: function () {
+			if (this.tooltipTimeout) {
+				clearTimeout(this.tooltipTimeout);
+				this.tooltipTimeout = null;
+			}
+		},
+
+		hideTooltip: function () {
+			this.cancelTooltip();
+			this.tooltipIndex = null;
+			let $tooltip = $("#chooser-tooltip");
+			if ($tooltip.length == 0) return;
+			$tooltip.hide().attr("aria-hidden", "true").empty();
+		},
+
+		showTooltip: function (index) {
+			let $tooltip = $("#chooser-tooltip");
+			if ($tooltip.length == 0) return;
+			let row = index >= 0 && this.rows ? this.rows[index] : null;
+			if (index >= 0 && !row) return;
+			let $content = this.config.getTooltipContent(index, this.screen, row ? row.entry : null);
+			if (!$content) return;
+
+			this.tooltipIndex = index;
+			$tooltip.empty().append($content);
+			$tooltip.css({ left: "0px", top: "0px" }).show().attr("aria-hidden", "false");
+			GameGlobals.uiFunctions.positionTooltipAtCursor($tooltip, this.tooltipCursor, this.TOOLTIP_CURSOR_GAP, this.TOOLTIP_EDGE_MARGIN);
+		},
+
+		// helpers for owners' tooltip builders
+
+		makeTooltipContent: function () {
+			let $content = $("<div></div>");
+			return {
+				$content: $content,
+				addHeader: function (name, badge) {
+					let $header = $("<div class='chooser-tooltip-header'></div>");
+					$header.append($("<span></span>").text(name));
+					if (badge) {
+						$header.append(" ");
+						$header.append($("<span class='status-badge'></span>").text(badge));
+					}
+					$content.append($header);
+				},
+				addLine: function (text, cls) {
+					if (!text) return;
+					$content.append($("<p></p>").addClass(cls || "").text(text));
+				},
+				addHTML: function (html, cls) {
+					if (!html) return;
+					$content.append($("<p></p>").addClass(cls || "").html(html));
+				},
+			};
+		},
+
+		getRowKeyLabel: function (index) {
+			return index + 1 <= 9 ? String(index + 1) : index + 1 == 10 ? "0" : null;
+		},
+
+	});
+
+	return UIChooserPopup;
+});
+
+})(function () {
+	var args = Array.prototype.slice.call(arguments);
+	if (typeof args[0] !== "string") args.unshift("game/helpers/ui/UIChooserPopup");
+	return define.apply(null, args);
+});
+
+;(function (define) {
 define([
 	'ash',
 	'text/Text',
@@ -25593,6 +26200,7 @@ define([
 	'game/constants/StoryConstants',
 	'game/constants/TradeConstants',
 	'game/constants/TribeConstants',
+	'game/constants/PlayerActionConstants',
 	'game/nodes/PlayerPositionNode',
 	'game/nodes/PlayerLocationNode',
 	'game/nodes/NearestCampNode',
@@ -25609,16 +26217,17 @@ define([
 	'game/components/sector/improvements/WorkshopComponent',
 	'game/components/sector/SectorStatusComponent',
 	'game/components/sector/EnemiesComponent',
-	'game/systems/AutoScavengeSystem'
+	'game/systems/AutoScavengeSystem',
+	'game/helpers/ui/UIChooserPopup'
 ], function (
 	Ash,
 	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, ImprovementConstants, PlayerStatConstants, TextConstants,
 	LogConstants, UIConstants, PositionConstants, LocaleConstants, LevelConstants, MovementConstants, StoryConstants, TradeConstants,
-	TribeConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
+	TribeConstants, PlayerActionConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
 	PassagesComponent, SectorControlComponent, SectorFeaturesComponent, SectorLocalesComponent,
 	MovementOptionsComponent, PositionComponent, CampComponent, SectorImprovementsComponent,
 	WorkshopComponent, SectorStatusComponent, EnemiesComponent,
-	AutoScavengeSystem) {
+	AutoScavengeSystem, UIChooserPopup) {
 	// The bucket and the trap. Everything either one offers now lives on its chip
 	// in the sector bar: build it, empty it, and raise its capacity.
 	var COLLECTOR_DEFS = [
@@ -25680,6 +26289,7 @@ define([
 			this.elements.outImprovementsTR = $("#out-improvements tr");
 			
 			this.initElements();
+			this.initSectorPopup();
 
 			return this;
 		},
@@ -25698,6 +26308,7 @@ define([
 			this.playerPosNodes = null;
 			this.playerLocationNodes = null;
 			this.engine = null;
+			if (this.sectorPopup) this.sectorPopup.destroy();
 		},
 		
 		initElements: function () {
@@ -25737,6 +26348,10 @@ define([
 		},
 
 		initListeners: function () {
+			// the badge in the sector bar advertises the O menu and opens it on a tap
+			$("#out-sector-menu-hint").click(ExceptionHandler.wrapClick(() => {
+				GlobalSignals.openSectorPopupSignal.dispatch();
+			}));
 			$("#out-action-auto-scavenge").click(ExceptionHandler.wrapClick(() => {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 				GlobalSignals.toggleAutoScavengeSignal.dispatch();
@@ -25781,6 +26396,8 @@ define([
 			GlobalSignals.add(this, GlobalSignals.movementBlockerClearedSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
+			GlobalSignals.add(this, GlobalSignals.popupOpenedSignal, this.onPopupOpened);
+			GlobalSignals.add(this, GlobalSignals.openSectorPopupSignal, this.onOpenSectorPopup);
 			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
 			GlobalSignals.add(this, GlobalSignals.buttonStateChangedSignal, this.onButtonStateChanged);
 			GlobalSignals.add(this, GlobalSignals.autoScavengeChangedSignal, this.updateAutoScavengeButton);
@@ -25826,6 +26443,8 @@ define([
 			if (!this.playerLocationNodes.head) return;
 			this.updateOutImprovementsStatus();
 			this.updateLevelPageActionsSlow();
+			this.updateSectorMenuHint();
+			if (this.sectorPopup.isOpen) this.sectorPopup.renderList();
 		},
 
 		updateAll: function () {
@@ -27146,7 +27765,8 @@ define([
 			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 
-		onPopupClosed: function () {
+		onPopupClosed: function (popupID) {
+			this.sectorPopup.onPopupClosed(popupID);
 			this.updateLocales();
 			this.updateCharacters();
 			// A room first described behind a popup - a fight, a story beat -
@@ -27157,6 +27777,320 @@ define([
 			this.updateSectorDescription();
 		},
 		
+		onPopupOpened: function (popupID) {
+			this.sectorPopup.onPopupOpened(popupID);
+		},
+
+		onOpenSectorPopup: function (screen) {
+			this.sectorPopup.open(typeof screen == "string" ? screen : null);
+		},
+
+		// SECTOR MENU (O)
+		//
+		// The outside counterpart of the camp's Buildings menu: three lists for the
+		// sector the player stands in. Build is what can be placed here, Action is
+		// everything else the sector offers, Search is its locales. Every row is a
+		// button that already exists on the tab, read for its label and state and
+		// pressed on the row's behalf, so the menu can never disagree with the tab
+		// and any button that grows or moves there shows up here on its own. The
+		// hotkeys the actions already have (N, M, G, F, H, R) keep working; the row
+		// shows them as its sub-text.
+		//
+		// The screens, cursor, keys, tooltips and step-aside logic live in
+		// UIChooserPopup; this system supplies the rows, their sub-text, the tooltip
+		// content and the press.
+
+		SECTOR_MENU_BUILD_ROWS: [
+			{ id: "#out-action-build-camp", name: "Camp" },
+			{ id: "#out-action-build-bucket", name: "Bucket" },
+			{ id: "#out-action-improve-bucket", name: "Bucket+" },
+			{ id: "#out-action-build-trap", name: "Trap" },
+			{ id: "#out-action-improve-trap", name: "Trap+" },
+			{ id: "#out-action-build-beacon", name: "Beacon" },
+			{ id: "#out-action-dismantle-beacon", name: "Dismantle beacon" },
+		],
+
+		SECTOR_MENU_ACTION_ROWS: [
+			{ id: "#out-action-sca", name: "Scavenge" },
+			{ id: "#out-action-auto-scavenge", name: "Auto-scavenge", isToggle: true },
+			{ id: "#out-action-scout", name: "Scout" },
+			{ id: "#out-action-use-bucket", name: "Water (all)" },
+			{ id: "#out-action-use-bucket_one", name: "Water (1)" },
+			{ id: "#out-action-use-trap", name: "Food (all)" },
+			{ id: "#out-action-use-trap_one", name: "Food (1)" },
+			{ id: "#out-action-use-spring", name: "Refill water" },
+			{ id: "#out-action-nap", name: "Rest" },
+			{ id: "#out-action-get-up", name: "Get up" },
+			{ id: "#out-action-wait", name: "Wait" },
+			{ id: "#out-action-investigate", name: "Investigate" },
+			{ id: "#out-action-examine" },
+			{ id: "#out-action-scavenge-heap", name: "Scavenge heap" },
+			{ id: "#out-action-clear-workshop", name: "Scout workshop" },
+			{ id: "#out-action-despair", name: "Despair" },
+		],
+
+		initSectorPopup: function () {
+			let sys = this;
+			let tabs = GameGlobals.uiFunctions.elementIDs.tabs;
+			this.sectorPopup = new UIChooserPopup({
+				popupID: "sector-popup",
+				screens: [ "build", "action", "search" ],
+				titles: { build: "Build", action: "Action", search: "Search" },
+				verbs: { build: "build", action: "do", search: "search" },
+				menuLetters: { KeyB: 0, KeyA: 1, KeyS: 2 },
+				openKey: { code: "KeyO", tab: tabs.out },
+				toggleLabel: "Show unavailable",
+				canOpen: () => !!sys.playerLocationNodes.head && !!sys.playerPosNodes.head && !sys.playerPosNodes.head.position.inCamp,
+				beforeOpen: () => GameGlobals.uiFunctions.showTabById(tabs.out),
+				getSector: () => sys.playerLocationNodes.head ? sys.playerLocationNodes.head.entity : null,
+				getEntries: screen => sys.getSectorPopupEntries(screen),
+				renderRowSub: (entry, screen) => sys.renderSectorRowSub(entry, screen),
+				renderRowDetail: (entry, screen) => sys.renderSectorRowDetail(entry, screen),
+				showResources: screen => screen == "build",
+				emptyText: screen => screen == "build" ? "Nothing to build here." : screen == "search" ? "No locations here to search." : "Nothing to do here.",
+				getTooltipContent: (index, screen, entry) => sys.getSectorTooltipContent(index, screen, entry),
+				press: entry => sys.pressSectorEntry(entry),
+			});
+			this.sectorPopup.init();
+		},
+
+		updateSectorMenuHint: function () {
+			let hasKey = GameGlobals.gameState.settings.hotkeysEnabled && !UIConstants.isTouchScreen();
+			let text = hasKey ? "O for menu" : "menu";
+			let $hint = $("#out-sector-menu-hint");
+			if ($hint.text() != text) $hint.text(text);
+		},
+
+		// a row presses the tab's own button; the auto-scavenge row flips the toggle
+		pressSectorEntry: function (entry) {
+			if (!entry.available) return false;
+			if (entry.isToggle) {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				GlobalSignals.toggleAutoScavengeSignal.dispatch();
+				return true;
+			}
+			let $btn = entry.$btn;
+			let canPress = $btn && $btn.length > 0 && $btn.is(":visible") && !$btn.hasClass("btn-disabled");
+			if (!canPress) return false;
+			$btn.click();
+			return true;
+		},
+
+		renderSectorRowSub: function (entry, screen) {
+			let parts = [];
+			if (entry.isToggle) parts.push(GameGlobals.gameState.uiStatus.isAutoScavenging ? "on" : "off");
+			if (entry.sub) parts.push(entry.sub);
+			if (entry.hotkey && GameGlobals.gameState.settings.hotkeysEnabled) parts.push("key " + entry.hotkey);
+			return parts.join(" &middot; ");
+		},
+
+		// null lets the popup show the action's costs, or the reason when there is
+		// one; a row without an action (the toggle, the toll gate) has neither
+		renderSectorRowDetail: function (entry, screen) {
+			if (entry.action) return null;
+			if (entry.reason && !entry.available) return "<span class='chooser-popup-item-reason'>" + entry.reason + "</span>";
+			return "";
+		},
+
+		// ENTRIES
+		//
+		// every entry has: key (stable id for keeping the cursor across renders), name,
+		// action, $btn (the tab button the row presses), available (pressing it now
+		// does something), hidden (only shown with "Show unavailable"), reason (why not)
+
+		getSectorMenuEntries: function () {
+			let counts = {
+				build: this.getSectorBuildEntries().filter(e => !e.hidden).length,
+				action: this.getSectorActionEntries().filter(e => !e.hidden).length,
+				search: this.getSectorSearchEntries().filter(e => !e.hidden).length,
+			};
+			return [
+				{ key: "build", screen: "build", letter: "B", name: "Build", count: counts.build, description: "Place a camp, a collector or a beacon in this sector, or improve one that stands", available: true, hidden: false },
+				{ key: "action", screen: "action", letter: "A", name: "Action", count: counts.action, description: "Scavenge, scout, collect, rest and whatever else this sector offers", available: true, hidden: false },
+				{ key: "search", screen: "search", letter: "S", name: "Search", count: counts.search, description: "Search the locations found in this sector", available: true, hidden: false },
+			];
+		},
+
+		getSectorEntryStatus: function (action, name) {
+			let reqs = GameGlobals.playerActionsHelper.checkRequirements(action, false);
+			let reqsMet = reqs.value >= 1;
+			let available = reqsMet && GameGlobals.playerActionsHelper.checkAvailability(action);
+			let reason = null;
+			if (!reqsMet && reqs.reason) {
+				let reasonVO = reqs.reason;
+				// the requirement check leaves the name out when it is the action's own
+				// improvement (its button already says it); a list row needs it spelled out
+				if (name && reasonVO.textParams && reasonVO.textParams.name === "") {
+					reasonVO = { textKey: reasonVO.textKey, textParams: { name: name } };
+				}
+				reason = Text.t(reasonVO);
+			}
+			let isBusy = !reqsMet && reqs.reason && (reqs.reason.baseReason == PlayerActionConstants.DISABLED_REASON_BUSY || reqs.reason.baseReason == PlayerActionConstants.DISABLED_REASON_IN_PROGRESS);
+			// a cooling-down action fails the availability check without a reason;
+			// the row says how long is left instead of looking unaffordable
+			let cooldownLeft = available ? 0 : GameGlobals.playerActionsHelper.getCooldownForCurrentLocation(action);
+			let isCooldown = !available && (reqsMet || isBusy) && cooldownLeft > 0;
+			if (isCooldown) reason = "Cooldown " + UIConstants.getTimeToNum(cooldownLeft);
+			return { available: available, reqsMet: reqsMet, reason: reason, isBusy: isBusy, isCooldown: isCooldown, cooldownLeft: cooldownLeft };
+		},
+
+		// one row from one tab button. The button's own visibility and disabled
+		// class are the truth: a button the tab does not show is a hidden row, a
+		// button it shows dimmed is an unavailable one
+		makeSectorEntry: function ($btn, key, def) {
+			if (!$btn || $btn.length == 0) return null;
+			def = def || {};
+			let action = $btn.attr("action") || null;
+			let name = def.name;
+			if (!name) {
+				let $label = $btn.find(".btn-label");
+				name = ($label.length > 0 ? $label.text() : $btn.clone().children().remove().end().text()).trim();
+			}
+			if (!name) name = action || key;
+			let isShown = $btn.is(":visible");
+			let isDisabled = $btn.hasClass("btn-disabled");
+			let status = action ? this.getSectorEntryStatus(action, name) : { available: !isDisabled, reason: null, isBusy: false, isCooldown: false };
+			let hotkeyHint = action ? GameGlobals.uiFunctions.getActionHotkeyHint(action) : def.hotkey || null;
+			return {
+				key: key,
+				name: name,
+				action: action,
+				$btn: $btn,
+				isToggle: def.isToggle || false,
+				hotkey: hotkeyHint,
+				sub: def.sub || "",
+				available: isShown && !isDisabled && status.available,
+				hidden: !isShown,
+				reason: status.reason,
+				isBusy: status.isBusy,
+				isCooldown: status.isCooldown,
+			};
+		},
+
+		getSectorBuildEntries: function () {
+			let result = [];
+			if (!this.playerLocationNodes.head) return result;
+			for (let i = 0; i < this.SECTOR_MENU_BUILD_ROWS.length; i++) {
+				let def = this.SECTOR_MENU_BUILD_ROWS[i];
+				let entry = this.makeSectorEntry($(def.id), "build-" + def.id, def);
+				if (entry) result.push(entry);
+			}
+			return result;
+		},
+
+		getSectorActionEntries: function () {
+			let result = [];
+			if (!this.playerLocationNodes.head) return result;
+			let sys = this;
+			for (let i = 0; i < this.SECTOR_MENU_ACTION_ROWS.length; i++) {
+				let def = this.SECTOR_MENU_ACTION_ROWS[i];
+				let entry = this.makeSectorEntry($(def.id), "action-" + def.id, def);
+				if (entry) result.push(entry);
+			}
+			// the auto-scavenge toggle has no action; its badge is written by hand on the tab too
+			for (let i = 0; i < result.length; i++) {
+				if (result[i].isToggle) result[i].hotkey = "&#8679;N";
+			}
+			// what the sector adds of its own: blocked exits (clear waste, bridge a
+			// gap, fight a gang, a toll gate) and people to talk to
+			$("#container-out-actions-movement-related button").each(function (index) {
+				let $btn = $(this);
+				let key = "blocker-" + ($btn.attr("action") || "tollgate-" + $btn.data("direction"));
+				let entry = sys.makeSectorEntry($btn, key);
+				if (entry) result.push(entry);
+			});
+			$("#out-characters button.action").each(function (index) {
+				let $btn = $(this);
+				let entry = sys.makeSectorEntry($btn, "talk-" + $btn.attr("action"), { name: "Talk: " + $btn.find(".btn-label").text().trim() });
+				if (entry) result.push(entry);
+			});
+			return result;
+		},
+
+		getSectorSearchEntries: function () {
+			let result = [];
+			if (!this.playerLocationNodes.head) return result;
+			let sys = this;
+			$("#table-out-actions-locales button.action").each(function (index) {
+				let $btn = $(this);
+				let info = $btn.closest("tr").find("td").last().find("span").text().trim();
+				let entry = sys.makeSectorEntry($btn, "locale-" + $btn.attr("action"), { sub: info });
+				if (!entry) return;
+				// "Already scouted" is the whole story; do not also show it as a blocker
+				if (info && !entry.available && !entry.reason) entry.reason = info;
+				result.push(entry);
+			});
+			return result;
+		},
+
+		getSectorPopupEntries: function (screen) {
+			switch (screen) {
+				case "menu": return this.getSectorMenuEntries();
+				case "build": return this.getSectorBuildEntries();
+				case "action": return this.getSectorActionEntries();
+				case "search": return this.getSectorSearchEntries();
+			}
+			return [];
+		},
+
+		// TOOLTIPS
+
+		getSectorTooltipContent: function (index, screen, entry) {
+			let t = this.sectorPopup.makeTooltipContent();
+			let $content = t.$content;
+			let addHeader = t.addHeader, addLine = t.addLine, addHTML = t.addHTML;
+
+			if (index == -2) {
+				let isTouch = UIConstants.isTouchScreen();
+				addHeader("Sector menu");
+				addLine(isTouch ? "Tap a row's ⓘ for what it does, what it costs and why it is blocked." : "Hover any row for what it does, what it costs and why it is blocked.");
+				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; space: show unavailable<br/>esc: back &middot; &#8679;esc: close</span>");
+				return $content;
+			}
+
+			if (index == -1) {
+				addHeader("Show unavailable");
+				addLine("Also list what this sector does not offer right now. Rows that only lack resources or wait on a cooldown are always shown.");
+				addHTML("<span class='meta'>space: toggle</span>");
+				return $content;
+			}
+
+			if (!entry) return null;
+
+			if (screen == "menu") {
+				addHeader(entry.name, entry.count + (entry.count == 1 ? " entry" : " entries"));
+				addLine(entry.description);
+				addHTML("<span class='meta'>" + entry.letter + " or " + (index + 1) + ": open</span>");
+				return $content;
+			}
+
+			let badge = entry.available ? "available" : entry.isCooldown ? "cooldown" : entry.isBusy ? "busy" : entry.reason ? entry.reason : entry.hidden ? "not here" : "unaffordable";
+			addHeader(entry.name, badge);
+			if (entry.isToggle) {
+				addLine("Keep scavenging whenever the cooldown ends, while a scavenger with the ability is in the party.", "chooser-tooltip-desc");
+				addLine(GameGlobals.gameState.uiStatus.isAutoScavenging ? "Currently on" : "Currently off", "meta");
+			} else if (entry.action) {
+				let description = GameGlobals.playerActionsHelper.getDescription(entry.action);
+				addLine(description, "chooser-tooltip-desc");
+				let duration = PlayerActionConstants.getDuration(entry.action);
+				let cooldown = PlayerActionConstants.getCooldown(entry.action);
+				let timing = [];
+				if (duration > 0) timing.push("takes " + UIConstants.getTimeToNum(duration));
+				if (cooldown > 0) timing.push("cooldown " + UIConstants.getTimeToNum(cooldown));
+				if (timing.length > 0) addLine(timing.join(", "), "meta");
+				let costSpans = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action);
+				if (costSpans.length > 0) addHTML("Costs: " + costSpans.join(", "));
+			}
+			if (entry.sub) addLine(entry.sub, "meta");
+			if (!entry.available && entry.reason) addHTML("<span class='action-cost-blocker'>" + entry.reason + "</span>");
+			let keys = [];
+			let keyLabel = this.sectorPopup.getRowKeyLabel(index);
+			if (keyLabel) keys.push(keyLabel + " or enter: " + (screen == "build" ? "build" : screen == "search" ? "search" : "do it"));
+			if (entry.hotkey && GameGlobals.gameState.settings.hotkeysEnabled) keys.push(entry.hotkey + " on the tab");
+			if (keys.length > 0) addHTML("<span class='meta'>" + keys.join(" &middot; ") + "</span>");
+			return $content;
+		},
+
 		onButtonStateChanged: function (action, isEnabled) {
 			switch (action) {
 				case "use_out_collector_water":
@@ -32944,6 +33878,10 @@ define(['ash',
 				// opens it on keydown so the keys typed right after land in the menu; this
 				// keyup binding is the fallback and the hotkey list entry
 				this.registerHotkey("Buildings menu", "KeyB", defaultModifier, tabs.in, false, false, () => GlobalSignals.openBuildingsPopupSignal.dispatch());
+				// the outside counterpart: Build, Action and Search lists for the sector the
+				// player stands in. O because B is "Back to camp" out here, and O sits away
+				// from the movement keys (see UIOutLevelSystem.initSectorPopup)
+				this.registerHotkey("Sector menu", "KeyO", defaultModifier, tabs.out, false, false, () => GlobalSignals.openSectorPopupSignal.dispatch());
 
 				// G asks for a level number and presses that camp's Go button. KeyG is free
 				// here because the collector binding is scoped to tabs.out; T is an alias.
@@ -54741,612 +55679,6 @@ function () {
 })(function () {
 	var args = Array.prototype.slice.call(arguments);
 	if (typeof args[0] !== "string") args.unshift("game/elements/HorizontalSelect");
-	return define.apply(null, args);
-});
-
-;(function (define) {
-// A two-level chooser popup: a menu screen of groups, and one numbered list per
-// group. Digits, letters, arrows and enter drive it; a mouse or a finger works
-// too. The Buildings menu (B) and the Craft menu (K) are both instances of this.
-//
-// The helper owns the popup's state and DOM wiring. The owner passes a config
-// with the things that differ: which screens exist, the rows of each screen,
-// the sub-text under a row's name, the tooltip content, and what a press does.
-// The owner forwards popupOpenedSignal, popupClosedSignal and slowUpdateSignal
-// so signal setup stays in one place per system.
-//
-// Element ids inside the popup are popupID + "-" + part (header-row, back,
-// header, header-screen, header-hint, header-hint-text, toggle-container,
-// show-unavailable, show-unavailable-label, resources, list, hint-menu,
-// hint-list, hint-verb, close). Row classes are chooser-popup-*; one body-level
-// #chooser-tooltip pane is shared, since only one popup is ever open.
-define([
-	'ash',
-	'text/Text',
-	'game/GameGlobals',
-	'game/constants/UIConstants',
-], function (Ash, Text, GameGlobals, UIConstants) {
-
-	let UIChooserPopup = Ash.Class.extend({
-
-		MENU: "menu",
-		TOOLTIP_DELAY: 450,
-		TOOLTIP_CURSOR_GAP: 14,
-		TOOLTIP_EDGE_MARGIN: 8,
-
-		constructor: function (config) {
-			this.config = config;
-			this.popupID = config.popupID;
-			this.screens = config.screens || [];
-			this.isOpen = false;
-			this.screen = this.MENU;
-			this.cursor = 0;
-			this.cursorByScreen = {};
-			this.rows = [];
-			this.showHiddenByScreen = {};
-			this.reopen = null;
-			this.swallowEscapeUp = false;
-			this.tooltipTimeout = null;
-			this.tooltipCursor = null;
-			this.tooltipIndex = null;
-		},
-
-		id: function (part) {
-			return "#" + this.popupID + "-" + part;
-		},
-
-		$: function (part) {
-			return $(this.id(part));
-		},
-
-		// DOM WIRING (once, at owner construction)
-
-		init: function () {
-			let popup = this;
-			let popupSelector = "#" + this.popupID;
-
-			this.$("close").click(function () { popup.close(); });
-			this.$("back").click(function () { popup.back(); });
-			this.$("show-unavailable").change(function () {
-				if (popup.screen == popup.MENU) return;
-				popup.showHiddenByScreen[popup.screen] = $(this).is(":checked");
-				popup.renderList();
-			});
-
-			this.$("header-hint-text").text(UIConstants.isTouchScreen() ? "tap for help" : "hover for details");
-
-			let $list = this.$("list");
-			$list.on("click", ".chooser-popup-row", function (e) {
-				if ($(e.target).closest(".chooser-popup-info").length > 0) return;
-				let index = parseInt($(this).attr("data-index"));
-				if (isNaN(index)) return;
-				popup.setCursor(index);
-				popup.activateRow();
-			});
-
-			// tooltips: hover with a delay on a mouse, the row's info glyph on touch.
-			// the checkbox line takes part as row -1, the header's help glyph as -2
-			let tooltipTargets = ".chooser-popup-row, " + this.id("toggle-container") + ", " + this.id("header-hint");
-			let rowIndexOf = function (el) {
-				let $el = $(el);
-				if ($el.is(popup.id("toggle-container"))) return -1;
-				if ($el.is(popup.id("header-hint"))) return -2;
-				let index = parseInt($el.attr("data-index"));
-				return isNaN(index) ? null : index;
-			};
-			$(popupSelector).on("mouseenter", tooltipTargets, function (e) {
-				if (UIConstants.isTouchScreen()) return;
-				let index = rowIndexOf(this);
-				if (index === null) return;
-				popup.cancelTooltip();
-				popup.tooltipCursor = { x: e.clientX, y: e.clientY };
-				popup.tooltipTimeout = setTimeout(function () {
-					popup.tooltipTimeout = null;
-					popup.showTooltip(index);
-				}, popup.TOOLTIP_DELAY);
-			});
-			$(popupSelector).on("mousemove", tooltipTargets, function (e) {
-				popup.tooltipCursor = { x: e.clientX, y: e.clientY };
-			});
-			$(popupSelector).on("mouseleave", tooltipTargets, function () {
-				if (UIConstants.isTouchScreen()) return;
-				popup.hideTooltip();
-			});
-			$(popupSelector).on("click", ".chooser-popup-info", function (e) {
-				e.stopPropagation();
-				let index = rowIndexOf($(this).closest(tooltipTargets));
-				if (index === null) return;
-				popup.cancelTooltip();
-				popup.tooltipCursor = { x: e.clientX, y: e.clientY };
-				if ($("#chooser-tooltip").is(":visible") && popup.tooltipIndex === index) {
-					popup.hideTooltip();
-				} else {
-					popup.showTooltip(index);
-				}
-			});
-			$list.on("scroll", function () { popup.hideTooltip(); });
-
-			// the letter's keydown opens the popup so the keys typed right after it land
-			// in the menu; the owner's registered hotkey stays as the keyup fallback
-			if (this.config.openKey) {
-				$(document).on("keydown." + this.popupID + "open", $.proxy(this.onDocumentKeyDownOpen, this));
-			}
-		},
-
-		destroy: function () {
-			$(document).off("keydown." + this.popupID + "open");
-			$(document).off("keydown." + this.popupID);
-			if (this._onKeyUpCapture) document.removeEventListener("keyup", this._onKeyUpCapture, true);
-		},
-
-		onDocumentKeyDownOpen: function (e) {
-			let oe = e.originalEvent || e;
-			if (oe.repeat) return;
-			if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
-			if (oe.code != this.config.openKey.code) return;
-			if (oe.isTextInput) return;
-			if (!GameGlobals.gameState.settings.hotkeysEnabled) return;
-			if (this.config.openKey.tab && GameGlobals.gameState.uiStatus.currentTab != this.config.openKey.tab) return;
-			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
-			let tagName = e.target ? e.target.tagName : null;
-			if (tagName == "INPUT" || tagName == "TEXTAREA" || tagName == "SELECT") return;
-			this.open();
-		},
-
-		// OPEN / CLOSE
-
-		open: function (screen) {
-			// the letter's keydown opens the popup and its keyup fires the registered
-			// hotkey fallback before the popup reads as open, so guard with a flag
-			if (this.isOpen) return;
-			if (GameGlobals.gameState.uiStatus.isHidden) return;
-			if (GameGlobals.uiFunctions.popupManager.hasOpenPopup()) return;
-			if (this.config.canOpen && !this.config.canOpen()) return;
-			if (this.config.beforeOpen && this.config.beforeOpen() === false) return;
-
-			let popup = this;
-			this.isOpen = true;
-			this.swallowEscapeUp = false;
-
-			GameGlobals.uiFunctions.showSpecialPopup(this.popupID, {
-				isMeta: false,
-				isDismissable: true,
-				setupCallback: () => popup.showScreen(screen || popup.MENU),
-			});
-
-			// bound at open, not when the popup becomes visible: keys typed while the
-			// popup is still fading in must land in the menu, not be dropped
-			$(document).on("keydown." + this.popupID, $.proxy(this.onKeyDown, this));
-
-			// Esc is consumed on keydown (back one level), but the universal "Dismiss
-			// popup" hotkey fires on keyup and would close the popup anyway. A capture
-			// listener stops that one keyup before jQuery's document handler sees it
-			if (!this._onKeyUpCapture) {
-				this._onKeyUpCapture = function (e) {
-					if (e.code != "Escape") return;
-					if (!popup.swallowEscapeUp) return;
-					popup.swallowEscapeUp = false;
-					e.stopPropagation();
-				};
-			}
-			document.addEventListener("keyup", this._onKeyUpCapture, true);
-		},
-
-		close: function () {
-			if (!this.isOpen) return;
-			this.hideTooltip();
-			GameGlobals.uiFunctions.popupManager.closePopup(this.popupID);
-		},
-
-		onPopupClosed: function (popupID) {
-			if (popupID == this.popupID) {
-				this.isOpen = false;
-				$(document).off("keydown." + this.popupID);
-				if (this._onKeyUpCapture) document.removeEventListener("keyup", this._onKeyUpCapture, true);
-				this.hideTooltip();
-				if (this.config.onClosed) this.config.onClosed();
-				return;
-			}
-			// return to the menu after the popup a row's press raised has closed
-			if (this.reopen) {
-				let reopen = this.reopen;
-				this.reopen = null;
-				this.cursorByScreen[reopen.screen] = reopen.cursor;
-				this.open(reopen.screen);
-			}
-		},
-
-		// popups do not stack: when a row's press raises one (a confirmation, a result),
-		// the menu steps aside and comes back on the same screen once it has closed
-		onPopupOpened: function (popupID) {
-			if (!this.isOpen) return;
-			if (popupID == this.popupID) return;
-			this.reopen = { screen: this.screen, cursor: this.cursor };
-			this.close();
-		},
-
-		isVisible: function () {
-			let $popup = $("#" + this.popupID);
-			if (!$popup.is(":visible")) return false;
-			if ($popup.attr("data-visible") != "true") return false;
-			if (GameGlobals.uiFunctions.popupManager.isClosing(this.popupID)) return false;
-			return true;
-		},
-
-		// SCREENS
-
-		showScreen: function (screen) {
-			if (this.screen && this.screens.indexOf(this.screen) >= 0) {
-				this.cursorByScreen[this.screen] = this.cursor;
-			}
-			this.hideTooltip();
-			this.screen = screen;
-			let isMenu = screen == this.MENU;
-
-			let title = isMenu ? "" : (this.config.titles && this.config.titles[screen]) || screen;
-			this.$("header-screen").text(isMenu ? "" : " › " + title);
-			GameGlobals.uiFunctions.toggle(this.id("back"), !isMenu);
-			GameGlobals.uiFunctions.toggle(this.id("hint-menu"), isMenu);
-			GameGlobals.uiFunctions.toggle(this.id("hint-list"), !isMenu);
-			let verb = (this.config.verbs && this.config.verbs[screen]) || "do";
-			this.$("hint-verb").text(verb);
-
-			if (!isMenu) {
-				this.$("show-unavailable").prop("checked", this.showHiddenByScreen[screen] == true);
-			}
-
-			let restoredCursor = isMenu ? 0 : this.cursorByScreen[screen];
-			this.renderList(typeof restoredCursor == "number" ? restoredCursor : 0);
-		},
-
-		back: function () {
-			if (!this.isOpen) return;
-			if (this.screen == this.MENU) {
-				this.close();
-				return;
-			}
-			let previous = this.screen;
-			this.showScreen(this.MENU);
-			// the menu lists screens in order but may skip empty ones: find by screen id
-			let index = 0;
-			for (let i = 0; i < this.rows.length; i++) {
-				if (this.rows[i].entry.screen == previous) { index = i; break; }
-			}
-			this.setCursor(index);
-		},
-
-		// RENDERING
-		//
-		// every entry has: key (stable id for keeping the cursor across renders), name,
-		// action, available (pressing it now does something), hidden (only shown with
-		// the toggle), reason (why not), isBusy, isCooldown. Menu entries add screen,
-		// letter, count, description
-
-		renderList: function (cursor) {
-			if (!this.isOpen) return;
-			let screen = this.screen;
-			let isMenu = screen == this.MENU;
-			let $list = this.$("list");
-			let isTouch = UIConstants.isTouchScreen();
-
-			let entries = this.config.getEntries(screen) || [];
-			let numHidden = entries.filter(e => e.hidden).length;
-			let showHidden = !isMenu && this.showHiddenByScreen[screen] == true;
-			let hasToggle = !isMenu && numHidden > 0;
-			GameGlobals.uiFunctions.toggle(this.id("toggle-container"), hasToggle);
-			this.$("show-unavailable-label").text((this.config.toggleLabel || "Show unavailable") + " (" + numHidden + ")");
-
-			let previousKey = null;
-			if (typeof cursor != "number") {
-				let previousRow = this.rows ? this.rows[this.cursor] : null;
-				previousKey = previousRow ? previousRow.key : null;
-				cursor = this.cursor;
-			}
-
-			let rows = [];
-			let html = "";
-			let infoGlyph = isTouch ? "<span class='chooser-popup-info' role='button' aria-label='Details'>&#9432;</span>" : "";
-			for (let i = 0; i < entries.length; i++) {
-				let entry = entries[i];
-				if (entry.hidden && !showHidden) continue;
-				let index = rows.length;
-				rows.push({ key: entry.key, entry: entry });
-				let number = index + 1;
-				let numberLabel = number <= 9 ? number : number == 10 ? "0" : "";
-				let keyLabel = isMenu && entry.letter ? entry.letter : numberLabel;
-				let classes = "chooser-popup-row";
-				if (isMenu) classes += " chooser-popup-menu-row";
-				if (!entry.available) classes += " chooser-popup-item-unavailable";
-				if (entry.hidden) classes += " chooser-popup-item-hidden";
-				html += "<div class='" + classes + "' data-index='" + index + "' data-key='" + entry.key + "'>";
-				html += "<span class='chooser-popup-key'>" + (keyLabel || "&nbsp;") + "</span>";
-				html += "<span class='chooser-popup-item-name'>" + entry.name;
-				let sub = isMenu ? "" : (this.config.renderRowSub ? this.config.renderRowSub(entry, screen) : "");
-				if (sub) html += "<span class='chooser-popup-item-sub'>" + sub + "</span>";
-				html += "</span>";
-				if (isMenu) {
-					html += "<span class='chooser-popup-item-costs header-count'>" + entry.count + "</span>";
-				} else {
-					let detail = this.config.renderRowDetail ? this.config.renderRowDetail(entry, screen) : null;
-					if (detail === null || detail === undefined) {
-						if (entry.reason && !entry.available && (entry.hidden || entry.isBusy || entry.isCooldown)) {
-							detail = "<span class='chooser-popup-item-reason'>" + entry.reason + "</span>";
-						} else {
-							detail = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action).join(" ");
-						}
-					}
-					html += "<span class='chooser-popup-item-costs'>" + detail + "</span>";
-				}
-				html += infoGlyph;
-				html += "</div>";
-			}
-
-			this.rows = rows;
-			this.renderResources(rows);
-
-			if (rows.length == 0) {
-				let empty = this.config.emptyText ? this.config.emptyText(screen) : "Nothing here yet.";
-				html = "<p class='p-meta chooser-popup-empty'>" + empty + "</p>";
-			}
-			$list.html(html);
-			// the list's height changed; keep the popup centred
-			GameGlobals.uiFunctions.popupManager.repositionPopup($("#" + this.popupID));
-
-			if (previousKey) {
-				for (let i = 0; i < rows.length; i++) {
-					if (rows[i].key == previousKey) { cursor = i; break; }
-				}
-			}
-			this.setCursor(cursor);
-		},
-
-		// the stock of every cost the listed rows use, in the order the costs first
-		// appear, so the player can see what a press would leave without a tooltip
-		renderResources: function (rows) {
-			let screen = this.screen;
-			let show = screen != this.MENU && rows.length > 0 && this.config.showResources && this.config.showResources(screen);
-			let sector = this.config.getSector ? this.config.getSector() : null;
-			show = show && !!sector;
-			GameGlobals.uiFunctions.toggle(this.id("resources"), show);
-			if (!show) return;
-
-			let keys = [];
-			for (let i = 0; i < rows.length; i++) {
-				let costs = GameGlobals.playerActionsHelper.getCosts(rows[i].entry.action);
-				for (let key in costs) {
-					if (!(costs[key] > 0)) continue;
-					if (keys.indexOf(key) < 0) keys.push(key);
-				}
-			}
-
-			let html = "";
-			for (let i = 0; i < keys.length; i++) {
-				let key = keys[i];
-				let owned = GameGlobals.playerActionsHelper.getCostAmountOwned(sector, key);
-				let label = key.indexOf("resource_") == 0 ? UIConstants.getResourceImg(key.split("_")[1]) : UIConstants.getCostDisplayName(key).toLowerCase() + " ";
-				let name = UIConstants.getCostDisplayName(key);
-				html += "<span class='chooser-popup-resource' title='" + name + "'>" + label + "<span class='chooser-popup-resource-amount'>" + UIConstants.getDisplayValue(Math.floor(owned)) + "</span></span>";
-			}
-			this.$("resources").html(html);
-		},
-
-		setCursor: function (index) {
-			let hasToggle = this.$("toggle-container").is(":visible");
-			let numRows = this.rows ? this.rows.length : 0;
-			let min = hasToggle ? -1 : 0;
-			if (index < min) index = min;
-			if (index >= numRows) index = numRows - 1;
-			if (index < min) index = min;
-
-			this.cursor = index;
-			this.$("list").find(".chooser-popup-row").removeClass("selected");
-			this.$("toggle-container").toggleClass("selected", index == -1);
-			if (index >= 0) {
-				let $row = this.$("list").find(".chooser-popup-row[data-index='" + index + "']");
-				$row.addClass("selected");
-				if ($row.length > 0 && $row[0].scrollIntoView) $row[0].scrollIntoView({ block: "nearest" });
-			}
-		},
-
-		getPageSize: function () {
-			let $list = this.$("list");
-			let $row = $list.find(".chooser-popup-row").first();
-			if ($row.length == 0) return 3;
-			let rowHeight = $row.outerHeight(true) || 1;
-			return Math.max(3, Math.floor($list.innerHeight() / rowHeight));
-		},
-
-		// KEYS
-
-		onKeyDown: function (e) {
-			if (!this.isOpen) return;
-			let oe = e.originalEvent || e;
-			let code = oe.code || "";
-			let hasModifier = e.ctrlKey || e.altKey || e.metaKey;
-			if (hasModifier) return;
-			let isMenu = this.screen == this.MENU;
-			let numRows = this.rows ? this.rows.length : 0;
-			let lastIndex = numRows - 1;
-
-			// any key hides the tooltip: the row under it may change
-			this.hideTooltip();
-
-			if (code == "Escape") {
-				e.preventDefault();
-				if (e.shiftKey || isMenu) {
-					this.close();
-				} else {
-					this.back();
-				}
-				this.swallowEscapeUp = true;
-				return;
-			}
-
-			if (e.shiftKey) return;
-
-			switch (code) {
-				case "ArrowDown": e.preventDefault(); this.setCursor(this.cursor + 1); return;
-				case "ArrowUp": e.preventDefault(); this.setCursor(this.cursor - 1); return;
-				case "Home": e.preventDefault(); this.setCursor(0); return;
-				case "End": e.preventDefault(); this.setCursor(lastIndex); return;
-				case "PageDown": e.preventDefault(); this.setCursor(Math.min(lastIndex, this.cursor + this.getPageSize())); return;
-				case "PageUp": e.preventDefault(); this.setCursor(Math.max(0, this.cursor - this.getPageSize())); return;
-				case "Enter": case "NumpadEnter": e.preventDefault(); this.activateRow(); return;
-				case "Backspace": case "ArrowLeft":
-					if (!isMenu) { e.preventDefault(); this.back(); }
-					return;
-				case "ArrowRight":
-					if (isMenu) { e.preventDefault(); this.activateRow(); }
-					return;
-				case "Space":
-					// space belongs to the toggle alone; on the menu it does nothing, so
-					// the same key never means two things
-					e.preventDefault();
-					if (!isMenu) this.toggleShowHidden();
-					return;
-			}
-
-			if (isMenu && this.config.menuLetters && this.config.menuLetters[code] !== undefined) {
-				e.preventDefault();
-				let index = this.config.menuLetters[code];
-				if (index > lastIndex) return;
-				this.setCursor(index);
-				this.activateRow();
-				return;
-			}
-
-			// digits pick a row: 1-9, then 0 for the tenth
-			let digit = -1;
-			if (code.indexOf("Digit") == 0 && code.length == 6) digit = parseInt(code.charAt(5));
-			if (code.indexOf("Numpad") == 0 && code.length == 7) digit = parseInt(code.charAt(6));
-			if (!isNaN(digit) && digit >= 0) {
-				e.preventDefault();
-				let index = digit == 0 ? 9 : digit - 1;
-				if (index > lastIndex) return;
-				this.setCursor(index);
-				this.activateRow();
-			}
-		},
-
-		toggleShowHidden: function () {
-			if (!this.$("toggle-container").is(":visible")) return;
-			this.$("show-unavailable").click();
-		},
-
-		activateRow: function (retries) {
-			if (!this.isOpen) return;
-			// the popup is not really open until showSpecialPopup's fadeIn sets data-visible;
-			// a press inside that window is kept and retried rather than dropped, so a fast
-			// "B A 2" lands its last key too
-			if (!this.isVisible()) {
-				retries = retries || 0;
-				if (retries < 20) setTimeout(() => this.activateRow(retries + 1), 25);
-				return;
-			}
-
-			if (this.cursor == -1) {
-				this.toggleShowHidden();
-				return;
-			}
-
-			let row = this.rows ? this.rows[this.cursor] : null;
-			if (!row) return;
-
-			if (this.screen == this.MENU) {
-				this.showScreen(row.entry.screen);
-				return;
-			}
-
-			let entry = row.entry;
-			let pressed = entry.available && this.config.press(entry, this.screen);
-			if (!pressed) {
-				this.flashUnavailable(this.cursor);
-				return;
-			}
-
-			this.hideTooltip();
-			// the press changed what the list shows: counts, levels, costs, busy state
-			if (this.isOpen) this.renderList();
-		},
-
-		// highlight the name and the lacking costs of an unavailable row for a moment
-		flashUnavailable: function (rowIndex) {
-			let $row = this.$("list").find(".chooser-popup-row[data-index='" + rowIndex + "']");
-			if ($row.length == 0) return;
-			$row.addClass("chooser-popup-flash");
-			setTimeout(function () { $row.removeClass("chooser-popup-flash"); }, 1000);
-		},
-
-		// TOOLTIPS
-		// one body-level fixed pane (#chooser-tooltip) like the upgrade tree's
-
-		cancelTooltip: function () {
-			if (this.tooltipTimeout) {
-				clearTimeout(this.tooltipTimeout);
-				this.tooltipTimeout = null;
-			}
-		},
-
-		hideTooltip: function () {
-			this.cancelTooltip();
-			this.tooltipIndex = null;
-			let $tooltip = $("#chooser-tooltip");
-			if ($tooltip.length == 0) return;
-			$tooltip.hide().attr("aria-hidden", "true").empty();
-		},
-
-		showTooltip: function (index) {
-			let $tooltip = $("#chooser-tooltip");
-			if ($tooltip.length == 0) return;
-			let row = index >= 0 && this.rows ? this.rows[index] : null;
-			if (index >= 0 && !row) return;
-			let $content = this.config.getTooltipContent(index, this.screen, row ? row.entry : null);
-			if (!$content) return;
-
-			this.tooltipIndex = index;
-			$tooltip.empty().append($content);
-			$tooltip.css({ left: "0px", top: "0px" }).show().attr("aria-hidden", "false");
-			GameGlobals.uiFunctions.positionTooltipAtCursor($tooltip, this.tooltipCursor, this.TOOLTIP_CURSOR_GAP, this.TOOLTIP_EDGE_MARGIN);
-		},
-
-		// helpers for owners' tooltip builders
-
-		makeTooltipContent: function () {
-			let $content = $("<div></div>");
-			return {
-				$content: $content,
-				addHeader: function (name, badge) {
-					let $header = $("<div class='chooser-tooltip-header'></div>");
-					$header.append($("<span></span>").text(name));
-					if (badge) {
-						$header.append(" ");
-						$header.append($("<span class='status-badge'></span>").text(badge));
-					}
-					$content.append($header);
-				},
-				addLine: function (text, cls) {
-					if (!text) return;
-					$content.append($("<p></p>").addClass(cls || "").text(text));
-				},
-				addHTML: function (html, cls) {
-					if (!html) return;
-					$content.append($("<p></p>").addClass(cls || "").html(html));
-				},
-			};
-		},
-
-		getRowKeyLabel: function (index) {
-			return index + 1 <= 9 ? String(index + 1) : index + 1 == 10 ? "0" : null;
-		},
-
-	});
-
-	return UIChooserPopup;
-});
-
-})(function () {
-	var args = Array.prototype.slice.call(arguments);
-	if (typeof args[0] !== "string") args.unshift("game/helpers/ui/UIChooserPopup");
 	return define.apply(null, args);
 });
 

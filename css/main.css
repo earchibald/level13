@@ -2993,35 +2993,41 @@ body.dark #mobile-overlay h2 {
   margin: 1em;
 }
 body.dark:not(.layout-small) #buildings-popup,
-body.dark:not(.layout-small) #craft-popup {
+body.dark:not(.layout-small) #craft-popup,
+body.dark:not(.layout-small) #sector-popup {
   width: 480px;
   min-width: 0;
   max-width: 90%;
   box-sizing: border-box;
 }
 body.dark #buildings-popup-header-row,
-body.dark #craft-popup-header-row {
+body.dark #craft-popup-header-row,
+body.dark #sector-popup-header-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 body.dark #buildings-popup-header-row h3,
-body.dark #craft-popup-header-row h3 {
+body.dark #craft-popup-header-row h3,
+body.dark #sector-popup-header-row h3 {
   margin: 0;
   flex: 1 1 auto;
 }
 body.dark #buildings-popup-header-screen,
-body.dark #craft-popup-header-screen {
+body.dark #craft-popup-header-screen,
+body.dark #sector-popup-header-screen {
   color: rgba(255, 255, 255, 0.5);
   font-weight: normal;
 }
 body.dark #buildings-popup-back,
-body.dark #craft-popup-back {
+body.dark #craft-popup-back,
+body.dark #sector-popup-back {
   flex: 0 0 auto;
   order: 2;
 }
 body.dark #buildings-popup-header-hint,
-body.dark #craft-popup-header-hint {
+body.dark #craft-popup-header-hint,
+body.dark #sector-popup-header-hint {
   flex: 0 0 auto;
   order: 1;
   padding: 1px 8px;
@@ -3033,11 +3039,13 @@ body.dark #craft-popup-header-hint {
   white-space: nowrap;
 }
 body.dark #buildings-popup-header-hint:hover,
-body.dark #craft-popup-header-hint:hover {
+body.dark #craft-popup-header-hint:hover,
+body.dark #sector-popup-header-hint:hover {
   border-color: #7b7b7b;
   color: #fdfdfd;
 }
-body.dark #in-improvements-menu-hint {
+body.dark #in-improvements-menu-hint,
+body.dark #out-sector-menu-hint {
   display: inline-block;
   margin-left: 6px;
   padding: 0 6px;
@@ -3066,12 +3074,14 @@ body.dark #mainmap-sector-details-chips-hint {
 body.dark body.touch #mainmap-sector-details-chips-hint {
   display: none;
 }
-body.dark #in-improvements-menu-hint:hover {
+body.dark #in-improvements-menu-hint:hover,
+body.dark #out-sector-menu-hint:hover {
   border-color: #7b7b7b;
   color: #fdfdfd;
 }
 body.dark #buildings-popup-resources,
-body.dark #craft-popup-resources {
+body.dark #craft-popup-resources,
+body.dark #sector-popup-resources {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -3091,7 +3101,8 @@ body.dark .chooser-popup-resource-amount {
   color: #fdfdfd;
 }
 body.dark #buildings-popup-list,
-body.dark #craft-popup-list {
+body.dark #craft-popup-list,
+body.dark #sector-popup-list {
   max-height: 55vh;
   overflow-y: auto;
   text-align: left;
@@ -3180,13 +3191,15 @@ body.dark .chooser-popup-empty {
   padding: 6px;
 }
 body.dark #buildings-popup-toggle-container,
-body.dark #craft-popup-toggle-container {
+body.dark #craft-popup-toggle-container,
+body.dark #sector-popup-toggle-container {
   display: block;
   padding: 2px 6px;
   border: 1px solid transparent;
 }
 body.dark #buildings-popup-toggle-container.selected,
-body.dark #craft-popup-toggle-container.selected {
+body.dark #craft-popup-toggle-container.selected,
+body.dark #sector-popup-toggle-container.selected {
   border-color: #555;
   background: #282a28;
 }
@@ -6246,35 +6259,41 @@ body.sunlit #mobile-overlay h2 {
   margin: 1em;
 }
 body.sunlit:not(.layout-small) #buildings-popup,
-body.sunlit:not(.layout-small) #craft-popup {
+body.sunlit:not(.layout-small) #craft-popup,
+body.sunlit:not(.layout-small) #sector-popup {
   width: 480px;
   min-width: 0;
   max-width: 90%;
   box-sizing: border-box;
 }
 body.sunlit #buildings-popup-header-row,
-body.sunlit #craft-popup-header-row {
+body.sunlit #craft-popup-header-row,
+body.sunlit #sector-popup-header-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 body.sunlit #buildings-popup-header-row h3,
-body.sunlit #craft-popup-header-row h3 {
+body.sunlit #craft-popup-header-row h3,
+body.sunlit #sector-popup-header-row h3 {
   margin: 0;
   flex: 1 1 auto;
 }
 body.sunlit #buildings-popup-header-screen,
-body.sunlit #craft-popup-header-screen {
+body.sunlit #craft-popup-header-screen,
+body.sunlit #sector-popup-header-screen {
   color: rgba(0, 0, 0, 0.5);
   font-weight: normal;
 }
 body.sunlit #buildings-popup-back,
-body.sunlit #craft-popup-back {
+body.sunlit #craft-popup-back,
+body.sunlit #sector-popup-back {
   flex: 0 0 auto;
   order: 2;
 }
 body.sunlit #buildings-popup-header-hint,
-body.sunlit #craft-popup-header-hint {
+body.sunlit #craft-popup-header-hint,
+body.sunlit #sector-popup-header-hint {
   flex: 0 0 auto;
   order: 1;
   padding: 1px 8px;
@@ -6286,11 +6305,13 @@ body.sunlit #craft-popup-header-hint {
   white-space: nowrap;
 }
 body.sunlit #buildings-popup-header-hint:hover,
-body.sunlit #craft-popup-header-hint:hover {
+body.sunlit #craft-popup-header-hint:hover,
+body.sunlit #sector-popup-header-hint:hover {
   border-color: #bfbfbf;
   color: #202220;
 }
-body.sunlit #in-improvements-menu-hint {
+body.sunlit #in-improvements-menu-hint,
+body.sunlit #out-sector-menu-hint {
   display: inline-block;
   margin-left: 6px;
   padding: 0 6px;
@@ -6319,12 +6340,14 @@ body.sunlit #mainmap-sector-details-chips-hint {
 body.sunlit body.touch #mainmap-sector-details-chips-hint {
   display: none;
 }
-body.sunlit #in-improvements-menu-hint:hover {
+body.sunlit #in-improvements-menu-hint:hover,
+body.sunlit #out-sector-menu-hint:hover {
   border-color: #bfbfbf;
   color: #202220;
 }
 body.sunlit #buildings-popup-resources,
-body.sunlit #craft-popup-resources {
+body.sunlit #craft-popup-resources,
+body.sunlit #sector-popup-resources {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -6344,7 +6367,8 @@ body.sunlit .chooser-popup-resource-amount {
   color: #202220;
 }
 body.sunlit #buildings-popup-list,
-body.sunlit #craft-popup-list {
+body.sunlit #craft-popup-list,
+body.sunlit #sector-popup-list {
   max-height: 55vh;
   overflow-y: auto;
   text-align: left;
@@ -6433,13 +6457,15 @@ body.sunlit .chooser-popup-empty {
   padding: 6px;
 }
 body.sunlit #buildings-popup-toggle-container,
-body.sunlit #craft-popup-toggle-container {
+body.sunlit #craft-popup-toggle-container,
+body.sunlit #sector-popup-toggle-container {
   display: block;
   padding: 2px 6px;
   border: 1px solid transparent;
 }
 body.sunlit #buildings-popup-toggle-container.selected,
-body.sunlit #craft-popup-toggle-container.selected {
+body.sunlit #craft-popup-toggle-container.selected,
+body.sunlit #sector-popup-toggle-container.selected {
   border-color: #999;
   background: #fff;
 }

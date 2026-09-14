@@ -21,6 +21,7 @@ define([
 	'game/constants/StoryConstants',
 	'game/constants/TradeConstants',
 	'game/constants/TribeConstants',
+	'game/constants/PlayerActionConstants',
 	'game/nodes/PlayerPositionNode',
 	'game/nodes/PlayerLocationNode',
 	'game/nodes/NearestCampNode',
@@ -37,16 +38,17 @@ define([
 	'game/components/sector/improvements/WorkshopComponent',
 	'game/components/sector/SectorStatusComponent',
 	'game/components/sector/EnemiesComponent',
-	'game/systems/AutoScavengeSystem'
+	'game/systems/AutoScavengeSystem',
+	'game/helpers/ui/UIChooserPopup'
 ], function (
 	Ash,
 	Text, MapUtils, UIList, UIState, ExceptionHandler, GameGlobals, GlobalSignals, DialogueConstants, ExplorationConstants, ImprovementConstants, PlayerStatConstants, TextConstants,
 	LogConstants, UIConstants, PositionConstants, LocaleConstants, LevelConstants, MovementConstants, StoryConstants, TradeConstants,
-	TribeConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
+	TribeConstants, PlayerActionConstants, PlayerPositionNode, PlayerLocationNode, NearestCampNode, VisionComponent, StaminaComponent,
 	PassagesComponent, SectorControlComponent, SectorFeaturesComponent, SectorLocalesComponent,
 	MovementOptionsComponent, PositionComponent, CampComponent, SectorImprovementsComponent,
 	WorkshopComponent, SectorStatusComponent, EnemiesComponent,
-	AutoScavengeSystem) {
+	AutoScavengeSystem, UIChooserPopup) {
 	// The bucket and the trap. Everything either one offers now lives on its chip
 	// in the sector bar: build it, empty it, and raise its capacity.
 	var COLLECTOR_DEFS = [
@@ -108,6 +110,7 @@ define([
 			this.elements.outImprovementsTR = $("#out-improvements tr");
 			
 			this.initElements();
+			this.initSectorPopup();
 
 			return this;
 		},
@@ -126,6 +129,7 @@ define([
 			this.playerPosNodes = null;
 			this.playerLocationNodes = null;
 			this.engine = null;
+			if (this.sectorPopup) this.sectorPopup.destroy();
 		},
 		
 		initElements: function () {
@@ -165,6 +169,10 @@ define([
 		},
 
 		initListeners: function () {
+			// the badge in the sector bar advertises the O menu and opens it on a tap
+			$("#out-sector-menu-hint").click(ExceptionHandler.wrapClick(() => {
+				GlobalSignals.openSectorPopupSignal.dispatch();
+			}));
 			$("#out-action-auto-scavenge").click(ExceptionHandler.wrapClick(() => {
 				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
 				GlobalSignals.toggleAutoScavengeSignal.dispatch();
@@ -209,6 +217,8 @@ define([
 			GlobalSignals.add(this, GlobalSignals.movementBlockerClearedSignal, this.updateAll);
 			GlobalSignals.add(this, GlobalSignals.slowUpdateSignal, this.slowUpdate);
 			GlobalSignals.add(this, GlobalSignals.popupClosedSignal, this.onPopupClosed);
+			GlobalSignals.add(this, GlobalSignals.popupOpenedSignal, this.onPopupOpened);
+			GlobalSignals.add(this, GlobalSignals.openSectorPopupSignal, this.onOpenSectorPopup);
 			GlobalSignals.add(this, GlobalSignals.gameResetSignal, this.onGameReset);
 			GlobalSignals.add(this, GlobalSignals.buttonStateChangedSignal, this.onButtonStateChanged);
 			GlobalSignals.add(this, GlobalSignals.autoScavengeChangedSignal, this.updateAutoScavengeButton);
@@ -254,6 +264,8 @@ define([
 			if (!this.playerLocationNodes.head) return;
 			this.updateOutImprovementsStatus();
 			this.updateLevelPageActionsSlow();
+			this.updateSectorMenuHint();
+			if (this.sectorPopup.isOpen) this.sectorPopup.renderList();
 		},
 
 		updateAll: function () {
@@ -1574,7 +1586,8 @@ define([
 			GameGlobals.uiFunctions.toggleRoomPanel(false);
 		},
 
-		onPopupClosed: function () {
+		onPopupClosed: function (popupID) {
+			this.sectorPopup.onPopupClosed(popupID);
 			this.updateLocales();
 			this.updateCharacters();
 			// A room first described behind a popup - a fight, a story beat -
@@ -1585,6 +1598,320 @@ define([
 			this.updateSectorDescription();
 		},
 		
+		onPopupOpened: function (popupID) {
+			this.sectorPopup.onPopupOpened(popupID);
+		},
+
+		onOpenSectorPopup: function (screen) {
+			this.sectorPopup.open(typeof screen == "string" ? screen : null);
+		},
+
+		// SECTOR MENU (O)
+		//
+		// The outside counterpart of the camp's Buildings menu: three lists for the
+		// sector the player stands in. Build is what can be placed here, Action is
+		// everything else the sector offers, Search is its locales. Every row is a
+		// button that already exists on the tab, read for its label and state and
+		// pressed on the row's behalf, so the menu can never disagree with the tab
+		// and any button that grows or moves there shows up here on its own. The
+		// hotkeys the actions already have (N, M, G, F, H, R) keep working; the row
+		// shows them as its sub-text.
+		//
+		// The screens, cursor, keys, tooltips and step-aside logic live in
+		// UIChooserPopup; this system supplies the rows, their sub-text, the tooltip
+		// content and the press.
+
+		SECTOR_MENU_BUILD_ROWS: [
+			{ id: "#out-action-build-camp", name: "Camp" },
+			{ id: "#out-action-build-bucket", name: "Bucket" },
+			{ id: "#out-action-improve-bucket", name: "Bucket+" },
+			{ id: "#out-action-build-trap", name: "Trap" },
+			{ id: "#out-action-improve-trap", name: "Trap+" },
+			{ id: "#out-action-build-beacon", name: "Beacon" },
+			{ id: "#out-action-dismantle-beacon", name: "Dismantle beacon" },
+		],
+
+		SECTOR_MENU_ACTION_ROWS: [
+			{ id: "#out-action-sca", name: "Scavenge" },
+			{ id: "#out-action-auto-scavenge", name: "Auto-scavenge", isToggle: true },
+			{ id: "#out-action-scout", name: "Scout" },
+			{ id: "#out-action-use-bucket", name: "Water (all)" },
+			{ id: "#out-action-use-bucket_one", name: "Water (1)" },
+			{ id: "#out-action-use-trap", name: "Food (all)" },
+			{ id: "#out-action-use-trap_one", name: "Food (1)" },
+			{ id: "#out-action-use-spring", name: "Refill water" },
+			{ id: "#out-action-nap", name: "Rest" },
+			{ id: "#out-action-get-up", name: "Get up" },
+			{ id: "#out-action-wait", name: "Wait" },
+			{ id: "#out-action-investigate", name: "Investigate" },
+			{ id: "#out-action-examine" },
+			{ id: "#out-action-scavenge-heap", name: "Scavenge heap" },
+			{ id: "#out-action-clear-workshop", name: "Scout workshop" },
+			{ id: "#out-action-despair", name: "Despair" },
+		],
+
+		initSectorPopup: function () {
+			let sys = this;
+			let tabs = GameGlobals.uiFunctions.elementIDs.tabs;
+			this.sectorPopup = new UIChooserPopup({
+				popupID: "sector-popup",
+				screens: [ "build", "action", "search" ],
+				titles: { build: "Build", action: "Action", search: "Search" },
+				verbs: { build: "build", action: "do", search: "search" },
+				menuLetters: { KeyB: 0, KeyA: 1, KeyS: 2 },
+				openKey: { code: "KeyO", tab: tabs.out },
+				toggleLabel: "Show unavailable",
+				canOpen: () => !!sys.playerLocationNodes.head && !!sys.playerPosNodes.head && !sys.playerPosNodes.head.position.inCamp,
+				beforeOpen: () => GameGlobals.uiFunctions.showTabById(tabs.out),
+				getSector: () => sys.playerLocationNodes.head ? sys.playerLocationNodes.head.entity : null,
+				getEntries: screen => sys.getSectorPopupEntries(screen),
+				renderRowSub: (entry, screen) => sys.renderSectorRowSub(entry, screen),
+				renderRowDetail: (entry, screen) => sys.renderSectorRowDetail(entry, screen),
+				showResources: screen => screen == "build",
+				emptyText: screen => screen == "build" ? "Nothing to build here." : screen == "search" ? "No locations here to search." : "Nothing to do here.",
+				getTooltipContent: (index, screen, entry) => sys.getSectorTooltipContent(index, screen, entry),
+				press: entry => sys.pressSectorEntry(entry),
+			});
+			this.sectorPopup.init();
+		},
+
+		updateSectorMenuHint: function () {
+			let hasKey = GameGlobals.gameState.settings.hotkeysEnabled && !UIConstants.isTouchScreen();
+			let text = hasKey ? "O for menu" : "menu";
+			let $hint = $("#out-sector-menu-hint");
+			if ($hint.text() != text) $hint.text(text);
+		},
+
+		// a row presses the tab's own button; the auto-scavenge row flips the toggle
+		pressSectorEntry: function (entry) {
+			if (!entry.available) return false;
+			if (entry.isToggle) {
+				GlobalSignals.triggerSoundSignal.dispatch(UIConstants.soundTriggerIDs.buttonClicked);
+				GlobalSignals.toggleAutoScavengeSignal.dispatch();
+				return true;
+			}
+			let $btn = entry.$btn;
+			let canPress = $btn && $btn.length > 0 && $btn.is(":visible") && !$btn.hasClass("btn-disabled");
+			if (!canPress) return false;
+			$btn.click();
+			return true;
+		},
+
+		renderSectorRowSub: function (entry, screen) {
+			let parts = [];
+			if (entry.isToggle) parts.push(GameGlobals.gameState.uiStatus.isAutoScavenging ? "on" : "off");
+			if (entry.sub) parts.push(entry.sub);
+			if (entry.hotkey && GameGlobals.gameState.settings.hotkeysEnabled) parts.push("key " + entry.hotkey);
+			return parts.join(" &middot; ");
+		},
+
+		// null lets the popup show the action's costs, or the reason when there is
+		// one; a row without an action (the toggle, the toll gate) has neither
+		renderSectorRowDetail: function (entry, screen) {
+			if (entry.action) return null;
+			if (entry.reason && !entry.available) return "<span class='chooser-popup-item-reason'>" + entry.reason + "</span>";
+			return "";
+		},
+
+		// ENTRIES
+		//
+		// every entry has: key (stable id for keeping the cursor across renders), name,
+		// action, $btn (the tab button the row presses), available (pressing it now
+		// does something), hidden (only shown with "Show unavailable"), reason (why not)
+
+		getSectorMenuEntries: function () {
+			let counts = {
+				build: this.getSectorBuildEntries().filter(e => !e.hidden).length,
+				action: this.getSectorActionEntries().filter(e => !e.hidden).length,
+				search: this.getSectorSearchEntries().filter(e => !e.hidden).length,
+			};
+			return [
+				{ key: "build", screen: "build", letter: "B", name: "Build", count: counts.build, description: "Place a camp, a collector or a beacon in this sector, or improve one that stands", available: true, hidden: false },
+				{ key: "action", screen: "action", letter: "A", name: "Action", count: counts.action, description: "Scavenge, scout, collect, rest and whatever else this sector offers", available: true, hidden: false },
+				{ key: "search", screen: "search", letter: "S", name: "Search", count: counts.search, description: "Search the locations found in this sector", available: true, hidden: false },
+			];
+		},
+
+		getSectorEntryStatus: function (action, name) {
+			let reqs = GameGlobals.playerActionsHelper.checkRequirements(action, false);
+			let reqsMet = reqs.value >= 1;
+			let available = reqsMet && GameGlobals.playerActionsHelper.checkAvailability(action);
+			let reason = null;
+			if (!reqsMet && reqs.reason) {
+				let reasonVO = reqs.reason;
+				// the requirement check leaves the name out when it is the action's own
+				// improvement (its button already says it); a list row needs it spelled out
+				if (name && reasonVO.textParams && reasonVO.textParams.name === "") {
+					reasonVO = { textKey: reasonVO.textKey, textParams: { name: name } };
+				}
+				reason = Text.t(reasonVO);
+			}
+			let isBusy = !reqsMet && reqs.reason && (reqs.reason.baseReason == PlayerActionConstants.DISABLED_REASON_BUSY || reqs.reason.baseReason == PlayerActionConstants.DISABLED_REASON_IN_PROGRESS);
+			// a cooling-down action fails the availability check without a reason;
+			// the row says how long is left instead of looking unaffordable
+			let cooldownLeft = available ? 0 : GameGlobals.playerActionsHelper.getCooldownForCurrentLocation(action);
+			let isCooldown = !available && (reqsMet || isBusy) && cooldownLeft > 0;
+			if (isCooldown) reason = "Cooldown " + UIConstants.getTimeToNum(cooldownLeft);
+			return { available: available, reqsMet: reqsMet, reason: reason, isBusy: isBusy, isCooldown: isCooldown, cooldownLeft: cooldownLeft };
+		},
+
+		// one row from one tab button. The button's own visibility and disabled
+		// class are the truth: a button the tab does not show is a hidden row, a
+		// button it shows dimmed is an unavailable one
+		makeSectorEntry: function ($btn, key, def) {
+			if (!$btn || $btn.length == 0) return null;
+			def = def || {};
+			let action = $btn.attr("action") || null;
+			let name = def.name;
+			if (!name) {
+				let $label = $btn.find(".btn-label");
+				name = ($label.length > 0 ? $label.text() : $btn.clone().children().remove().end().text()).trim();
+			}
+			if (!name) name = action || key;
+			let isShown = $btn.is(":visible");
+			let isDisabled = $btn.hasClass("btn-disabled");
+			let status = action ? this.getSectorEntryStatus(action, name) : { available: !isDisabled, reason: null, isBusy: false, isCooldown: false };
+			let hotkeyHint = action ? GameGlobals.uiFunctions.getActionHotkeyHint(action) : def.hotkey || null;
+			return {
+				key: key,
+				name: name,
+				action: action,
+				$btn: $btn,
+				isToggle: def.isToggle || false,
+				hotkey: hotkeyHint,
+				sub: def.sub || "",
+				available: isShown && !isDisabled && status.available,
+				hidden: !isShown,
+				reason: status.reason,
+				isBusy: status.isBusy,
+				isCooldown: status.isCooldown,
+			};
+		},
+
+		getSectorBuildEntries: function () {
+			let result = [];
+			if (!this.playerLocationNodes.head) return result;
+			for (let i = 0; i < this.SECTOR_MENU_BUILD_ROWS.length; i++) {
+				let def = this.SECTOR_MENU_BUILD_ROWS[i];
+				let entry = this.makeSectorEntry($(def.id), "build-" + def.id, def);
+				if (entry) result.push(entry);
+			}
+			return result;
+		},
+
+		getSectorActionEntries: function () {
+			let result = [];
+			if (!this.playerLocationNodes.head) return result;
+			let sys = this;
+			for (let i = 0; i < this.SECTOR_MENU_ACTION_ROWS.length; i++) {
+				let def = this.SECTOR_MENU_ACTION_ROWS[i];
+				let entry = this.makeSectorEntry($(def.id), "action-" + def.id, def);
+				if (entry) result.push(entry);
+			}
+			// the auto-scavenge toggle has no action; its badge is written by hand on the tab too
+			for (let i = 0; i < result.length; i++) {
+				if (result[i].isToggle) result[i].hotkey = "&#8679;N";
+			}
+			// what the sector adds of its own: blocked exits (clear waste, bridge a
+			// gap, fight a gang, a toll gate) and people to talk to
+			$("#container-out-actions-movement-related button").each(function (index) {
+				let $btn = $(this);
+				let key = "blocker-" + ($btn.attr("action") || "tollgate-" + $btn.data("direction"));
+				let entry = sys.makeSectorEntry($btn, key);
+				if (entry) result.push(entry);
+			});
+			$("#out-characters button.action").each(function (index) {
+				let $btn = $(this);
+				let entry = sys.makeSectorEntry($btn, "talk-" + $btn.attr("action"), { name: "Talk: " + $btn.find(".btn-label").text().trim() });
+				if (entry) result.push(entry);
+			});
+			return result;
+		},
+
+		getSectorSearchEntries: function () {
+			let result = [];
+			if (!this.playerLocationNodes.head) return result;
+			let sys = this;
+			$("#table-out-actions-locales button.action").each(function (index) {
+				let $btn = $(this);
+				let info = $btn.closest("tr").find("td").last().find("span").text().trim();
+				let entry = sys.makeSectorEntry($btn, "locale-" + $btn.attr("action"), { sub: info });
+				if (!entry) return;
+				// "Already scouted" is the whole story; do not also show it as a blocker
+				if (info && !entry.available && !entry.reason) entry.reason = info;
+				result.push(entry);
+			});
+			return result;
+		},
+
+		getSectorPopupEntries: function (screen) {
+			switch (screen) {
+				case "menu": return this.getSectorMenuEntries();
+				case "build": return this.getSectorBuildEntries();
+				case "action": return this.getSectorActionEntries();
+				case "search": return this.getSectorSearchEntries();
+			}
+			return [];
+		},
+
+		// TOOLTIPS
+
+		getSectorTooltipContent: function (index, screen, entry) {
+			let t = this.sectorPopup.makeTooltipContent();
+			let $content = t.$content;
+			let addHeader = t.addHeader, addLine = t.addLine, addHTML = t.addHTML;
+
+			if (index == -2) {
+				let isTouch = UIConstants.isTouchScreen();
+				addHeader("Sector menu");
+				addLine(isTouch ? "Tap a row's ⓘ for what it does, what it costs and why it is blocked." : "Hover any row for what it does, what it costs and why it is blocked.");
+				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; space: show unavailable<br/>esc: back &middot; &#8679;esc: close</span>");
+				return $content;
+			}
+
+			if (index == -1) {
+				addHeader("Show unavailable");
+				addLine("Also list what this sector does not offer right now. Rows that only lack resources or wait on a cooldown are always shown.");
+				addHTML("<span class='meta'>space: toggle</span>");
+				return $content;
+			}
+
+			if (!entry) return null;
+
+			if (screen == "menu") {
+				addHeader(entry.name, entry.count + (entry.count == 1 ? " entry" : " entries"));
+				addLine(entry.description);
+				addHTML("<span class='meta'>" + entry.letter + " or " + (index + 1) + ": open</span>");
+				return $content;
+			}
+
+			let badge = entry.available ? "available" : entry.isCooldown ? "cooldown" : entry.isBusy ? "busy" : entry.reason ? entry.reason : entry.hidden ? "not here" : "unaffordable";
+			addHeader(entry.name, badge);
+			if (entry.isToggle) {
+				addLine("Keep scavenging whenever the cooldown ends, while a scavenger with the ability is in the party.", "chooser-tooltip-desc");
+				addLine(GameGlobals.gameState.uiStatus.isAutoScavenging ? "Currently on" : "Currently off", "meta");
+			} else if (entry.action) {
+				let description = GameGlobals.playerActionsHelper.getDescription(entry.action);
+				addLine(description, "chooser-tooltip-desc");
+				let duration = PlayerActionConstants.getDuration(entry.action);
+				let cooldown = PlayerActionConstants.getCooldown(entry.action);
+				let timing = [];
+				if (duration > 0) timing.push("takes " + UIConstants.getTimeToNum(duration));
+				if (cooldown > 0) timing.push("cooldown " + UIConstants.getTimeToNum(cooldown));
+				if (timing.length > 0) addLine(timing.join(", "), "meta");
+				let costSpans = GameGlobals.uiFunctions.getActionCostsSpanList(entry.action);
+				if (costSpans.length > 0) addHTML("Costs: " + costSpans.join(", "));
+			}
+			if (entry.sub) addLine(entry.sub, "meta");
+			if (!entry.available && entry.reason) addHTML("<span class='action-cost-blocker'>" + entry.reason + "</span>");
+			let keys = [];
+			let keyLabel = this.sectorPopup.getRowKeyLabel(index);
+			if (keyLabel) keys.push(keyLabel + " or enter: " + (screen == "build" ? "build" : screen == "search" ? "search" : "do it"));
+			if (entry.hotkey && GameGlobals.gameState.settings.hotkeysEnabled) keys.push(entry.hotkey + " on the tab");
+			if (keys.length > 0) addHTML("<span class='meta'>" + keys.join(" &middot; ") + "</span>");
+			return $content;
+		},
+
 		onButtonStateChanged: function (action, isEnabled) {
 			switch (action) {
 				case "use_out_collector_water":

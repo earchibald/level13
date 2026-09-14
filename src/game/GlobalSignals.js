@@ -22,6 +22,7 @@ define(['ash',], function (Ash) {
 		openCraftPopupSignal: new Ash.Signals.Signal(),
 		openBuildingsPopupSignal: new Ash.Signals.Signal(),
 		openGoPopupSignal: new Ash.Signals.Signal(),
+		openSectorPopupSignal: new Ash.Signals.Signal(),
 		elementToggledSignal: new Ash.Signals.Signal(),
 		elementCreatedSignal: new Ash.Signals.Signal(),
 		buttonStateChangedSignal: new Ash.Signals.Signal(),
