@@ -970,6 +970,11 @@ div.grid-content {
 
 // the Camp tab's Buildings header carries a badge that names the B menu and
 // opens it on a click, so the menu is discoverable without the hotkey list
+// the outside badge has a row of its own above the sector's buttons
+#out-sector-menu-row {
+	margin: 0 0 6px 0;
+}
+
 #in-improvements-menu-hint, #out-sector-menu-hint {
 	display: inline-block;
 	margin-left: 6px;
@@ -1002,6 +1007,10 @@ div.grid-content {
 
 body.touch #mainmap-sector-details-chips-hint {
 	display: none;
+}
+
+#out-sector-menu-hint {
+	margin-left: 0;
 }
 
 #in-improvements-menu-hint:hover, #out-sector-menu-hint:hover {

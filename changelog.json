@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.7.0.m13",
+            "version": "0.7.0.m14",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -10,6 +10,10 @@
                 {
                     "type": "NEW",
                     "summary": "Sector menu: press O outside (or tap the badge in the sector bar) for Build, Action and Search lists of everything the sector offers. B, A, S or a number opens a list; a number or enter presses a row; arrows move; esc backs out. The existing hotkeys (N, shift-N, M, G, shift-G, F, shift-F, H, R) keep working and each row shows its key."
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "The 'O for menu' badge sits on its own row below the sector info and above the sector's buttons."
                 }
             ]
         },
