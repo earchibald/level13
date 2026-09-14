@@ -273,7 +273,8 @@ define([
 		// every entry has: key (stable id for keeping the cursor across renders), name,
 		// action, available (pressing it now does something), hidden (only shown with
 		// the toggle), reason (why not), isBusy, isCooldown. Menu entries add screen,
-		// letter, count, description
+		// letter, count, description. Optional hotkeyCode / hotkeyShift let the row
+		// answer to its own hotkey while the list is open
 
 		renderList: function (cursor) {
 			if (!this.isOpen) return;
@@ -454,6 +455,20 @@ define([
 				}
 				this.swallowEscapeUp = true;
 				return;
+			}
+
+			// a row that names its own hotkey (N, shift-G, ...) answers to it here too,
+			// so the key the row shows is never a key that does nothing
+			if (!isMenu) {
+				for (let i = 0; i < numRows; i++) {
+					let entry = this.rows[i].entry;
+					if (!entry.hotkeyCode || entry.hotkeyCode != code) continue;
+					if (!!entry.hotkeyShift != !!e.shiftKey) continue;
+					e.preventDefault();
+					this.setCursor(i);
+					this.activateRow();
+					return;
+				}
 			}
 
 			if (e.shiftKey) return;

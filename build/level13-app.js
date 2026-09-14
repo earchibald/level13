@@ -25846,7 +25846,8 @@ define([
 		// every entry has: key (stable id for keeping the cursor across renders), name,
 		// action, available (pressing it now does something), hidden (only shown with
 		// the toggle), reason (why not), isBusy, isCooldown. Menu entries add screen,
-		// letter, count, description
+		// letter, count, description. Optional hotkeyCode / hotkeyShift let the row
+		// answer to its own hotkey while the list is open
 
 		renderList: function (cursor) {
 			if (!this.isOpen) return;
@@ -26027,6 +26028,20 @@ define([
 				}
 				this.swallowEscapeUp = true;
 				return;
+			}
+
+			// a row that names its own hotkey (N, shift-G, ...) answers to it here too,
+			// so the key the row shows is never a key that does nothing
+			if (!isMenu) {
+				for (let i = 0; i < numRows; i++) {
+					let entry = this.rows[i].entry;
+					if (!entry.hotkeyCode || entry.hotkeyCode != code) continue;
+					if (!!entry.hotkeyShift != !!e.shiftKey) continue;
+					e.preventDefault();
+					this.setCursor(i);
+					this.activateRow();
+					return;
+				}
 			}
 
 			if (e.shiftKey) return;
@@ -27841,7 +27856,7 @@ define([
 
 		SECTOR_MENU_ACTION_ROWS: [
 			{ id: "#out-action-sca", name: "Scavenge" },
-			{ id: "#out-action-auto-scavenge", name: "Auto-scavenge", isToggle: true },
+			{ id: "#out-action-auto-scavenge", name: "Auto-scavenge", isToggle: true, hotkeyCode: "KeyN", hotkeyShift: true },
 			{ id: "#out-action-scout", name: "Scout" },
 			{ id: "#out-action-use-bucket", name: "Water (all)", fillID: "#out-collector-fill-water" },
 			{ id: "#out-action-use-bucket_one", name: "Water (1)", fillID: "#out-collector-fill-water" },
@@ -27980,6 +27995,9 @@ define([
 			let isDisabled = $btn.hasClass("btn-disabled");
 			let status = action ? this.getSectorEntryStatus(action, name) : { available: !isDisabled, reason: null, isBusy: false, isCooldown: false };
 			let hotkeyHint = action ? GameGlobals.uiFunctions.getActionHotkeyHint(action) : def.hotkey || null;
+			let hotkey = action ? GameGlobals.uiFunctions.getActionHotkey(action) : null;
+			let hotkeyCode = hotkey ? hotkey.code : def.hotkeyCode || null;
+			let hotkeyShift = hotkey ? GameGlobals.uiFunctions.getActualHotkeyModifier(hotkey.modifier) == "shiftKey" : def.hotkeyShift || false;
 			return {
 				key: key,
 				name: name,
@@ -27987,6 +28005,8 @@ define([
 				$btn: $btn,
 				isToggle: def.isToggle || false,
 				hotkey: hotkeyHint,
+				hotkeyCode: hotkeyCode,
+				hotkeyShift: hotkeyShift,
 				// the collector rows carry the chip's own fill ("3 / 10"), so the count
 				// accumulates in the list as it does on the tab
 				sub: def.fillID ? $(def.fillID).text().trim() : (def.sub || ""),
@@ -28075,7 +28095,7 @@ define([
 				let isTouch = UIConstants.isTouchScreen();
 				addHeader("Sector menu");
 				addLine(isTouch ? "Tap a row's ⓘ for what it does, what it costs and why it is blocked." : "Hover any row for what it does, what it costs and why it is blocked.");
-				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; esc: back &middot; &#8679;esc: close</span>");
+				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number, enter or the row's own key (N, G, &#8679;G...): pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; esc: back &middot; &#8679;esc: close</span>");
 				return $content;
 			}
 
@@ -28114,7 +28134,7 @@ define([
 			let keys = [];
 			let keyLabel = this.sectorPopup.getRowKeyLabel(index);
 			if (keyLabel) keys.push(keyLabel + " or enter: " + (screen == "build" ? "build" : screen == "search" ? "search" : "do it"));
-			if (entry.hotkey && GameGlobals.gameState.settings.hotkeysEnabled) keys.push(entry.hotkey + " on the tab");
+			if (entry.hotkey && GameGlobals.gameState.settings.hotkeysEnabled) keys.push(entry.hotkey + ": here or on the tab");
 			if (keys.length > 0) addHTML("<span class='meta'>" + keys.join(" &middot; ") + "</span>");
 			return $content;
 		},

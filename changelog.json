@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.7.0.m16",
+            "version": "0.7.0.m17",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -22,6 +22,10 @@
                 {
                     "type": "CHANGE",
                     "summary": "The sector menu's Water and Food rows (and Bucket+ / Trap+) show the collector's fill, e.g. 3 / 10, as the sector bar does."
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "Inside an open sector menu list, a row's own hotkey (N, shift-N, M, G, shift-G, F, shift-F, H, R) presses that row, as the row's label says."
                 }
             ]
         },
