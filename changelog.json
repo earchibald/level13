@@ -1,7 +1,7 @@
 {
     "versions": [
         {
-            "version": "0.7.0.m14",
+            "version": "0.7.0.m15",
             "requiredVersion": "0.6.1",
             "phase": "beta",
             "final": true,
@@ -14,6 +14,10 @@
                 {
                     "type": "CHANGE",
                     "summary": "The 'O for menu' badge sits on its own row below the sector info and above the sector's buttons."
+                },
+                {
+                    "type": "CHANGE",
+                    "summary": "The sector menu has no 'show unavailable': what the sector does not offer is not listed. A list with nothing in it is greyed out on the menu and cannot be opened; arrows step over it."
                 }
             ]
         },

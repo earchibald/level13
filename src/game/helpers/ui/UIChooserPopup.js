@@ -350,6 +350,7 @@ define([
 					if (rows[i].key == previousKey) { cursor = i; break; }
 				}
 			}
+			if (isMenu && rows[cursor] && !rows[cursor].entry.available) cursor = this.firstAvailableIndex();
 			this.setCursor(cursor);
 		},
 
@@ -401,6 +402,26 @@ define([
 			}
 		},
 
+		// arrows step over menu rows that cannot be opened (an empty list, greyed
+		// out); on a list screen every row can take the cursor, so it is a plain step
+		stepCursor: function (direction) {
+			let numRows = this.rows ? this.rows.length : 0;
+			let index = this.cursor + direction;
+			if (this.screen == this.MENU) {
+				while (index >= 0 && index < numRows && !this.rows[index].entry.available) index += direction;
+				if (index < 0 || index >= numRows) return;
+			}
+			this.setCursor(index);
+		},
+
+		// the first menu row that can be opened, for a fresh cursor
+		firstAvailableIndex: function () {
+			for (let i = 0; i < this.rows.length; i++) {
+				if (this.rows[i].entry.available) return i;
+			}
+			return 0;
+		},
+
 		getPageSize: function () {
 			let $list = this.$("list");
 			let $row = $list.find(".chooser-popup-row").first();
@@ -438,8 +459,8 @@ define([
 			if (e.shiftKey) return;
 
 			switch (code) {
-				case "ArrowDown": e.preventDefault(); this.setCursor(this.cursor + 1); return;
-				case "ArrowUp": e.preventDefault(); this.setCursor(this.cursor - 1); return;
+				case "ArrowDown": e.preventDefault(); this.stepCursor(1); return;
+				case "ArrowUp": e.preventDefault(); this.stepCursor(-1); return;
 				case "Home": e.preventDefault(); this.setCursor(0); return;
 				case "End": e.preventDefault(); this.setCursor(lastIndex); return;
 				case "PageDown": e.preventDefault(); this.setCursor(Math.min(lastIndex, this.cursor + this.getPageSize())); return;
@@ -463,6 +484,8 @@ define([
 				e.preventDefault();
 				let index = this.config.menuLetters[code];
 				if (index > lastIndex) return;
+				// a greyed-out menu row flashes where it is; the cursor stays put
+				if (!this.rows[index].entry.available) { this.flashUnavailable(index); return; }
 				this.setCursor(index);
 				this.activateRow();
 				return;
@@ -476,6 +499,7 @@ define([
 				e.preventDefault();
 				let index = digit == 0 ? 9 : digit - 1;
 				if (index > lastIndex) return;
+				if (isMenu && !this.rows[index].entry.available) { this.flashUnavailable(index); return; }
 				this.setCursor(index);
 				this.activateRow();
 			}
@@ -506,6 +530,11 @@ define([
 			if (!row) return;
 
 			if (this.screen == this.MENU) {
+				// an empty list is greyed out and does not open
+				if (!row.entry.available) {
+					this.flashUnavailable(this.cursor);
+					return;
+				}
 				this.showScreen(row.entry.screen);
 				return;
 			}

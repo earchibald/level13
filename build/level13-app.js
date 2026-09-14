@@ -25923,6 +25923,7 @@ define([
 					if (rows[i].key == previousKey) { cursor = i; break; }
 				}
 			}
+			if (isMenu && rows[cursor] && !rows[cursor].entry.available) cursor = this.firstAvailableIndex();
 			this.setCursor(cursor);
 		},
 
@@ -25974,6 +25975,26 @@ define([
 			}
 		},
 
+		// arrows step over menu rows that cannot be opened (an empty list, greyed
+		// out); on a list screen every row can take the cursor, so it is a plain step
+		stepCursor: function (direction) {
+			let numRows = this.rows ? this.rows.length : 0;
+			let index = this.cursor + direction;
+			if (this.screen == this.MENU) {
+				while (index >= 0 && index < numRows && !this.rows[index].entry.available) index += direction;
+				if (index < 0 || index >= numRows) return;
+			}
+			this.setCursor(index);
+		},
+
+		// the first menu row that can be opened, for a fresh cursor
+		firstAvailableIndex: function () {
+			for (let i = 0; i < this.rows.length; i++) {
+				if (this.rows[i].entry.available) return i;
+			}
+			return 0;
+		},
+
 		getPageSize: function () {
 			let $list = this.$("list");
 			let $row = $list.find(".chooser-popup-row").first();
@@ -26011,8 +26032,8 @@ define([
 			if (e.shiftKey) return;
 
 			switch (code) {
-				case "ArrowDown": e.preventDefault(); this.setCursor(this.cursor + 1); return;
-				case "ArrowUp": e.preventDefault(); this.setCursor(this.cursor - 1); return;
+				case "ArrowDown": e.preventDefault(); this.stepCursor(1); return;
+				case "ArrowUp": e.preventDefault(); this.stepCursor(-1); return;
 				case "Home": e.preventDefault(); this.setCursor(0); return;
 				case "End": e.preventDefault(); this.setCursor(lastIndex); return;
 				case "PageDown": e.preventDefault(); this.setCursor(Math.min(lastIndex, this.cursor + this.getPageSize())); return;
@@ -26036,6 +26057,8 @@ define([
 				e.preventDefault();
 				let index = this.config.menuLetters[code];
 				if (index > lastIndex) return;
+				// a greyed-out menu row flashes where it is; the cursor stays put
+				if (!this.rows[index].entry.available) { this.flashUnavailable(index); return; }
 				this.setCursor(index);
 				this.activateRow();
 				return;
@@ -26049,6 +26072,7 @@ define([
 				e.preventDefault();
 				let index = digit == 0 ? 9 : digit - 1;
 				if (index > lastIndex) return;
+				if (isMenu && !this.rows[index].entry.available) { this.flashUnavailable(index); return; }
 				this.setCursor(index);
 				this.activateRow();
 			}
@@ -26079,6 +26103,11 @@ define([
 			if (!row) return;
 
 			if (this.screen == this.MENU) {
+				// an empty list is greyed out and does not open
+				if (!row.entry.available) {
+					this.flashUnavailable(this.cursor);
+					return;
+				}
 				this.showScreen(row.entry.screen);
 				return;
 			}
@@ -27839,7 +27868,6 @@ define([
 				verbs: { build: "build", action: "do", search: "search" },
 				menuLetters: { KeyB: 0, KeyA: 1, KeyS: 2 },
 				openKey: { code: "KeyO", tab: tabs.out },
-				toggleLabel: "Show unavailable",
 				canOpen: () => !!sys.playerLocationNodes.head && !!sys.playerPosNodes.head && !sys.playerPosNodes.head.position.inCamp,
 				beforeOpen: () => GameGlobals.uiFunctions.showTabById(tabs.out),
 				getSector: () => sys.playerLocationNodes.head ? sys.playerLocationNodes.head.entity : null,
@@ -27905,9 +27933,9 @@ define([
 				search: this.getSectorSearchEntries().filter(e => !e.hidden).length,
 			};
 			return [
-				{ key: "build", screen: "build", letter: "B", name: "Build", count: counts.build, description: "Place a camp, a collector or a beacon in this sector, or improve one that stands", available: true, hidden: false },
-				{ key: "action", screen: "action", letter: "A", name: "Action", count: counts.action, description: "Scavenge, scout, collect, rest and whatever else this sector offers", available: true, hidden: false },
-				{ key: "search", screen: "search", letter: "S", name: "Search", count: counts.search, description: "Search the locations found in this sector", available: true, hidden: false },
+				{ key: "build", screen: "build", letter: "B", name: "Build", count: counts.build, description: "Place a camp, a collector or a beacon in this sector, or improve one that stands", available: counts.build > 0, reason: "Nothing here", hidden: false },
+				{ key: "action", screen: "action", letter: "A", name: "Action", count: counts.action, description: "Scavenge, scout, collect, rest and whatever else this sector offers", available: counts.action > 0, reason: "Nothing here", hidden: false },
+				{ key: "search", screen: "search", letter: "S", name: "Search", count: counts.search, description: "Search the locations found in this sector", available: counts.search > 0, reason: "Nothing here", hidden: false },
 			];
 		},
 
@@ -27935,10 +27963,12 @@ define([
 		},
 
 		// one row from one tab button. The button's own visibility and disabled
-		// class are the truth: a button the tab does not show is a hidden row, a
-		// button it shows dimmed is an unavailable one
+		// class are the truth: a button the tab does not show is no row at all (the
+		// outside lists have no "show unavailable" - what the sector does not offer
+		// is simply not listed), a button it shows dimmed is an unavailable one
 		makeSectorEntry: function ($btn, key, def) {
 			if (!$btn || $btn.length == 0) return null;
+			if (!$btn.is(":visible")) return null;
 			def = def || {};
 			let action = $btn.attr("action") || null;
 			let name = def.name;
@@ -27947,7 +27977,6 @@ define([
 				name = ($label.length > 0 ? $label.text() : $btn.clone().children().remove().end().text()).trim();
 			}
 			if (!name) name = action || key;
-			let isShown = $btn.is(":visible");
 			let isDisabled = $btn.hasClass("btn-disabled");
 			let status = action ? this.getSectorEntryStatus(action, name) : { available: !isDisabled, reason: null, isBusy: false, isCooldown: false };
 			let hotkeyHint = action ? GameGlobals.uiFunctions.getActionHotkeyHint(action) : def.hotkey || null;
@@ -27959,8 +27988,8 @@ define([
 				isToggle: def.isToggle || false,
 				hotkey: hotkeyHint,
 				sub: def.sub || "",
-				available: isShown && !isDisabled && status.available,
-				hidden: !isShown,
+				available: !isDisabled && status.available,
+				hidden: false,
 				reason: status.reason,
 				isBusy: status.isBusy,
 				isCooldown: status.isCooldown,
@@ -28044,14 +28073,7 @@ define([
 				let isTouch = UIConstants.isTouchScreen();
 				addHeader("Sector menu");
 				addLine(isTouch ? "Tap a row's ⓘ for what it does, what it costs and why it is blocked." : "Hover any row for what it does, what it costs and why it is blocked.");
-				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; space: show unavailable<br/>esc: back &middot; &#8679;esc: close</span>");
-				return $content;
-			}
-
-			if (index == -1) {
-				addHeader("Show unavailable");
-				addLine("Also list what this sector does not offer right now. Rows that only lack resources or wait on a cooldown are always shown.");
-				addHTML("<span class='meta'>space: toggle</span>");
+				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; esc: back &middot; &#8679;esc: close</span>");
 				return $content;
 			}
 
@@ -28060,11 +28082,15 @@ define([
 			if (screen == "menu") {
 				addHeader(entry.name, entry.count + (entry.count == 1 ? " entry" : " entries"));
 				addLine(entry.description);
-				addHTML("<span class='meta'>" + entry.letter + " or " + (index + 1) + ": open</span>");
+				if (entry.available) {
+					addHTML("<span class='meta'>" + entry.letter + " or " + (index + 1) + ": open</span>");
+				} else {
+					addLine("Nothing of this kind in this sector right now.", "meta");
+				}
 				return $content;
 			}
 
-			let badge = entry.available ? "available" : entry.isCooldown ? "cooldown" : entry.isBusy ? "busy" : entry.reason ? entry.reason : entry.hidden ? "not here" : "unaffordable";
+			let badge = entry.available ? "available" : entry.isCooldown ? "cooldown" : entry.isBusy ? "busy" : entry.reason ? entry.reason : "unaffordable";
 			addHeader(entry.name, badge);
 			if (entry.isToggle) {
 				addLine("Keep scavenging whenever the cooldown ends, while a scavenger with the ability is in the party.", "chooser-tooltip-desc");

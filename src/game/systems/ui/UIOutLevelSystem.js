@@ -1660,7 +1660,6 @@ define([
 				verbs: { build: "build", action: "do", search: "search" },
 				menuLetters: { KeyB: 0, KeyA: 1, KeyS: 2 },
 				openKey: { code: "KeyO", tab: tabs.out },
-				toggleLabel: "Show unavailable",
 				canOpen: () => !!sys.playerLocationNodes.head && !!sys.playerPosNodes.head && !sys.playerPosNodes.head.position.inCamp,
 				beforeOpen: () => GameGlobals.uiFunctions.showTabById(tabs.out),
 				getSector: () => sys.playerLocationNodes.head ? sys.playerLocationNodes.head.entity : null,
@@ -1726,9 +1725,9 @@ define([
 				search: this.getSectorSearchEntries().filter(e => !e.hidden).length,
 			};
 			return [
-				{ key: "build", screen: "build", letter: "B", name: "Build", count: counts.build, description: "Place a camp, a collector or a beacon in this sector, or improve one that stands", available: true, hidden: false },
-				{ key: "action", screen: "action", letter: "A", name: "Action", count: counts.action, description: "Scavenge, scout, collect, rest and whatever else this sector offers", available: true, hidden: false },
-				{ key: "search", screen: "search", letter: "S", name: "Search", count: counts.search, description: "Search the locations found in this sector", available: true, hidden: false },
+				{ key: "build", screen: "build", letter: "B", name: "Build", count: counts.build, description: "Place a camp, a collector or a beacon in this sector, or improve one that stands", available: counts.build > 0, reason: "Nothing here", hidden: false },
+				{ key: "action", screen: "action", letter: "A", name: "Action", count: counts.action, description: "Scavenge, scout, collect, rest and whatever else this sector offers", available: counts.action > 0, reason: "Nothing here", hidden: false },
+				{ key: "search", screen: "search", letter: "S", name: "Search", count: counts.search, description: "Search the locations found in this sector", available: counts.search > 0, reason: "Nothing here", hidden: false },
 			];
 		},
 
@@ -1756,10 +1755,12 @@ define([
 		},
 
 		// one row from one tab button. The button's own visibility and disabled
-		// class are the truth: a button the tab does not show is a hidden row, a
-		// button it shows dimmed is an unavailable one
+		// class are the truth: a button the tab does not show is no row at all (the
+		// outside lists have no "show unavailable" - what the sector does not offer
+		// is simply not listed), a button it shows dimmed is an unavailable one
 		makeSectorEntry: function ($btn, key, def) {
 			if (!$btn || $btn.length == 0) return null;
+			if (!$btn.is(":visible")) return null;
 			def = def || {};
 			let action = $btn.attr("action") || null;
 			let name = def.name;
@@ -1768,7 +1769,6 @@ define([
 				name = ($label.length > 0 ? $label.text() : $btn.clone().children().remove().end().text()).trim();
 			}
 			if (!name) name = action || key;
-			let isShown = $btn.is(":visible");
 			let isDisabled = $btn.hasClass("btn-disabled");
 			let status = action ? this.getSectorEntryStatus(action, name) : { available: !isDisabled, reason: null, isBusy: false, isCooldown: false };
 			let hotkeyHint = action ? GameGlobals.uiFunctions.getActionHotkeyHint(action) : def.hotkey || null;
@@ -1780,8 +1780,8 @@ define([
 				isToggle: def.isToggle || false,
 				hotkey: hotkeyHint,
 				sub: def.sub || "",
-				available: isShown && !isDisabled && status.available,
-				hidden: !isShown,
+				available: !isDisabled && status.available,
+				hidden: false,
 				reason: status.reason,
 				isBusy: status.isBusy,
 				isCooldown: status.isCooldown,
@@ -1865,14 +1865,7 @@ define([
 				let isTouch = UIConstants.isTouchScreen();
 				addHeader("Sector menu");
 				addLine(isTouch ? "Tap a row's ⓘ for what it does, what it costs and why it is blocked." : "Hover any row for what it does, what it costs and why it is blocked.");
-				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; space: show unavailable<br/>esc: back &middot; &#8679;esc: close</span>");
-				return $content;
-			}
-
-			if (index == -1) {
-				addHeader("Show unavailable");
-				addLine("Also list what this sector does not offer right now. Rows that only lack resources or wait on a cooldown are always shown.");
-				addHTML("<span class='meta'>space: toggle</span>");
+				addHTML("<span class='meta'>B, A, S or 1-3: open a list &middot; number or enter: pick a row<br/>arrows, pgup/pgdn, home/end: move &middot; esc: back &middot; &#8679;esc: close</span>");
 				return $content;
 			}
 
@@ -1881,11 +1874,15 @@ define([
 			if (screen == "menu") {
 				addHeader(entry.name, entry.count + (entry.count == 1 ? " entry" : " entries"));
 				addLine(entry.description);
-				addHTML("<span class='meta'>" + entry.letter + " or " + (index + 1) + ": open</span>");
+				if (entry.available) {
+					addHTML("<span class='meta'>" + entry.letter + " or " + (index + 1) + ": open</span>");
+				} else {
+					addLine("Nothing of this kind in this sector right now.", "meta");
+				}
 				return $content;
 			}
 
-			let badge = entry.available ? "available" : entry.isCooldown ? "cooldown" : entry.isBusy ? "busy" : entry.reason ? entry.reason : entry.hidden ? "not here" : "unaffordable";
+			let badge = entry.available ? "available" : entry.isCooldown ? "cooldown" : entry.isBusy ? "busy" : entry.reason ? entry.reason : "unaffordable";
 			addHeader(entry.name, badge);
 			if (entry.isToggle) {
 				addLine("Keep scavenging whenever the cooldown ends, while a scavenger with the ability is in the party.", "chooser-tooltip-desc");
